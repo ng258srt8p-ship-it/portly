@@ -1,0 +1,65 @@
+{
+  "nim": {
+    "baseUrl": "https://integrate.api.nvidia.com/v1",
+    "apiKey": "${NIM_API_KEY}",
+    "model": "meta/llama-3.1-70b-instruct",
+    "maxTokens": 4096,
+    "temperature": 0.7,
+    "topP": 1.0,
+    "timeout": 60000,
+    "maxRetries": 3,
+    "rateLimit": {
+      "maxRequestsPerMinute": 40,
+      "maxConcurrentRequests": 3
+    }
+  },
+  "models": {
+    "chat": {
+      "default": "meta/llama-3.1-70b-instruct",
+      "options": [
+        "meta/llama-3.1-70b-instruct",
+        "meta/llama-3.1-8b-instruct",
+        "nvidia/nemotron-3-ultra",
+        "mistralai/mixtral-8x7b-instruct-v0.1",
+        "google/gemma-2-27b-it"
+      ]
+    },
+    "embedding": {
+      "default": "nvidia/nv-embed-v1",
+      "options": [
+        "nvidia/nv-embed-v1",
+        "nvidia/nv-embedqa-e5-v5",
+        "nvidia/nv-embedqa-mistral-7b-v2"
+      ]
+    }
+  },
+  "agents": {
+    "ScrapeAgent": {
+      "useNim": false,
+      "description": "Web scraping only - no LLM calls needed"
+    },
+    "BizDevAgent": {
+      "useNim": true,
+      "useCases": [
+        "Competitor strategy analysis",
+        "Revenue model classification",
+        "Market positioning assessment",
+        "Partnership opportunity identification"
+      ],
+      "model": "meta/llama-3.1-70b-instruct",
+      "temperature": 0.3
+    },
+    "AnalyticsAgent": {
+      "useNim": true,
+      "useCases": [
+        "Deal quality scoring",
+        "Price anomaly detection",
+        "Cabin categorization refinement",
+        "Itinerary sentiment analysis",
+        "Customer review summarization"
+      ],
+      "model": "meta/llama-3.1-70b-instruct",
+      "temperature": 0.2
+    }
+  }
+}

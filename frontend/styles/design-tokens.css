@@ -1,0 +1,236 @@
+/* ============================================================
+   PORTLY DESIGN SYSTEM — Design Tokens & CSS Variables
+   ============================================================
+   Theme: High-Contrast Luxury Aggregator
+   Typography System: Clash Display / Plus Jakarta Sans / Geist Mono
+   Color Philosophy: Deep obsidian backgrounds + vibrant neon/pastel accents
+   ============================================================ */
+
+@layer base {
+  :root {
+    /* ==========================================================
+       TYPOGRAPHY — Font Family Definitions
+       ==========================================================
+       Brand/Display: 'Clash Display', 'Syne' — Geometric, bold, luxury
+       Interface:     'Plus Jakarta Sans', 'Inter' — Clean, legible at small sizes
+       Tabular Data:  'Geist Mono', 'JetBrains Mono' — Monospace with tabular numbers
+       ========================================================== */
+
+    --font-brand: 'Clash Display', 'Syne', system-ui, sans-serif;
+    --font-interface: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    --font-mono: 'Geist Mono', 'JetBrains Mono', ui-monospace, monospace;
+
+    /* ==========================================================
+       TYPOGRAPHY — Size Scale (Modular scale: 1.250 — Major Third)
+       ========================================================== */
+
+    --text-xs: 0.75rem;       /* 12px — Captions, meta, labels */
+    --text-sm: 0.875rem;      /* 14px — Body small, filters, pills */
+    --text-base: 1rem;        /* 16px — Body text */
+    --text-lg: 1.125rem;      /* 18px — Large body */
+    --text-xl: 1.25rem;       /* 20px — Subtitles */
+    --text-2xl: 1.563rem;     /* 25px — Section headings */
+    --text-3xl: 1.953rem;     /* 31px — Card headings */
+    --text-4xl: 2.441rem;     /* 39px — Page headings */
+    --text-5xl: 3.052rem;     /* 49px — Hero headings */
+    --text-6xl: 3.815rem;     /* 61px — Display hero */
+    --text-7xl: 4.768rem;     /* 76px — Mega hero */
+
+    /* ==========================================================
+       TYPOGRAPHY — Leading (Line Height)
+       ========================================================== */
+
+    --leading-none: 1;
+    --leading-tight: 1.1;      /* Display typography */
+    --leading-snug: 1.25;      /* Headings */
+    --leading-normal: 1.5;     /* Body text */
+    --leading-relaxed: 1.625;  /* Long-form content */
+    --leading-loose: 2;        /* Sparse content */
+
+    /* ==========================================================
+       TYPOGRAPHY — Tracking (Letter Spacing)
+       ========================================================== */
+
+    --tracking-tighter: -0.04em;   /* Extreme display */
+    --tracking-tight: -0.02em;     /* Heading display */     
+    --tracking-normal: 0em;        /* Body text */
+    --tracking-wide: 0.02em;       /* UI labels */
+    --tracking-wider: 0.04em;      /* Uppercase labels */
+    --tracking-widest: 0.08em;     /* All-caps overline */
+
+    /* ==========================================================
+       COLOR PALETTE — Deep Obsidian Backgrounds
+       ========================================================== */
+
+    --obsidian-50: #f8f9fa;
+    --obsidian-100: #e9eaed;
+    --obsidian-200: #cdcfd6;
+    --obsidian-300: #a2a6b3;
+    --obsidian-400: #777d8f;
+    --obsidian-500: #555b6e;
+    --obsidian-600: #3d4356;
+    --obsidian-700: #2a2f3f;
+    --obsidian-800: #1a1d2b;
+    --obsidian-900: #0f1119;
+    --obsidian-950: #07080e;
+
+    /* ==========================================================
+       COLOR PALETTE — Neon Accents (Vibrant, High-Contrast)
+       ========================================================== */
+
+    /* Electric Teal — Primary brand accent, CTA buttons, interactive elements */
+    --neon-teal-50: #ecfeff;
+    --neon-teal-100: #cffafe;
+    --neon-teal-200: #a5f3fc;
+    --neon-teal-300: #67e8f9;
+    --neon-teal-400: #22d3ee;
+    --neon-teal-500: #06b6d4;
+    --neon-teal-600: #0891b2;
+    --neon-teal-700: #0e7490;
+    --neon-teal-800: #155e75;
+    --neon-teal-900: #164e63;
+
+    /* Neon Mint — Secondary accent, deal ratings, success signals */
+    --neon-mint-50: #f0fdf4;
+    --neon-mint-100: #dcfce7;
+    --neon-mint-200: #bbf7d0;
+    --neon-mint-300: #86efac;
+    --neon-mint-400: #4ade80;
+    --neon-mint-500: #22c55e;
+    --neon-mint-600: #16a34a;
+    --neon-mint-700: #15803d;
+    --neon-mint-800: #166534;
+    --neon-mint-900: #14532d;
+
+    /* Electric Coral — Price drops, urgency, hot deals */
+    --neon-coral-50: #fff1f2;
+    --neon-coral-100: #ffe4e6;
+    --neon-coral-200: #fecdd3;
+    --neon-coral-300: #fda4af;
+    --neon-coral-400: #fb7185;
+    --neon-coral-500: #f43f5e;
+    --neon-coral-600: #e11d48;
+    --neon-coral-700: #be123c;
+    --neon-coral-800: #9f1239;
+    --neon-coral-900: #881337;
+
+    /* Vivid Amber — Deal ratings, stars, warnings */
+    --neon-amber-50: #fffbeb;
+    --neon-amber-100: #fef3c7;
+    --neon-amber-200: #fde68a;
+    --neon-amber-300: #fcd34d;
+    --neon-amber-400: #fbbf24;
+    --neon-amber-500: #f59e0b;
+    --neon-amber-600: #d97706;
+    --neon-amber-700: #b45309;
+    --neon-amber-800: #92400e;
+    --neon-amber-900: #78350f;
+
+    /* Electric Blue — Info, links, secondary CTAs */
+    --neon-blue-50: #eff6ff;
+    --neon-blue-100: #dbeafe;
+    --neon-blue-200: #bfdbfe;
+    --neon-blue-300: #93c5fd;
+    --neon-blue-400: #60a5fa;
+    --neon-blue-500: #3b82f6;
+    --neon-blue-600: #2563eb;
+    --neon-blue-700: #1d4ed8;
+    --neon-blue-800: #1e40af;
+    --neon-blue-900: #1e3a8a;
+
+    /* ==========================================================
+       SEMANTIC COLOR MAPPINGS
+       ========================================================== */
+
+    /* Backgrounds */
+    --bg-base: var(--obsidian-950);
+    --bg-surface: var(--obsidian-900);
+    --bg-elevated: var(--obsidian-800);
+    --bg-overlay: var(--obsidian-700);
+    --bg-inverse: var(--obsidian-50);
+
+    /* Text */
+    --text-primary: var(--obsidian-50);
+    --text-secondary: var(--obsidian-300);
+    --text-tertiary: var(--obsidian-400);
+    --text-inverse: var(--obsidian-950);
+    --text-link: var(--neon-teal-400);
+    --text-link-hover: var(--neon-teal-300);
+
+    /* Borders */
+    --border-subtle: var(--obsidian-700);
+    --border-default: var(--obsidian-600);
+    --border-strong: var(--obsidian-400);
+    --border-accent: var(--neon-teal-500);
+    --border-focus: var(--neon-teal-400);
+
+    /* Interactive */
+    --interactive-primary: var(--neon-teal-500);
+    --interactive-primary-hover: var(--neon-teal-400);
+    --interactive-primary-text: var(--obsidian-950);
+    --interactive-secondary: var(--obsidian-700);
+    --interactive-secondary-hover: var(--obsidian-600);
+
+    /* Status */
+    --status-success: var(--neon-mint-400);
+    --status-warning: var(--neon-amber-400);
+    --status-error: var(--neon-coral-400);
+    --status-info: var(--neon-blue-400);
+
+    /* Deal Ratings */
+    --deal-hot: var(--neon-coral-500);
+    --deal-great: var(--neon-amber-500);
+    --deal-good: var(--neon-teal-500);
+    --deal-average: var(--obsidian-400);
+    --deal-poor: var(--obsidian-600);
+
+    /* ==========================================================
+       SPACING SCALE (4px base)
+       ========================================================== */
+
+    --space-1: 0.25rem;   /* 4px */
+    --space-2: 0.5rem;    /* 8px */
+    --space-3: 0.75rem;   /* 12px */
+    --space-4: 1rem;      /* 16px */
+    --space-5: 1.25rem;   /* 20px */
+    --space-6: 1.5rem;    /* 24px */
+    --space-8: 2rem;      /* 32px */
+    --space-10: 2.5rem;   /* 40px */
+    --space-12: 3rem;     /* 48px */
+    --space-16: 4rem;     /* 64px */
+    --space-20: 5rem;     /* 80px */
+    --space-24: 6rem;     /* 96px */
+
+    /* ==========================================================
+       BORDER RADIUS
+       ========================================================== */
+
+    --radius-none: 0;
+    --radius-sm: 0.25rem;    /* 4px */
+    --radius-md: 0.5rem;     /* 8px */
+    --radius-lg: 0.75rem;    /* 12px */
+    --radius-xl: 1rem;       /* 16px */
+    --radius-2xl: 1.5rem;    /* 24px */
+    --radius-full: 9999px;   /* Pill shapes */
+
+    /* ==========================================================
+       SHADOWS
+       ========================================================== */
+
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+    --shadow-glow-teal: 0 0 20px rgba(6, 182, 212, 0.15), 0 0 40px rgba(6, 182, 212, 0.08);
+    --shadow-glow-coral: 0 0 20px rgba(244, 63, 94, 0.15), 0 0 40px rgba(244, 63, 94, 0.08);
+
+    /* ==========================================================
+       TRANSITIONS
+       ========================================================== */
+
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+}

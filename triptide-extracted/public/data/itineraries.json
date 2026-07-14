@@ -1,0 +1,86 @@
+[
+  {
+    "id": "i1",
+    "cruiseLine": "Celestara Voyages",
+    "ship": "Aurora Meridian",
+    "route": "Eastern Caribbean",
+    "nights": 7,
+    "sailDate": "Mar 14",
+    "cabins": [
+      { "cabinClass": "Inside", "baseFarePerPerson": 549, "portTaxPerPerson": 129, "gratuityPerPersonPerNight": 16.5 },
+      { "cabinClass": "Oceanview", "baseFarePerPerson": 689, "portTaxPerPerson": 129, "gratuityPerPersonPerNight": 16.5 },
+      { "cabinClass": "Balcony", "baseFarePerPerson": 899, "portTaxPerPerson": 129, "gratuityPerPersonPerNight": 18 },
+      { "cabinClass": "Suite", "baseFarePerPerson": 1649, "portTaxPerPerson": 129, "gratuityPerPersonPerNight": 21 }
+    ]
+  },
+  {
+    "id": "i2",
+    "cruiseLine": "Norstrand Line",
+    "ship": "Solveig Explorer",
+    "route": "Norwegian Fjords",
+    "nights": 10,
+    "sailDate": "Jun 02",
+    "cabins": [
+      { "cabinClass": "Inside", "baseFarePerPerson": 890, "portTaxPerPerson": 168, "gratuityPerPersonPerNight": 17 },
+      { "cabinClass": "Oceanview", "baseFarePerPerson": 1075, "portTaxPerPerson": 168, "gratuityPerPersonPerNight": 17 },
+      { "cabinClass": "Balcony", "baseFarePerPerson": 1390, "portTaxPerPerson": 168, "gratuityPerPersonPerNight": 18.5 },
+      { "cabinClass": "Suite", "baseFarePerPerson": 2260, "portTaxPerPerson": 168, "gratuityPerPersonPerNight": 22 }
+    ]
+  },
+  {
+    "id": "i3",
+    "cruiseLine": "Pacifica Royale",
+    "ship": "Kaimana Star",
+    "route": "Hawaiian Islands",
+    "nights": 9,
+    "sailDate": "Apr 22",
+    "cabins": [
+      { "cabinClass": "Inside", "baseFarePerPerson": 720, "portTaxPerPerson": 145, "gratuityPerPersonPerNight": 16 },
+      { "cabinClass": "Oceanview", "baseFarePerPerson": 865, "portTaxPerPerson": 145, "gratuityPerPersonPerNight": 16 },
+      { "cabinClass": "Balcony", "baseFarePerPerson": 1120, "portTaxPerPerson": 145, "gratuityPerPersonPerNight": 17.5 },
+      { "cabinClass": "Suite", "baseFarePerPerson": 1980, "portTaxPerPerson": 145, "gratuityPerPersonPerNight": 20 }
+    ]
+  },
+  {
+    "id": "i4",
+    "cruiseLine": "Meridian Atlantic",
+    "ship": "Cassiopeia Wave",
+    "route": "Greek Isles",
+    "nights": 8,
+    "sailDate": "Sep 10",
+    "cabins": [
+      { "cabinClass": "Inside", "baseFarePerPerson": 940, "portTaxPerPerson": 156, "gratuityPerPersonPerNight": 17 },
+      { "cabinClass": "Oceanview", "baseFarePerPerson": 1180, "portTaxPerPerson": 156, "gratuityPerPersonPerNight": 17 },
+      { "cabinClass": "Balcony", "baseFarePerPerson": 1495, "portTaxPerPerson": 156, "gratuityPerPersonPerNight": 18.5 },
+      { "cabinClass": "Suite", "baseFarePerPerson": 2610, "portTaxPerPerson": 156, "gratuityPerPersonPerNight": 23 }
+    ]
+  },
+  {
+    "id": "i5",
+    "cruiseLine": "Celestara Voyages",
+    "ship": "Borealis Horizon",
+    "route": "Alaskan Passage",
+    "nights": 7,
+    "sailDate": "Jul 18",
+    "cabins": [
+      { "cabinClass": "Inside", "baseFarePerPerson": 610, "portTaxPerPerson": 138, "gratuityPerPersonPerNight": 16.5 },
+      { "cabinClass": "Oceanview", "baseFarePerPerson": 760, "portTaxPerPerson": 138, "gratuityPerPersonPerNight": 16.5 },
+      { "cabinClass": "Balcony", "baseFarePerPerson": 985, "portTaxPerPerson": 138, "gratuityPerPersonPerNight": 18 },
+      { "cabinClass": "Suite", "baseFarePerPerson": 1740, "portTaxPerPerson": 138, "gratuityPerPersonPerNight": 21 }
+    ]
+  },
+  {
+    "id": "i6",
+    "cruiseLine": "Solitude Cruises",
+    "ship": "Mariner's Ember",
+    "route": "Western Mediterranean",
+    "nights": 12,
+    "sailDate": "May 30",
+    "cabins": [
+      { "cabinClass": "Inside", "baseFarePerPerson": 1080, "portTaxPerPerson": 174, "gratuityPerPersonPerNight": 17.5 },
+      { "cabinClass": "Oceanview", "baseFarePerPerson": 1320, "portTaxPerPerson": 174, "gratuityPerPersonPerNight": 17.5 },
+      { "cabinClass": "Balcony", "baseFarePerPerson": 1690, "portTaxPerPerson": 174, "gratuityPerPersonPerNight": 19 },
+      { "cabinClass": "Suite", "baseFarePerPerson": 2940, "portTaxPerPerson": 174, "gratuityPerPersonPerNight": 23.5 }
+    ]
+  }
+]

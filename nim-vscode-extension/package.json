@@ -1,0 +1,129 @@
+{
+  "name": "portly-nim-integration",
+  "displayName": "Portly NIM Integration",
+  "description": "NVIDIA NIM (Llama 3.1 70B) client with rate limiting for AI-powered cruise analytics",
+  "version": "1.0.0",
+  "publisher": "portly",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Machine Learning"
+  ],
+  "keywords": [
+    "nvidia",
+    "nim",
+    "llama",
+    "llm",
+    "rate-limiting",
+    "cruise",
+    "analytics"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Portly NIM Integration",
+      "properties": {
+        "portlyNim.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "NVIDIA NIM API Key (or set NIM_API_KEY env var)",
+          "secret": true
+        },
+        "portlyNim.baseUrl": {
+          "type": "string",
+          "default": "https://integrate.api.nvidia.com/v1",
+          "description": "NIM API base URL"
+        },
+        "portlyNim.model": {
+          "type": "string",
+          "default": "meta/llama-3.1-70b-instruct",
+          "description": "Model to use for completions"
+        },
+        "portlyNim.maxRequestsPerMinute": {
+          "type": "number",
+          "default": 40,
+          "description": "Maximum requests per minute (NIM free tier limit)"
+        },
+        "portlyNim.maxConcurrentRequests": {
+          "type": "number",
+          "default": 3,
+          "description": "Maximum concurrent requests"
+        },
+        "portlyNim.defaultTemperature": {
+          "type": "number",
+          "default": 0.7,
+          "description": "Default temperature for completions"
+        },
+        "portlyNim.defaultMaxTokens": {
+          "type": "number",
+          "default": 4096,
+          "description": "Default max tokens for completions"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "portlyNim.testConnection",
+        "title": "Test NIM Connection",
+        "category": "Portly NIM"
+      },
+      {
+        "command": "portlyNim.showRateLimitStatus",
+        "title": "Show Rate Limit Status",
+        "category": "Portly NIM"
+      },
+      {
+        "command": "portlyNim.createClient",
+        "title": "Create NIM Client in Workspace",
+        "category": "Portly NIM"
+      },
+      {
+        "command": "portlyNim.insertSnippet",
+        "title": "Insert NIM Code Snippet",
+        "category": "Portly NIM"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "typescript",
+        "path": "./snippets/nim-client.json"
+      },
+      {
+        "language": "javascript",
+        "path": "./snippets/nim-client.json"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "portlyNim.rateLimitView",
+          "name": "NIM Rate Limit Status",
+          "when": "portlyNim.enabled"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "20.x",
+    "typescript": "^5.3.3",
+    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.9"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}

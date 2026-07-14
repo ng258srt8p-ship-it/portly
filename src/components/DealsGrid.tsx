@@ -1,0 +1,326 @@
+'use client';
+
+import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import type { BadgeType, Deal, DealFilters as Filters } from '@/types/cruise';
+import Sparkline from '@/components/ui/Sparkline';
+import SyncStatus from '@/components/ui/SyncStatus';
+import { fetchDeals } from '@/services/cruiseApi';
+import MaterialIcon from '@/components/ui/MaterialIcon';
+import { useLiveData } from '@/hooks/useLiveData';
+import FilterSelectionGrid from '@/components/FilterSelectionGrid';
+
+const badgeStyles: Record<BadgeType, string> = {
+  drop: 'bg-mint-soft text-mint-ink border-mint-ink/15',
+  solo: 'bg-coral-soft text-coral-ink border-coral-ink/15',
+  gold: 'bg-coral-soft text-coral-ink border-coral-ink/15',
+};
+
+const LIMIT_OPTIONS = [5, 10, 20, 0] as const; // 0 = all
+
+const LIMIT_LABELS: Record<number, string> = {
+  5: '5',
+  10: '10',
+  20: '20',
+  0: 'All',
+};
+
+function getStorageLimit(): number {
+  if (typeof window === 'undefined') return 20;
+  const stored = localStorage.getItem('dealsLimit');
+  const parsed = stored ? parseInt(stored, 10) : 20;
+  return LIMIT_OPTIONS.includes(parsed as any) ? parsed : 20;
+}
+
+export default function DealsGrid() {
+  const router = useRouter();
+
+  const [limit, setLimit] = useState(getStorageLimit);
+
+  // ── Filters synced to URL search params ──
+  const parseFilters = (): Filters => {
+    const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const f: Filters = {};
+    const cl = sp.get('cruiseLine');
+    if (cl) f.cruiseLine = cl.split(',');
+    const dest = sp.get('destination');
+    if (dest) f.destination = dest.split(',');
+    const dp = sp.get('departurePort');
+    if (dp) f.departurePort = dp.split(',');
+    const dr = sp.get('departureRegion');
+    if (dr) f.departureRegion = dr.split(',');
+    const minN = sp.get('minNights');
+    if (minN) f.minNights = parseInt(minN);
+    const maxN = sp.get('maxNights');
+    if (maxN) f.maxNights = parseInt(maxN);
+    const minP = sp.get('minPrice');
+    if (minP) f.minPrice = parseInt(minP);
+    const maxP = sp.get('maxPrice');
+    if (maxP) f.maxPrice = parseInt(maxP);
+    const bt = sp.get('badgeType');
+    if (bt) f.badgeType = bt.split(',') as ('drop' | 'solo' | 'gold')[];
+    const s = sp.get('sort');
+    if (s) f.sort = s as Filters['sort'];
+    return f;
+  };
+
+  const [filters, setFilters] = useState<Filters>(parseFilters);
+
+  // Sync filters to URL
+  useEffect(() => {
+    const sp = new URLSearchParams();
+    if (filters.cruiseLine?.length) sp.set('cruiseLine', filters.cruiseLine.join(','));
+    if (filters.destination?.length) sp.set('destination', filters.destination.join(','));
+    if (filters.departurePort?.length) sp.set('departurePort', filters.departurePort.join(','));
+    if (filters.departureRegion?.length) sp.set('departureRegion', filters.departureRegion.join(','));
+    if (filters.minNights !== undefined) sp.set('minNights', String(filters.minNights));
+    if (filters.maxNights !== undefined) sp.set('maxNights', String(filters.maxNights));
+    if (filters.minPrice !== undefined) sp.set('minPrice', String(filters.minPrice));
+    if (filters.maxPrice !== undefined) sp.set('maxPrice', String(filters.maxPrice));
+    if (filters.badgeType?.length) sp.set('badgeType', filters.badgeType.join(','));
+    if (filters.sort) sp.set('sort', filters.sort);
+    const qs = sp.toString();
+    const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    router.replace(newUrl, { scroll: false });
+  }, [filters, router]);
+
+  const fetcher = useCallback(() => fetchDeals(limit, filters), [limit, filters]);
+  const { data: deals, loading, error, lastSyncedAt, refresh } = useLiveData(fetcher, { pollIntervalMs: 30000 });
+
+  const setLimitAndPersist = (n: number) => {
+    setLimit(n);
+    localStorage.setItem('dealsLimit', String(n));
+  };
+
+  // Extract available filter options from full deals data
+  const availableOptions = useMemo(() => {
+    if (!deals) return { lines: [], destinations: [], ports: [], regions: [] };
+    return {
+      lines: [...new Set(deals.map((d) => d.cruiseLine))].sort(),
+      destinations: [...new Set(deals.map((d) => d.destination))].sort(),
+      ports: [...new Set(deals.map((d) => d.departurePort))].sort(),
+      regions: [...new Set(deals.map((d) => d.departureRegion).filter(Boolean))].sort() as string[],
+    };
+  }, [deals]);
+
+  return (
+    <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6" id="deals">
+      <div className="mb-12 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+        <div>
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo">Curated right now</span>
+          <h2 className="mt-3 font-display text-4xl font-extrabold text-ink sm:text-5xl">Hot Deals on the Radar</h2>
+        </div>
+        <div className="flex flex-col items-start gap-3 sm:items-end">
+          <p className="max-w-sm text-ink-soft">
+            Every card is powered by live fare polling — we flag the sailings where the tide has genuinely turned in your
+            favor.
+          </p>
+          <SyncStatus loading={loading} lastSyncedAt={lastSyncedAt} onRefresh={refresh} />
+        </div>
+      </div>
+
+      {error && (
+        <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-3xl border border-coral-ink/15 bg-coral-soft p-6 sm:flex-row sm:items-center">
+          <p className="text-sm font-medium text-coral-ink">
+            Couldn&apos;t reach the TripTide fare service. {error}
+          </p>
+          <button
+            onClick={refresh}
+            className="shrink-0 rounded-full bg-coral-ink px-4 py-2 text-xs font-bold text-white hover:opacity-90"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Filter bar */}
+      {deals && !loading && (
+        <FilterSelectionGrid
+          filters={filters}
+          onChange={setFilters}
+          availableLines={availableOptions.lines}
+          availableRegions={availableOptions.regions}
+          availableDestinations={availableOptions.destinations}
+          hasActiveFilters={Boolean(
+            filters.cruiseLine?.length ||
+            filters.destination?.length ||
+            filters.departureRegion?.length ||
+            filters.minNights !== undefined ||
+            filters.maxNights !== undefined ||
+            filters.minPrice !== undefined ||
+            filters.maxPrice !== undefined ||
+            filters.badgeType?.length ||
+            filters.sort
+          )}
+        />
+      )}
+
+      {/* Deal size selector + count */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm font-medium text-ink-soft">
+          {deals && !loading
+            ? `${deals.length} deal${deals.length !== 1 ? 's' : ''} available`
+            : 'Loading...'}
+        </p>
+        <div className="flex items-center gap-1.5 rounded-full border border-black/[0.06] bg-white px-2 py-1 shadow-float">
+          <span className="mr-1 pl-1 text-[11px] font-semibold text-ink-faint">Show</span>
+          {LIMIT_OPTIONS.map((n) => (
+            <button
+              key={n}
+              onClick={() => setLimitAndPersist(n)}
+              className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
+                limit === n
+                  ? 'bg-ink text-white shadow-sm'
+                  : 'text-ink-soft hover:text-ink hover:bg-black/[0.04]'
+              }`}
+            >
+              {LIMIT_LABELS[n]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {renderGridContent(loading, deals, refresh, router)}
+      </div>
+    </section>
+  );
+}
+
+function renderGridContent(
+  loading: boolean,
+  deals: Deal[] | null | undefined,
+  refresh: () => void,
+  router: ReturnType<typeof useRouter>
+) {
+  if (loading && !deals) {
+    return Array.from({ length: 6 }).map((_, i) => <DealCardSkeleton key={i} />);
+  }
+
+  if (!deals || deals.length === 0) {
+    return (
+      <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
+        <MaterialIcon name="search" size="3xl" className="text-ink-faint/40" />
+        <p className="font-display text-xl font-bold text-ink">No deals found right now</p>
+        <p className="mt-1 max-w-xs text-sm text-ink-soft">
+          Check back soon &mdash; we&apos;re polling live fares to surface the best opportunities.
+        </p>
+        <button
+          onClick={refresh}
+          className="mt-6 rounded-full bg-ink px-6 py-2.5 text-xs font-bold text-white transition-colors hover:bg-indigo"
+        >
+          Refresh
+        </button>
+      </div>
+    );
+  }
+
+  return deals.map((deal) => (
+    <article
+      key={deal.id}
+      data-testid="deal-card"
+      className="group flex flex-col justify-between rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float transition-all duration-300 hover:-translate-y-1 hover:shadow-float-lg"
+    >
+      <div>
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold uppercase tracking-wide text-ink-faint">
+              {deal.cruiseLine}
+            </p>
+            <h3 className="mt-1 truncate font-display text-xl font-bold text-ink">{deal.ship}</h3>
+          </div>
+          <span
+            className={`whitespace-nowrap rounded-full border px-3 py-1 text-[11px] font-bold ${badgeStyles[deal.badgeType]}`}
+          >
+            {deal.badgeText}
+          </span>
+        </div>
+
+        <div className="mb-5 flex flex-wrap gap-2">
+          <Tag>{deal.destination}</Tag>
+          <Tag>{deal.departurePort}</Tag>
+          <Tag>{deal.duration}</Tag>
+        </div>
+
+        <div className="mb-5 flex items-end justify-between gap-3 rounded-2xl bg-canvas p-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-faint">90-day trend</p>
+            <div className="mt-1 flex flex-wrap items-baseline gap-2">
+              <span className="font-mono-tab text-2xl font-bold text-ink">${deal.price.toLocaleString()}</span>
+              {deal.dropPercent > 0 && (
+                <span className="font-mono-tab text-sm text-ink-faint line-through">
+                  ${deal.originalPrice.toLocaleString()}
+                </span>
+              )}
+            </div>
+          </div>
+          <Sparkline data={deal.history} positive={deal.dropPercent > 0} />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 border-t border-black/[0.06] pt-4">
+        <span className="text-xs font-medium text-ink-faint">Sails {deal.sailDate}</span>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {deal.bookingUrl && (
+            <a
+              href={deal.bookingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-full bg-emerald px-4 py-2 text-xs font-bold text-white hover:bg-emerald-dark transition"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+              {deal.bookingLabel || 'Book Now'}
+            </a>
+          )}
+          <button
+            onClick={() => router.push(`/sailing/${deal.id}`)}
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs font-bold text-white hover:bg-indigo active:scale-[0.97]"
+          >
+            View Deal
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7 17L17 7M17 7H9M17 7v8" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </article>
+  ));
+}
+
+function Tag({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="truncate rounded-lg bg-black/[0.035] px-2.5 py-1 text-[11px] font-semibold text-ink-soft">
+      {children}
+    </span>
+  );
+}
+
+function DealCardSkeleton() {
+  return (
+    <div className="flex flex-col justify-between rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float">
+      <div>
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="w-2/3 space-y-2">
+            <div className="h-3 w-1/2 animate-pulse rounded bg-black/[0.06]" />
+            <div className="h-5 w-3/4 animate-pulse rounded bg-black/[0.06]" />
+          </div>
+          <div className="h-6 w-20 shrink-0 animate-pulse rounded-full bg-black/[0.06]" />
+        </div>
+        <div className="mb-5 flex gap-2">
+          <div className="h-6 w-20 animate-pulse rounded-lg bg-black/[0.05]" />
+          <div className="h-6 w-16 animate-pulse rounded-lg bg-black/[0.05]" />
+          <div className="h-6 w-16 animate-pulse rounded-lg bg-black/[0.05]" />
+        </div>
+        <div className="h-20 animate-pulse rounded-2xl bg-black/[0.04]" />
+      </div>
+      <div className="mt-4 flex items-center justify-between border-t border-black/[0.06] pt-4">
+        <div className="h-3 w-20 animate-pulse rounded bg-black/[0.05]" />
+        <div className="h-8 w-24 animate-pulse rounded-full bg-black/[0.06]" />
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,20 @@
+{
+  // 1. Kill the automatic background chatter
+  "editor.inlineSuggest.enabled": false,
+  "github.copilot.inlineSuggest.enable": false,
+  
+  // 2. Stop the extension from sending requests on every single keystroke
+  "editor.suggest.snippetsPreventQuickSuggestions": true,
+  "editor.quickSuggestions": {
+    "other": "off",
+    "comments": "off",
+    "strings": "off"
+  },
+
+  // 3. Prevent automatic code actions and diagnostic checks from firing API calls
+  "editor.codeActionsOnSave": {},
+  "editor.lightbulb.enabled": false,
+
+  // 4. Force a massive delay if any auto-suggestions do try to sneak through
+  "editor.quickSuggestionsDelay": 2000
+}

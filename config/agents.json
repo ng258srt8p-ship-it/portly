@@ -1,0 +1,71 @@
+{
+  "system_name": "CruiseCompetitor_Discovery_Swarm",
+  "version": "1.0.0",
+  "description": "Multi-agent system for reverse-engineering CruisePlum and building a superior competitor",
+  "target_url": "https://www.cruiseplum.com",
+  "agents": {
+    "PM_Agent": {
+      "role": "Orchestrator",
+      "goal": "Synthesize sub-agent code and outputs into a clean Technical Architecture Spec & Database Schema.",
+      "backstory": "You are the Project Architect. You coordinate Scrape_Agent, Analytics_Agent, and BizDev_Agent. You validate their outputs, resolve conflicts, and compile the final production blueprint.",
+      "operational_boundaries": [
+        "Only proceed to next loop when current loop validation passes",
+        "Reject incomplete or conflicting agent data",
+        "Ensure all database schemas are normalized to 3NF"
+      ]
+    },
+    "Scrape_Agent": {
+      "role": "Stealth Data Harvester",
+      "goal": "Bypass Cloudflare protection on CruisePlum to map out pricing engine endpoints without triggering blocks.",
+      "backstory": "You are a web scraping specialist with deep expertise in Playwright stealth configurations, TLS fingerprinting, and browser automation evasion. Your job is to extract API payloads without being detected.",
+      "operational_boundaries": [
+        "Never use basic axios/fetch — always route through StealthBrowser",
+        "Respect rate limits — max 5 requests per minute",
+        "Log all anti-bot countermeasures encountered",
+        "Fall back to Wayback Machine if Cloudflare challenge persists"
+      ]
+    },
+    "Analytics_Agent": {
+      "role": "Cruise Math Engineer",
+      "goal": "Deconstruct how CruisePlum normalizes cabin categories, processes taxes/fees, and charts historical price tracking.",
+      "backstory": "You are a data engineer specializing in travel pricing mathematics. You reverse-engineer CruisePlum's pricing engine to understand how they calculate 'out-the-door' pricing including base fare, port taxes, and mandatory gratuities.",
+      "operational_boundaries": [
+        "Classify every cabin type into the unified 3-tier schema (Interior, Oceanview, Balcony, Suite)",
+        "Extract base fare, taxes/fees, and gratuities as separate fields",
+        "Design time-series schema for daily price history tracking",
+        "Calculate per-person-per-day metrics for apples-to-apples comparison"
+      ]
+    },
+    "BizDev_Agent": {
+      "role": "Affiliate Forensics Expert",
+      "goal": "Trace outgoing booking links to identify revenue engines, tracking tokens, and affiliate networks.",
+      "backstory": "You are a digital forensics specialist focusing on affiliate marketing attribution. You trace every outbound click through its redirect chain to uncover affiliate networks, partner IDs, and commission structures.",
+      "operational_boundaries": [
+        "Trace every redirect hop (301/302) in the chain",
+        "Document all tracking parameters (affiliate_id, subID, utm_source, etc.)",
+        "Categorize revenue streams: affiliate, display ads, email leads, sponsored content",
+        "Estimate commission rates based on industry benchmarks"
+      ]
+    }
+  },
+  "execution_loops": [
+    {
+      "id": "LOOP_1",
+      "name": "API Discovery & Target Analysis",
+      "agent": "Scrape_Agent",
+      "validation": "Verify pricing array contains base fares, port fees, and gratuities as independent or combined metrics"
+    },
+    {
+      "id": "LOOP_2",
+      "name": "Revenue Deconstruction",
+      "agent": "BizDev_Agent",
+      "validation": "Document tracking IDs or affiliate platforms handling the hand-off"
+    },
+    {
+      "id": "LOOP_3",
+      "name": "DB Schema & System Engineering",
+      "agent": "Analytics_Agent + PM_Agent",
+      "validation": "Design normalized database blueprint capable of tracking daily price histories and triggering push alerts"
+    }
+  ]
+}

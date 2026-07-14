@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Syne", "sans-serif";
+  --font-body: "Plus Jakarta Sans", "sans-serif";
+  --font-mono: "JetBrains Mono", monospace;
+
+  --color-canvas: #f8f9fa;
+  --color-ink: #12131a;
+  --color-ink-soft: #4a4c59;
+  --color-ink-faint: #8b8d9a;
+
+  --color-indigo: #2a44e7;
+  --color-indigo-dark: #1c2fa8;
+  --color-indigo-mist: #eef0fd;
+
+  --color-mint: #a9f3e0;
+  --color-mint-ink: #0b6b57;
+  --color-mint-soft: #eafdf8;
+
+  --color-coral: #f2a65a;
+  --color-coral-ink: #8a4e0f;
+  --color-coral-soft: #fdf1e3;
+
+  --shadow-float: 0 24px 48px -12px rgba(18, 19, 26, 0.06), 0 4px 12px -4px rgba(18, 19, 26, 0.04);
+  --shadow-float-lg: 0 32px 64px -16px rgba(18, 19, 26, 0.08), 0 8px 20px -6px rgba(18, 19, 26, 0.05);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
+}
+
+.font-mono-tab {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+* {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-timing-function: ease-in-out;
+  transition-duration: 0.2s;
+}
+
+::selection {
+  background-color: var(--color-indigo);
+  color: white;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

@@ -1,0 +1,579 @@
+/* ============================================================
+   PORTLY — Global Styles & Typography Boilerplate
+   ============================================================
+   Font Stack:
+     Display:  'Clash Display', 'Syne', sans-serif
+     Interface: 'Plus Jakarta Sans', 'Inter', sans-serif
+     Tabular:   'Geist Mono', 'JetBrains Mono', monospace
+   
+   Color Theme: Deep obsidian backgrounds + neon accents
+   ============================================================ */
+
+@import url('https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=syne@400,500,600,700,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=geist-mono@400,500,600,700&display=swap');
+
+/* ============================================================
+   @FONT-FACE — Local fallback declarations
+   ============================================================ */
+
+@font-face {
+  font-family: 'Clash Display';
+  src: url('/fonts/ClashDisplay-Variable.woff2') format('woff2');
+  font-weight: 200 700;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Syne';
+  src: url('/fonts/Syne-Variable.woff2') format('woff2');
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 400 700;
+  font-display: swap;
+  font-feature-settings: 'tnum' on, 'calt' on, 'liga' on;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('/fonts/PlusJakartaSans-Variable.woff2') format('woff2');
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+/* ============================================================
+   TAILWIND DIRECTIVES
+   ============================================================ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   BASE STYLES
+   ============================================================ */
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-base text-primary font-interface;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  /* ========================================================
+     TYPOGRAPHY — Display / Brand Hierarchy
+     ======================================================== */
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-brand font-semibold tracking-tight;
+  }
+
+  h1 {
+    @apply text-5xl md:text-6xl lg:text-7xl leading-tight font-bold;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl lg:text-5xl leading-snug;
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl leading-snug;
+  }
+
+  h4 {
+    @apply text-xl md:text-2xl;
+  }
+
+  h5 {
+    @apply text-lg md:text-xl;
+  }
+
+  h6 {
+    @apply text-base font-semibold tracking-wide uppercase;
+  }
+
+  /* ========================================================
+     TYPOGRAPHY — Body / Interface Text
+     ======================================================== */
+
+  p {
+    @apply font-interface text-base leading-normal text-secondary;
+  }
+
+  .text-body-small {
+    @apply font-interface text-sm leading-relaxed text-secondary;
+  }
+
+  .text-caption {
+    @apply font-interface text-xs leading-normal text-tertiary tracking-wide;
+  }
+
+  .text-overline {
+    @apply font-interface text-2xs font-semibold uppercase tracking-widest text-tertiary;
+  }
+
+  /* ========================================================
+     TYPOGRAPHY — Tabular / Numerical Data
+     ======================================================== */
+
+  .tabular-nums {
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tabular-data {
+    @apply font-mono tabular-nums;
+  }
+
+  .price-amount {
+    @apply font-mono tabular-nums font-semibold;
+  }
+
+  .price-compare {
+    @apply font-mono tabular-nums text-sm;
+  }
+
+  /* ========================================================
+     LINKS
+     ======================================================== */
+
+  a {
+    @apply text-link transition-colors duration-200;
+  }
+
+  a:hover {
+    @apply text-link-hover;
+  }
+
+  /* ========================================================
+     SELECTION
+     ======================================================== */
+
+  ::selection {
+    @apply bg-neon-teal-500/30 text-primary;
+  }
+}
+
+/* ============================================================
+   COMPONENT STYLES
+   ============================================================ */
+
+@layer components {
+  /* ========================================================
+     BUTTONS
+     ======================================================== */
+
+  .btn {
+    @apply inline-flex items-center justify-center font-interface font-semibold
+           rounded-lg transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-2 focus:ring-offset-base
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-neon-teal-500 text-inverse hover:bg-neon-teal-400
+           shadow-glow-teal hover:shadow-glow-teal/50
+           active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply btn bg-elevated text-primary border border-subtle
+           hover:bg-overlay hover:border-default;
+  }
+
+  .btn-ghost {
+    @apply btn text-secondary hover:text-primary hover:bg-elevated;
+  }
+
+  .btn-danger {
+    @apply btn bg-neon-coral-500 text-white hover:bg-neon-coral-400
+           shadow-glow-coral;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm rounded-md;
+  }
+
+  .btn-md {
+    @apply px-4 py-2 text-base;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-lg;
+  }
+
+  /* ========================================================
+     CARDS
+     ======================================================== */
+
+  .card {
+    @apply bg-surface border border-subtle rounded-xl
+           transition-all duration-200;
+  }
+
+  .card:hover {
+    @apply border-default shadow-lg;
+  }
+
+  .card-elevated {
+    @apply card bg-elevated shadow-md;
+  }
+
+  .card-interactive {
+    @apply card cursor-pointer hover:border-accent hover:shadow-glow-teal;
+  }
+
+  .card-deal {
+    @apply card border-neon-teal-500/20 relative overflow-hidden;
+  }
+
+  .card-deal::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-br from-neon-teal-500/5 to-transparent pointer-events-none;
+  }
+
+  /* ========================================================
+     BADGES / PILLS
+     ======================================================== */
+
+  .badge {
+    @apply inline-flex items-center font-interface font-semibold
+           px-2.5 py-0.5 rounded-full text-xs tracking-wide;
+  }
+
+  .badge-hot {
+    @apply badge bg-neon-coral-500/15 text-neon-coral-400 border border-neon-coral-500/20;
+  }
+
+  .badge-great {
+    @apply badge bg-neon-amber-500/15 text-neon-amber-400 border border-neon-amber-500/20;
+  }
+
+  .badge-good {
+    @apply badge bg-neon-teal-500/15 text-neon-teal-400 border border-neon-teal-500/20;
+  }
+
+  .badge-average {
+    @apply badge bg-obsidian-700/50 text-obsidian-300 border border-subtle;
+  }
+
+  .badge-solo {
+    @apply badge bg-neon-mint-500/15 text-neon-mint-400 border border-neon-mint-500/20;
+  }
+
+  .badge-price-drop {
+    @apply badge bg-neon-coral-500/20 text-neon-coral-400 border border-neon-coral-500/30
+           animate-pulse-glow;
+  }
+
+  /* ========================================================
+     PRICE TAG COMPONENT
+     ======================================================== */
+
+  .price-tag {
+    @apply font-mono tabular-nums;
+  }
+
+  .price-tag-current {
+    @apply price-tag text-2xl font-bold text-primary;
+  }
+
+  .price-tag-compare {
+    @apply price-tag text-sm text-tertiary line-through;
+  }
+
+  .price-tag-savings {
+    @apply price-tag text-sm font-semibold text-neon-mint-400;
+  }
+
+  .price-tag-from {
+    @apply price-tag text-lg font-semibold text-primary;
+  }
+
+  /* ========================================================
+     DEAL RATING INDICATOR
+     ======================================================== */
+
+  .deal-rating {
+    @apply inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold font-interface;
+  }
+
+  .deal-rating-hot {
+    @apply deal-rating bg-neon-coral-500/20 text-neon-coral-400;
+  }
+
+  .deal-rating-great {
+    @apply deal-rating bg-neon-amber-500/20 text-neon-amber-400;
+  }
+
+  .deal-rating-good {
+    @apply deal-rating bg-neon-teal-500/20 text-neon-teal-400;
+  }
+
+  .deal-rating-average {
+    @apply deal-rating bg-obsidian-700/50 text-obsidian-300;
+  }
+
+  /* ========================================================
+     FORM ELEMENTS
+     ======================================================== */
+
+  .input {
+    @apply w-full bg-elevated border border-subtle rounded-lg
+           font-interface text-primary placeholder:text-tertiary
+           px-4 py-2.5 text-sm
+           focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent
+           transition-colors duration-200;
+  }
+
+  .input-sm {
+    @apply input px-3 py-1.5 text-xs;
+  }
+
+  .select {
+    @apply input appearance-none cursor-pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a2a6b3' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+
+  .filter-chip {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
+           font-interface text-sm font-medium
+           bg-elevated border border-subtle text-secondary
+           hover:bg-overlay hover:text-primary hover:border-default
+           transition-all duration-200 cursor-pointer
+           data-[active=true]:bg-neon-teal-500/15 data-[active=true]:text-neon-teal-400
+           data-[active=true]:border-neon-teal-500/30;
+  }
+
+  /* ========================================================
+     NAVIGATION
+     ======================================================== */
+
+  .nav-link {
+    @apply font-interface text-sm font-medium text-secondary
+           hover:text-primary transition-colors duration-200
+           relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5
+           after:bg-neon-teal-400 after:transition-all after:duration-300
+           hover:after:w-full;
+  }
+
+  .nav-link-active {
+    @apply nav-link text-primary after:w-full;
+  }
+
+  /* ========================================================
+     SKELETON LOADING
+     ======================================================== */
+
+  .skeleton {
+    @apply bg-obsidian-700/50 rounded-lg animate-skeleton;
+  }
+
+  .skeleton-text {
+    @apply skeleton h-4 w-full;
+  }
+
+  .skeleton-card {
+    @apply skeleton h-48 w-full rounded-xl;
+  }
+
+  /* ========================================================
+     DIVIDERS
+     ======================================================== */
+
+  .divider {
+    @apply w-full h-px bg-gradient-to-r from-transparent via-border-subtle to-transparent;
+  }
+
+  .divider-strong {
+    @apply w-full h-px bg-gradient-to-r from-transparent via-border-default to-transparent;
+  }
+
+  /* ========================================================
+     TOOLTIP
+     ======================================================== */
+
+  .tooltip {
+    @apply absolute z-50 px-2 py-1 text-xs font-interface font-medium
+           bg-obsidian-700 text-primary border border-subtle rounded-md
+           shadow-lg pointer-events-none;
+  }
+
+  /* ========================================================
+     PRICE DROP ANIMATION
+     ======================================================== */
+
+  .price-dropped {
+    animation: priceFlash 1.5s ease-out;
+  }
+
+  /* ========================================================
+     GLOW EFFECTS FOR DATA VISUALIZATION
+     ======================================================== */
+
+  .glow-teal {
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.2), 0 0 30px rgba(6, 182, 212, 0.1);
+  }
+
+  .glow-coral {
+    box-shadow: 0 0 15px rgba(244, 63, 94, 0.2), 0 0 30px rgba(244, 63, 94, 0.1);
+  }
+
+  .glow-amber {
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.2), 0 0 30px rgba(245, 158, 11, 0.1);
+  }
+
+  .glow-mint {
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.2), 0 0 30px rgba(34, 197, 94, 0.1);
+  }
+}
+
+/* ============================================================
+   UTILITY STYLES
+   ============================================================ */
+
+@layer utilities {
+  /* Font feature toggles */
+  .tabular-nums {
+    font-feature-settings: 'tnum' on, 'lnum' on !important;
+    font-variant-numeric: tabular-nums !important;
+  }
+
+  .lining-nums {
+    font-feature-settings: 'lnum' on !important;
+  }
+
+  .oldstyle-nums {
+    font-feature-settings: 'onum' on !important;
+  }
+
+  .proportional-nums {
+    font-feature-settings: 'pnum' on !important;
+  }
+
+  .fraction {
+    font-feature-settings: 'frac' on !important;
+  }
+
+  .ordinal {
+    font-feature-settings: 'ordn' on !important;
+  }
+
+  .slashed-zero {
+    font-feature-settings: 'zero' on !important;
+  }
+
+  /* Text truncation */
+  .text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .text-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .text-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Gradient text */
+  .text-gradient-teal {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-neon-teal-400 to-neon-teal-600;
+  }
+
+  .text-gradient-coral {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-neon-coral-400 to-neon-coral-600;
+  }
+
+  .text-gradient-amber {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-neon-amber-400 to-neon-amber-600;
+  }
+
+  /* Scrollbar styling */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--obsidian-600) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--obsidian-600);
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: var(--obsidian-500);
+  }
+
+  /* Focus visible */
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:ring-offset-2 focus-visible:ring-offset-base;
+  }
+}
+
+/* ============================================================
+   PRINT STYLES
+   ============================================================ */
+
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* ============================================================
+   @MEDIA — Reduced Motion
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
