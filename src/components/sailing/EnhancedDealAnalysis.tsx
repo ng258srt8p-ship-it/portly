@@ -168,7 +168,7 @@ export default function EnhancedDealAnalysis({ sailingId }: EnhancedDealAnalysis
           <MaterialIcon name="analytics" size="lg" />
           <h2 className="font-display text-2xl font-bold text-ink">Deal Analysis</h2>
         </div>
-        <div className="rounded-xl border border-indigo/10 bg-indigo-mist/50 p-4">
+        <div className="rounded-xl border border-indigo/10 bg-white p-4">
           <div className="flex items-start gap-2">
             <MaterialIcon name="schedule" size="sm" />
             <div>
@@ -250,7 +250,7 @@ export default function EnhancedDealAnalysis({ sailingId }: EnhancedDealAnalysis
 
       {/* ===== Justification ===== */}
       {justificationSections.length > 0 && (
-        <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-4" data-testid="deal-justification">
+        <div className="rounded-xl border border-amber-100 bg-white p-4" data-testid="deal-justification">
           <div className="mb-3 flex items-center gap-1.5">
             <MaterialIcon name="lightbulb" size="sm" />
             <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-800">Why This Is a Deal</h3>
@@ -298,7 +298,7 @@ export default function EnhancedDealAnalysis({ sailingId }: EnhancedDealAnalysis
         const has = hc.mandatoryGratuities !== undefined || hc.wifiCost !== undefined || hc.realTotalCost !== undefined;
         if (!has) return null;
         return (
-          <div className="rounded-xl border border-rose-500/15 bg-rose-50 p-4" data-testid="hidden-cost-detector">
+          <div className="rounded-xl border border-rose-500/15 bg-white p-4" data-testid="hidden-cost-detector">
             <div className="mb-2 flex items-center gap-1.5">
               <MaterialIcon name="visibility_off" size="sm" />
               <h3 className="text-xs font-semibold uppercase tracking-wider text-rose-700">Hidden Cost Detector</h3>
@@ -364,7 +364,7 @@ export default function EnhancedDealAnalysis({ sailingId }: EnhancedDealAnalysis
 
       {/* ===== Itinerary Value ===== */}
       {data.itineraryValue && (
-        <div className="rounded-xl border border-emerald-500/15 bg-emerald-50/50 p-4" data-testid="itinerary-value-breakdown">
+        <div className="rounded-xl border border-emerald-500/15 bg-white p-4" data-testid="itinerary-value-breakdown">
           <div className="mb-2 flex items-center gap-1.5">
             <MaterialIcon name="map" size="sm" />
             <h3 className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Itinerary Value Breakdown</h3>
@@ -375,7 +375,7 @@ export default function EnhancedDealAnalysis({ sailingId }: EnhancedDealAnalysis
 
       {/* ===== Pricing Strategy ===== */}
       {data.pricingStrategy && (
-        <div className="rounded-xl border border-blue-500/15 bg-blue-50 p-4" data-testid="pricing-strategy-decoder">
+        <div className="rounded-xl border border-blue-500/15 bg-white p-4" data-testid="pricing-strategy-decoder">
           <div className="mb-2 flex items-center gap-1.5">
             <MaterialIcon name="trending_up" size="sm" />
             <h3 className="text-xs font-semibold uppercase tracking-wider text-blue-700">Pricing Strategy</h3>
@@ -386,7 +386,7 @@ export default function EnhancedDealAnalysis({ sailingId }: EnhancedDealAnalysis
 
       {/* ===== Inventory Intelligence ===== */}
       {data.inventoryIntelligence && (
-        <div className="rounded-xl border border-violet-500/15 bg-violet-50 p-4" data-testid="inventory-intelligence">
+        <div className="rounded-xl border border-violet-500/15 bg-white p-4" data-testid="inventory-intelligence">
           <div className="mb-2 flex items-center gap-1.5">
             <MaterialIcon name="inventory_2" size="sm" />
             <h3 className="text-xs font-semibold uppercase tracking-wider text-violet-700">Inventory Intelligence</h3>
@@ -397,7 +397,7 @@ export default function EnhancedDealAnalysis({ sailingId }: EnhancedDealAnalysis
 
       {/* ===== Insider Tips ===== */}
       {tipsArray.length > 0 && (
-        <div className="rounded-xl border border-indigo/10 bg-indigo-mist/50 p-4" data-testid="sailing-specific-tips">
+        <div className="rounded-xl border border-indigo/10 bg-white p-4" data-testid="sailing-specific-tips">
           <div className="mb-2 flex items-center gap-1.5">
             <MaterialIcon name="travel_explore" size="sm" />
             <h3 className="text-xs font-semibold uppercase tracking-wider text-indigo-dark">

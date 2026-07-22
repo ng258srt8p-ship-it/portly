@@ -58,10 +58,10 @@ function CabinForecastCard({ forecast }: { forecast: CabinForecast }) {
   const priceChange30d = ((forecast.forecast30d - forecast.currentPrice) / forecast.currentPrice * 100);
 
   const cabinColors: Record<string, string> = {
-    Inside: 'border-slate-400 bg-slate-50',
-    Oceanview: 'border-blue-400 bg-blue-50',
-    Balcony: 'border-indigo-400 bg-indigo-50',
-    Suite: 'border-amber-400 bg-amber-50',
+    Inside: 'border-slate-400 bg-white',
+    Oceanview: 'border-blue-400 bg-white',
+    Balcony: 'border-indigo-400 bg-white',
+    Suite: 'border-amber-400 bg-white',
   };
 
   return (
@@ -285,16 +285,16 @@ export default function EnhancedPriceForecast({ sailingId }: EnhancedPriceForeca
           </div>
           <div className="mb-3 flex items-center gap-2">
             <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-              data.trendContext.direction === 'rising' ? 'bg-coral/10 text-coral' :
+              data.trendContext.direction === 'rising' ? 'bg-red-100 text-red-700' :
               data.trendContext.direction === 'falling' ? 'bg-emerald-100 text-emerald-700' :
-              'bg-ink-faint/10 text-ink-soft'
+              'bg-slate-100 text-slate-700'
             }`}>
               <MaterialIcon name={data.trendContext.direction === 'rising' ? 'trending_up' : data.trendContext.direction === 'falling' ? 'trending_down' : 'horizontal_rule'} size="xs" />
               {cleanText(data.trendContext.direction.charAt(0).toUpperCase() + data.trendContext.direction.slice(1))}
               {' '}{cleanText(data.trendContext.magnitude > 0 ? '+' : '')}{data.trendContext.magnitude.toFixed(1)}%
             </span>
             {data.seasonalIndicator && data.seasonalIndicator !== 'unknown' && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+              <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-1 text-xs font-medium text-orange-700">
                 <MaterialIcon name="wb_sunny" size="xs" />
                 {data.seasonalIndicator.charAt(0).toUpperCase() + data.seasonalIndicator.slice(1)} Season
               </span>
@@ -335,9 +335,9 @@ export default function EnhancedPriceForecast({ sailingId }: EnhancedPriceForeca
       {data.rateLock && data.rateLock.urgency && data.rateLock.urgency !== 'low' && (
         <div
           className={`rounded-xl border p-4 ${
-            data.rateLock.urgency === 'critical' ? 'border-rose-300 bg-rose-50' :
-            data.rateLock.urgency === 'high' ? 'border-amber-300 bg-amber-50' :
-            'border-yellow-200 bg-yellow-50'
+            data.rateLock.urgency === 'critical' ? 'border-red-300 bg-red-50' :
+            data.rateLock.urgency === 'high' ? 'border-orange-300 bg-orange-50' :
+            'border-yellow-300 bg-yellow-50'
           }`}
           data-testid="rate-lock-urgency"
         >
@@ -374,7 +374,7 @@ export default function EnhancedPriceForecast({ sailingId }: EnhancedPriceForeca
 
       {/* Optimal Booking Window */}
       {data.optimalBookingWindow && (
-        <div className="rounded-xl border border-emerald-500/15 bg-emerald-50 p-4" data-testid="optimal-booking-window">
+        <div className="rounded-xl border border-emerald-500/15 bg-white p-4" data-testid="optimal-booking-window">
           <div className="flex items-center gap-1.5">
             <MaterialIcon name="event_available" size="sm" />
             <h3 className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Optimal Booking Window</h3>
