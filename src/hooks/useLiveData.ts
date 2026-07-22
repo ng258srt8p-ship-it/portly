@@ -27,14 +27,11 @@ export function useLiveData<T>(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
-  const fetcherRef = useRef(fetcher);
-  fetcherRef.current = fetcher;
-
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await fetcherRef.current();
+      const result = await fetcher();
       setData(result);
       setLastSyncedAt(Date.now());
     } catch (err) {
@@ -42,7 +39,7 @@ export function useLiveData<T>(
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetcher]);
 
   useEffect(() => {
     load();

@@ -13,7 +13,7 @@
 
   // 3. Prevent automatic code actions and diagnostic checks from firing API calls
   "editor.codeActionsOnSave": {},
-  "editor.lightbulb.enabled": false,
+  "editor.lightbulb.enabled": "off",
 
   // 4. Force a massive delay if any auto-suggestions do try to sneak through
   "editor.quickSuggestionsDelay": 2000

@@ -1,0 +1,20 @@
+{
+  "loopToken": "81720636-5197-4ca2-8a15-cf7080053457",
+  "ralphPath": "/Users/georgetozer/Development/Portly/RALPH.md",
+  "taskDir": "/Users/georgetozer/Development/Portly",
+  "cwd": "/Users/georgetozer/Development/Portly",
+  "status": "timeout",
+  "currentIteration": 1,
+  "maxIterations": 25,
+  "timeout": 300,
+  "startedAt": "2026-07-16T12:09:33.258Z",
+  "guardrails": {
+    "blockCommands": [
+      "git\\s+push"
+    ],
+    "protectedFiles": [
+      "policy:secret-bearing-paths"
+    ]
+  },
+  "completedAt": "2026-07-16T12:16:46.833Z"
+}

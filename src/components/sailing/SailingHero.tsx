@@ -16,6 +16,8 @@ interface SailingHeroProps {
   price: number;
   originalPrice?: number;
   dropPercent?: number;
+  /** Optional: cabin tier (e.g. "Oceanview", "Interior") — renders price context when available */
+  cabinType?: string;
 }
 
 export default function SailingHero({
@@ -28,6 +30,7 @@ export default function SailingHero({
   price,
   originalPrice,
   dropPercent,
+  cabinType,
 }: SailingHeroProps) {
   const hasDrop = dropPercent && dropPercent > 0;
   const formattedDate = new Date(departureDate).toLocaleDateString('en-US', {
@@ -37,6 +40,8 @@ export default function SailingHero({
     year: 'numeric',
   });
 
+  const priceLabel = cabinType ? `Starting at $${price.toLocaleString()} from ${cabinType}` : `Starting at $${price.toLocaleString()}`;
+
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink via-[#1a1b24] to-ink p-8 text-white shadow-float sm:p-12">
       {/* Glow accent */}
@@ -44,7 +49,7 @@ export default function SailingHero({
 
       <div className="relative z-10">
         {/* Breadcrumb line */}
-        <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-ink-faint/60">
+        <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-ink-faint/80">
           {line}
         </p>
 
@@ -55,13 +60,13 @@ export default function SailingHero({
 
         {/* Quick facts row */}
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+          <span className="rounded-full bg-white/[0.4] px-3 py-1 text-xs font-semibold backdrop-blur-sm">
             {days} Nights
           </span>
-          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+          <span className="rounded-full bg-white/[0.4] px-3 py-1 text-xs font-semibold backdrop-blur-sm">
             Departs {formattedDate}
           </span>
-          <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+          <span className="rounded-full bg-white/[0.4] px-3 py-1 text-xs font-semibold backdrop-blur-sm">
             {region} · {port}
           </span>
         </div>
@@ -73,7 +78,7 @@ export default function SailingHero({
           </span>
           {hasDrop && (
             <>
-              <span className="font-mono-tab text-2xl text-white/40 line-through sm:text-3xl">
+              <span className="font-mono-tab text-2xl text-white/60 line-through sm:text-3xl">
                 ${originalPrice!.toLocaleString()}
               </span>
               <span className="rounded-full bg-coral-ink px-4 py-1.5 text-sm font-bold text-white">
@@ -82,6 +87,9 @@ export default function SailingHero({
             </>
           )}
         </div>
+
+        {/* Price label — identifies cabin type context when available */}
+        <p className="mt-4 text-sm text-white/70">{priceLabel}</p>
       </div>
     </div>
   );

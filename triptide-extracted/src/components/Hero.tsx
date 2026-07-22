@@ -65,7 +65,7 @@ export default function Hero() {
               <button
                 aria-label="Decrease passengers"
                 onClick={() => setPassengers((p) => Math.max(1, p - 1))}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
                 disabled={passengers <= 1}
               >
                 −
@@ -74,7 +74,7 @@ export default function Hero() {
               <button
                 aria-label="Increase passengers"
                 onClick={() => setPassengers((p) => Math.min(4, p + 1))}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
                 disabled={passengers >= 4}
               >
                 +
@@ -83,7 +83,7 @@ export default function Hero() {
           </div>
 
           <div className="flex items-center p-2 lg:pl-2">
-            <button className="flex w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-indigo px-8 py-4 text-sm font-bold text-white shadow-[0_12px_24px_-8px_rgba(42,68,231,0.55)] hover:bg-indigo-dark active:scale-[0.98] lg:w-auto">
+            <button aria-label="Search voyages" className="flex w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-indigo px-8 py-4 text-sm font-bold text-white shadow-[0_12px_24px_-8px_rgba(42,68,231,0.55)] hover:bg-indigo-dark active:scale-[0.98] lg:w-auto">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                 <circle cx="11" cy="11" r="7" />
                 <path d="M21 21l-4.3-4.3" />

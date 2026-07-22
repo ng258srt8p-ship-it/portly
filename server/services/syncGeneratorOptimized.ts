@@ -8,6 +8,7 @@
 
 import { getPool } from '../db/pool';
 import { getGlobalLimiter } from '../utils/nimRateLimiter';
+import { callOpenRouter } from '../lib/openRouterClient';
 
 // ---- Types ----
 
@@ -395,32 +396,10 @@ class PrioritizedWorker {
         const { count } = payload;
         const prompt = UNIFIED_SYNC_PROMPT.replace('{COUNT}', String(count));
         
-        return this.globalLimiter.executeWithRetry(
-          async () => {
-            const res = await fetch('https://opencode.ai/zen/v1/chat/completions', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                model,
-                messages: [
-                  { role: 'system', content: 'You are a cruise data provider API. Return only valid JSON arrays with no formatting, no markdown, no commentary.' },
-                  { role: 'user', content: prompt }
-                ],
-                temperature: 0.5,
-                max_tokens: 16384,
-                stream: false,
-              }),
-            });
-            return {
-              status: res.status,
-              ok: res.ok,
-              headers: Object.fromEntries(res.headers.entries()),
-              body: () => res.text(),
-              json: () => res.json(),
-            };
-          },
-          { model, maxRetries: 5, baseBackoffMs: 2000, maxBackoffMs: 45000, jitterFactor: 0.5 }
-        ).then(data => (data as any).choices?.[0]?.message?.content || '');
+        return callOpenRouter([
+          { role: 'system', content: 'You are a cruise data provider API. Return only valid JSON arrays with no formatting, no markdown, no commentary.' },
+          { role: 'user', content: prompt }
+        ], { max_tokens: 16384, temperature: 0.5 });
       }
 
       case 'generateDealAnalysis': {
@@ -439,60 +418,30 @@ class PrioritizedWorker {
           }
         }
 
-        return this.globalLimiter.executeWithRetry(
-          async () => {
-            const res = await fetch('https://opencode.ai/zen/v1/chat/completions', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                model,
-                messages: [
-                  { role: 'system', content: "You are TripTide's deal analyst. Output ONLY the JSON object specified. No markdown, no commentary." },
-                  { role: 'user', content: prompt }
-                ],
-                temperature: 0.3,
-                max_tokens: 1024,
-                stream: false,
-              }),
-            });
-            return {
-              status: res.status,
-              ok: res.ok,
-              headers: Object.fromEntries(res.headers.entries()),
-              body: () => res.text(),
-              json: () => res.json(),
-            };
-          },
-          { model, maxRetries: 5, baseBackoffMs: 2000, maxBackoffMs: 45000, jitterFactor: 0.5 }
-        ).then(async data => {
-          const content = (data as any).choices?.[0]?.message?.content || '';
-          // Validate and normalize
-          try {
-            const parsed = JSON.parse(content.trim());
-            const normalized = JSON.stringify({
-              dealScore: Math.max(0, Math.min(100, Number(parsed.dealScore) || 50)),
-              pricingDeepDive: String(parsed.pricingDeepDive || 'Analysis unavailable'),
-              priceTrend: ['rising', 'falling', 'stable'].includes(parsed.priceTrend) ? parsed.priceTrend : 'stable',
-              shipExperience: String(parsed.shipExperience || 'Experience data unavailable'),
-              insiderTips: Array.isArray(parsed.insiderTips) ? parsed.insiderTips.slice(0, 3) : ['Contact agent for details'],
-              verdict: String(parsed.verdict || 'Manual review recommended'),
-              is_heuristic: false,
-            });
-            // Update cache
-            await updateSailingCache(sailingId, currentHash, currentPpd, normalized);
-            return normalized;
-          } catch {
-            // Parsing failed - will fall through to heuristic fallback
-            throw new Error('JSON parse failed');
-          }
-        }).catch(async err => {
-          // All retries exhausted → use heuristic fallback
-          console.warn(`[HEURISTIC] Fallback for sailing ${sailingId}: ${err.message}`);
+        try {
+          const content = await callOpenRouter([
+            { role: 'system', content: "You are TripTide's deal analyst. Output ONLY the JSON object specified. No markdown, no commentary." },
+            { role: 'user', content: prompt }
+          ], { max_tokens: 1024, temperature: 0.2 });
+          const parsed = JSON.parse(content.trim());
+          const normalized = JSON.stringify({
+            dealScore: Math.max(0, Math.min(100, Number(parsed.dealScore) || 50)),
+            pricingDeepDive: String(parsed.pricingDeepDive || 'Analysis unavailable'),
+            priceTrend: ['rising', 'falling', 'stable'].includes(parsed.priceTrend) ? parsed.priceTrend : 'stable',
+            shipExperience: String(parsed.shipExperience || 'Experience data unavailable'),
+            insiderTips: Array.isArray(parsed.insiderTips) ? parsed.insiderTips.slice(0, 3) : ['Contact agent for details'],
+            verdict: String(parsed.verdict || 'Manual review recommended'),
+            is_heuristic: false,
+          });
+          await updateSailingCache(sailingId, currentHash, currentPpd, normalized);
+          return normalized;
+        } catch {
+          console.warn(`[HEURISTIC] Fallback for sailing ${sailingId}`);
           const heuristic = heuristicDealAnalysis(sailingData);
           const heuristicJson = JSON.stringify({ ...heuristic, is_heuristic: true });
           await updateSailingCache(sailingId, currentHash, currentPpd, heuristicJson);
           return heuristicJson;
-        });
+        }
       }
 
       case 'generatePriceForecast': {
@@ -523,49 +472,22 @@ class PrioritizedWorker {
           .replace('{daysUntil}', String(daysUntil))
           .replace('{cabinSummaries}', cabinSummaries);
 
-        return this.globalLimiter.executeWithRetry(
-          async () => {
-            const res = await fetch('https://opencode.ai/zen/v1/chat/completions', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                model,
-                messages: [
-                  { role: 'system', content: "You are TripTide's price forecasting analyst. Output only valid JSON. No markdown." },
-                  { role: 'user', content: prompt }
-                ],
-                temperature: 0.3,
-                max_tokens: 1200,
-                stream: false,
-              }),
-            });
-            return {
-              status: res.status,
-              ok: res.ok,
-              headers: Object.fromEntries(res.headers.entries()),
-              body: () => res.text(),
-              json: () => res.json(),
-            };
-          },
-          { model, maxRetries: 5, baseBackoffMs: 2000, maxBackoffMs: 45000, jitterFactor: 0.5 }
-        ).then(async data => {
-          const content = (data as any).choices?.[0]?.message?.content || '';
-          // Validate JSON
-          try {
-            JSON.parse(content.trim());
-            await updateSailingCache(sailingId, currentHash, currentPpd, undefined, content.trim());
-            return content.trim();
-          } catch {
-            throw new Error('JSON parse failed');
-          }
-        }).catch(async err => {
-          console.warn(`[HEURISTIC] Forecast fallback for sailing ${sailingId}: ${err.message}`);
+        try {
+          const content = await callOpenRouter([
+            { role: 'system', content: "You are TripTide's price forecasting analyst. Output only valid JSON. No markdown." },
+            { role: 'user', content: prompt }
+          ], { max_tokens: 1200, temperature: 0.2 });
+          JSON.parse(content.trim());
+          await updateSailingCache(sailingId, currentHash, currentPpd, undefined, content.trim());
+          return content.trim();
+        } catch {
+          console.warn(`[HEURISTIC] Forecast fallback for sailing ${sailingId}`);
           const currentPrice = extractCurrentPrice(sailingData);
           const heuristic = heuristicPriceForecast(currentPrice, daysUntil);
           const heuristicJson = JSON.stringify({ ...heuristic, is_heuristic: true });
           await updateSailingCache(sailingId, currentHash, currentPpd, undefined, heuristicJson);
           return heuristicJson;
-        });
+        }
       }
 
       default:

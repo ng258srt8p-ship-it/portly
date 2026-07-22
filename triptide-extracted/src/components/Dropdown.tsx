@@ -24,15 +24,16 @@ export default function Dropdown({ label, value, options, onChange, icon, disabl
   }, []);
 
   return (
-    <div ref={rootRef} className="relative min-w-0 flex-1">
+    <div ref={rootRef} className="relative min-w-0 flex-1" role="group" aria-label={label}>
       <button
         type="button"
         disabled={disabled}
         onClick={() => setOpen((prev) => !prev)}
+        aria-label={`${label} filter (current: ${value})`}
         className="flex w-full min-w-0 items-center gap-3 px-6 py-4 text-left disabled:opacity-40 hover:bg-black/[0.015]"
       >
         <span className="shrink-0 text-indigo">{icon}</span>
-        <span className="flex min-w-0 flex-1 flex-col">
+        <span className="flex min-w-0 flex-1 flex-col" aria-hidden={true}>
           <span className="text-xs font-semibold uppercase tracking-wide text-ink-faint">{label}</span>
           <span className="truncate font-semibold text-ink">{disabled ? "Loading…" : value}</span>
         </span>

@@ -1,6 +1,18 @@
 {
-  "/page": "app/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/deals/page": "app/deals/page.js",
   "/history/page": "app/history/page.js",
-  "/solo/page": "app/solo/page.js"
+  "/alerts/page": "app/alerts/page.js",
+  "/page": "app/page.js",
+  "/solo/page": "app/solo/page.js",
+  "/sailing/[id]/page": "app/sailing/[id]/page.js",
+  "/sitemap.xml/route": "app/sitemap.xml/route.js",
+  "/fare-disclosure/page": "app/fare-disclosure/page.js",
+  "/about/page": "app/about/page.js",
+  "/disclosure/page": "app/disclosure/page.js",
+  "/careers/page": "app/careers/page.js",
+  "/contact/page": "app/contact/page.js",
+  "/privacy/page": "app/privacy/page.js",
+  "/terms/page": "app/terms/page.js",
+  "/press/page": "app/press/page.js"
 }

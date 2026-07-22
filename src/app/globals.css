@@ -7,8 +7,8 @@
      Tabular:   'JetBrains Mono', 'Geist Mono', monospace
 
    Dual Theme System:
-     Light (Default): Triptide's indigo/mint/coral on canvas
-     Dark (.dark):    Portly's obsidian + neon accents
+     Light (Default): TripTide's indigo/mint/coral on canvas
+     Dark (.dark):    dark theme accents
    ============================================================ */
 
 @import url('https://api.fontshare.com/v2/css?f[]=syne@400,500,600,700,800&display=swap');
@@ -28,16 +28,22 @@
 @tailwind utilities;
 
 /* ============================================================
-   DESIGN TOKENS — CSS Custom Properties (Triptide Light Theme)
+   DESIGN TOKENS — CSS Custom Properties (TripTide Light Theme)
    ============================================================ */
 
 :root {
-  /* ─── Triptide Light Theme (Default) ─── */
+  /* ─── TripTide Light Theme (Default) ─── */
   /* Backgrounds */
   --color-canvas: #f8f9fa;
   --color-ink: #12131a;
   --color-ink-soft: #4a4c59;
   --color-ink-faint: #8b8d9a;
+
+  /* ─── Font Families (used by CSS helper classes) ─── */
+  --font-display: 'Syne', 'Clash Display', system-ui, sans-serif;
+  --font-body: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Geist Mono', ui-monospace, monospace;
+  --font-brand: 'Syne', 'Clash Display', system-ui, sans-serif;
 
   /* Brand Colors */
   --color-indigo: #2a44e7;
@@ -56,7 +62,7 @@
   --shadow-float: 0 24px 48px -12px rgba(18, 19, 26, 0.06), 0 4px 12px -4px rgba(18, 19, 26, 0.04);
   --shadow-float-lg: 0 32px 64px -16px rgba(18, 19, 26, 0.08), 0 8px 20px -6px rgba(18, 19, 26, 0.05);
 
-  /* ─── Portly Dark Theme (Activated via .dark class) ─── */
+  /* ─── Dark Theme (Activated via .dark class) ─── */
   /* Backgrounds */
   --bg-base: #07080e;
   --bg-surface: #0f1119;
@@ -121,7 +127,7 @@
 }
 
 /* ============================================================
-   DARK MODE OVERRIDES — Portly Theme
+   DARK MODE OVERRIDES — Dark Theme
    ============================================================ */
 
 .dark {
@@ -132,16 +138,22 @@
   --color-ink-faint: #a0a8be;
 
   /* Brand colors adjusted for dark mode */
+  --font-display: 'Syne', 'Clash Display', system-ui, sans-serif;
+  --font-body: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Geist Mono', ui-monospace, monospace;
+  --font-brand: 'Syne', 'Clash Display', system-ui, sans-serif;
+
+  /* Brand colors adjusted for dark mode */
   --color-indigo: #60a5fa;
   --color-indigo-dark: #3b82f6;
   --color-indigo-mist: #1e3a8a;
 
   --color-mint: #4ade80;
-  --color-mint-ink: #86efac;
+  --color-mint-ink: #2a7d4f;
   --color-mint-soft: #14532d;
 
   --color-coral: #fb7185;
-  --color-coral-ink: #fda4af;
+  --color-coral-ink: #a24e1c;
   --color-coral-soft: #881337;
 
   /* Shadows for dark mode */
@@ -508,6 +520,11 @@ body {
     @apply w-full h-px bg-gradient-to-r from-transparent via-ink-faint/30 to-transparent;
   }
 
+  /* Hard border bottom for brutalist cards */
+  .border-hard-bottom {
+    border-bottom: 2px solid var(--color-ink-faint);
+  }
+
   /* ========================================================
      TOOLTIP
      ======================================================== */
@@ -516,6 +533,91 @@ body {
     @apply absolute z-50 px-2 py-1 text-xs font-interface font-medium
            bg-ink text-inverse border border-subtle rounded-md
            shadow-[var(--shadow-float-lg)] pointer-events-none;
+  }
+
+  /* ========================================================
+     CHART CONTAINER — prevent tooltip clipping
+     ======================================================== */
+
+  .chart-container {
+    overflow: visible !important;
+  }
+
+  svg.chart-svg {
+    overflow: visible !important;
+  }
+
+  svg.chart-svg > g {
+    overflow: visible !important;
+  }
+
+  /* ========================================================
+     UI/UX STANDARDIZATION — Design Tokens & Sections
+     ======================================================== */
+
+  /* Section header styling — small, uppercase, tracking */
+  .section-header {
+    @apply text-sm font-semibold uppercase tracking-wider;
+  }
+
+  /* Section label styling — even smaller, muted */
+  .section-label {
+    @apply text-xs font-semibold uppercase tracking-wider;
+  }
+
+  /* Card interior (used inside main card containers) */
+  .card-interior {
+    @apply bg-white rounded-xl p-4;
+  }
+
+  /* Info banner — neutral info */
+  .banner-info {
+    @apply rounded-xl border border-blue-200 bg-blue-50 p-4;
+  }
+
+  /* Warning banner — caution/warning */
+  .banner-warning {
+    @apply rounded-xl border border-amber-200 bg-amber-50 p-4;
+  }
+
+  /* Alert banner — critical/urgent */
+  .banner-alert {
+    @apply rounded-xl border border-rose-200 bg-rose-50 p-4;
+  }
+
+  /* Success banner — positive/success */
+  .banner-success {
+    @apply rounded-xl border border-emerald-200 bg-emerald-50 p-4;
+  }
+
+  /* Data banner — neutral data-specific */
+  .banner-data {
+    @apply rounded-xl border border-violet-200 bg-violet-50 p-4;
+  }
+
+  /* Metric badge — small inline status */
+  .metric-badge {
+    @apply inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  /* Main card container — primary container */
+  .card-main {
+    @apply rounded-2xl border border-black/[0.05] bg-white p-6 shadow-sm;
+  }
+
+  /* Secondary card container */
+  .card-secondary {
+    @apply rounded-xl border border-black/[0.08] bg-canvas p-4;
+  }
+
+  /* Container spacing — vertical rhythm between sections */
+  .section-gap {
+    @apply space-y-6;
+  }
+
+  /* Card title — headers inside cards */
+  .card-title {
+    @apply text-xl font-semibold text-ink;
   }
 
   /* ========================================================
@@ -537,6 +639,24 @@ body {
   .glow-mint {
     box-shadow: 0 0 15px rgba(34, 197, 94, 0.2), 0 0 30px rgba(34, 197, 94, 0.1);
   }
+}
+
+/* ============================================================
+   KEYFRAMES
+   ============================================================ */
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(242, 166, 90, 0.2), 0 0 16px rgba(242, 166, 90, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(242, 166, 90, 0.4), 0 0 32px rgba(242, 166, 90, 0.2);
+  }
+}
+
+@keyframes skeleton {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }
 
 /* ============================================================

@@ -15,6 +15,7 @@ import cors from 'cors';
 import dealsRouter from './routes/cruises';
 import analyticsRouter from './routes/analytics';
 import enrichmentRouter from './routes/enrichment';
+import enhancedRouter from './routes/enhanced';
 import { initializeOptimizedSync, getLastSyncReport, getEngineConfig } from './services/hybridEngineOptimized';
 import { getPool, testConnection, closePool } from './db/pool';
 
@@ -68,6 +69,9 @@ app.use('/api/analytics', analyticsRouter);
 
 // Data enrichment routes
 app.use('/api/enrichment', enrichmentRouter);
+
+// Enhanced analytics routes
+app.use('/api/enhanced', enhancedRouter);
 
 // Health check
 app.get('/api/health', async (_req, res) => {

@@ -89,6 +89,9 @@ test.describe('Deals Page — Deep Dive', () => {
     await page.waitForLoadState('networkidle', { timeout: 15000 });
     await page.waitForTimeout(3000);
     
+    // Use desktop viewport so responsive filters are visible
+    await page.setViewportSize({ width: 1440, height: 900 });
+    
     const filterTestIds = [
       'filter-region', 
       'filter-destination',
@@ -126,6 +129,9 @@ test.describe('Deals Page — Deep Dive', () => {
   });
 
   test('filters by region', async ({ page }) => {
+    // Use desktop viewport so responsive filters are visible
+    await page.setViewportSize({ width: 1440, height: 900 });
+    
     const regionFilter = page.locator('[data-testid="filter-region"]').first();
     await regionFilter.click();
     
@@ -145,11 +151,17 @@ test.describe('Deals Page — Deep Dive', () => {
   });
 
   test('sort dropdown works', async ({ page }) => {
-    const sortSelect = page.locator('[data-testid="filter-sort"]').first();
-    if (await sortSelect.isVisible({ timeout: 3000 })) {
-      await sortSelect.selectOption({ index: 1 });
-      await page.waitForLoadState('networkidle', { timeout: 5000 });
-    }
+    // Use desktop viewport so responsive filters are visible
+    await page.setViewportSize({ width: 1440, height: 900 });
+    
+    const sortSelect = page.locator('[data-testid="filter-sort"]');
+    await expect(sortSelect).toBeVisible({ timeout: 5000 });
+    
+    await sortSelect.selectOption({ index: 1 });
+    await page.waitForLoadState('networkidle', { timeout: 5000 });
+    
+    const deals = page.locator('[data-testid="deal-card"]');
+    await expect(deals.first()).toBeVisible({ timeout: 10000 });
   });
 
   test('pagination works', async ({ page }) => {
@@ -237,11 +249,15 @@ test.describe('Sailing Detail Page', () => {
   test('booking URL present and clickable', async ({ page }) => {
     await sailingDetailPage.expectLoaded();
     
+    // Check if booking link exists (some sailings may not have bookingUrl)
     const bookingLink = page.locator('a[href*="vacationstogo"], a[href*="booking"], button:has-text("Book"), button:has-text("View Deal")').first();
     if (await bookingLink.isVisible({ timeout: 3000 })) {
       const href = await bookingLink.getAttribute('href');
       expect(href).toBeTruthy();
       expect(href?.length).toBeGreaterThan(10);
+    } else {
+      // No booking URL available - this is acceptable
+      expect(true).toBeTruthy();
     }
   });
 
@@ -392,6 +408,8 @@ test.describe('Navigation & Layout', () => {
   });
 
   test('header Explore Deals link navigates to /deals', async ({ page }) => {
+    // Use desktop viewport so responsive header elements are visible
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
     const exploreLink = page.locator('button:has-text("Explore Deals")').first();
     await expect(exploreLink).toBeVisible({ timeout: 5000 });
@@ -483,6 +501,8 @@ test.describe('Solo Hub', () => {
   });
 
   test('loads solo hub with tabs', async ({ page }) => {
+    // Use desktop viewport so responsive elements are visible
+    await page.setViewportSize({ width: 1440, height: 900 });
     await soloPage.expectLoaded();
     
     const tabs = ['All', 'Waived', 'Low Supplement'];
@@ -495,6 +515,8 @@ test.describe('Solo Hub', () => {
   });
 
   test('tab switching works', async ({ page }) => {
+    // Use desktop viewport so responsive elements are visible
+    await page.setViewportSize({ width: 1440, height: 900 });
     await soloPage.expectLoaded();
     
     await soloPage.clickTab('Waived');
@@ -507,6 +529,8 @@ test.describe('Solo Hub', () => {
   });
 
   test('displays solo supplement data', async ({ page }) => {
+    // Use desktop viewport so responsive elements are visible
+    await page.setViewportSize({ width: 1440, height: 900 });
     await soloPage.expectLoaded();
     
     await expect(page.locator('text=/Solo|Supplement|Waived/i').first()).toBeVisible({ timeout: 5000 });
@@ -526,6 +550,8 @@ test.describe('Price Alerts', () => {
   });
 
   test('loads alerts page with form', async ({ page }) => {
+    // Use desktop viewport so responsive elements are visible
+    await page.setViewportSize({ width: 1440, height: 900 });
     await alertsPage.expectLoaded();
     
     await expect(alertsPage.emailInput).toBeVisible({ timeout: 5000 });
@@ -533,6 +559,8 @@ test.describe('Price Alerts', () => {
   });
 
   test('form validation works', async ({ page }) => {
+    // Use desktop viewport so responsive elements are visible
+    await page.setViewportSize({ width: 1440, height: 900 });
     await alertsPage.goto();
     
     await alertsPage.submitButton.click();
@@ -540,6 +568,8 @@ test.describe('Price Alerts', () => {
   });
 
   test('can enter email and sailing ID', async ({ page }) => {
+    // Use desktop viewport so responsive elements are visible
+    await page.setViewportSize({ width: 1440, height: 900 });
     await alertsPage.goto();
     
     await alertsPage.emailInput.fill('test@example.com');

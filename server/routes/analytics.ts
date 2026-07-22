@@ -6,6 +6,7 @@ import {
   analyzeAllSailingsOptimized
 } from '../services/analyticsOptimized';
 import { generateMarketSummary } from '../services/analytics';
+import { sanitizeDealContent } from '../utils/contentFormatter';
 
 // ---- In-memory cache for market summary (5-minute TTL) ----
 let marketSummaryCache: { data: string; generatedAt: number } | null = null;
@@ -24,7 +25,7 @@ router.get('/market-summary', async (_req: Request, res: Response) => {
       res.json({ success: true, data: marketSummaryCache.data, generatedAt: new Date(marketSummaryCache.generatedAt).toISOString(), cached: true });
       return;
     }
-    const summary = await generateMarketSummary(false);
+    const summary = sanitizeDealContent(await generateMarketSummary(false));
     marketSummaryCache = { data: summary, generatedAt: now };
     res.json({ success: true, data: summary, generatedAt: new Date(now).toISOString(), cached: false });
   } catch (err: any) {
@@ -56,7 +57,7 @@ router.get('/deal-analysis/:sailingId', async (req: Request, res: Response) => {
     if (row.deal_analysis) {
       return res.json({
         success: true,
-        data: row.deal_analysis,
+        data: sanitizeDealContent(row.deal_analysis),
         generatedAt: row.deal_analysis_generated_at,
         cached: true,
       });
@@ -99,7 +100,7 @@ router.get('/price-forecast/:sailingId', async (req: Request, res: Response) => 
     if (row.price_forecast) {
       return res.json({
         success: true,
-        data: row.price_forecast,
+        data: sanitizeDealContent(row.price_forecast),
         generatedAt: row.price_forecast_generated_at,
         cached: true,
       });

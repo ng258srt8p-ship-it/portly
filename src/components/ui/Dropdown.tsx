@@ -27,6 +27,8 @@ export default function Dropdown({ label, value, options, onChange, icon, disabl
     <div ref={rootRef} className="relative min-w-0 flex-1">
       <button
         type="button"
+        aria-label={label}
+        aria-expanded={open}
         disabled={disabled}
         onClick={() => setOpen((prev) => !prev)}
         className="flex w-full min-w-0 items-center gap-3 px-6 py-4 text-left disabled:opacity-40 hover:bg-black/[0.015]"

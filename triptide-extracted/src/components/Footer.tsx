@@ -24,9 +24,23 @@ export default function Footer() {
           </div>
 
           <div className="grid grid-cols-2 gap-10 sm:grid-cols-3">
-            <FooterCol title="Product" links={["Explore Deals", "Price History Maps", "Solo Hub", "Price Alerts"]} />
-            <FooterCol title="Company" links={["About", "Press", "Careers", "Contact"]} />
-            <FooterCol title="Legal" links={["Privacy", "Terms", "Fare Disclosure"]} />
+            <FooterCol title="Product" links={[
+              { href: "/deals", label: "Explore Deals" },
+              { href: "/price-history", label: "Price History Maps" },
+              { href: "/solo", label: "Solo Hub" },
+              { href: "/alerts", label: "Price Alerts" },
+            ]} />
+            <FooterCol title="Company" links={[
+              { href: "/about", label: "About" },
+              { href: "/press", label: "Press" },
+              { href: "/careers", label: "Careers" },
+              { href: "/contact", label: "Contact" },
+            ]} />
+            <FooterCol title="Legal" links={[
+              { href: "/privacy", label: "Privacy" },
+              { href: "/terms", label: "Terms" },
+              { href: "/fare-disclosure", label: "Fare Disclosure" },
+            ]} />
           </div>
         </div>
 
@@ -39,15 +53,15 @@ export default function Footer() {
   );
 }
 
-function FooterCol({ title, links }: { title: string; links: string[] }) {
+function FooterCol({ title, links }: { title: string; links: { href: string; label: string }[] }) {
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">{title}</p>
       <ul className="mt-4 space-y-3">
         {links.map((link) => (
-          <li key={link}>
-            <a href="#" className="text-sm text-ink-soft hover:text-indigo">
-              {link}
+          <li key={link.label}>
+            <a href={link.href} className="text-sm text-ink-soft hover:text-indigo">
+              {link.label}
             </a>
           </li>
         ))}

@@ -11,20 +11,20 @@ const config: Config = {
   theme: {
     extend: {
       /* ========================================================
-         TYPOGRAPHY — Font Families (Triptide + Portly)
+         TYPOGRAPHY — Font Families (TripTide + Portly)
          ======================================================== */
       fontFamily: {
-        /* Brand & Display — Syne (Triptide) + Clash Display (Portly fallback) */
+        /* Brand & Display — Syne (TripTide) + Clash Display (Portly fallback) */
         brand: ['Syne', 'Clash Display', 'system-ui', 'sans-serif'],
         display: ['Syne', 'Clash Display', 'system-ui', 'sans-serif'],
         heading: ['Syne', 'Clash Display', 'system-ui', 'sans-serif'],
 
-        /* Interface & Controls — Plus Jakarta Sans (Triptide) */
+        /* Interface & Controls — Plus Jakarta Sans (TripTide) */
         interface: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
         ui: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
         sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
 
-        /* Tabular Data — JetBrains Mono (Triptide) + Geist Mono (Portly) */
+        /* Tabular Data — JetBrains Mono (TripTide) + Geist Mono (Portly) */
         mono: ['JetBrains Mono', 'Geist Mono', 'ui-monospace', 'monospace'],
         tabular: ['JetBrains Mono', 'Geist Mono', 'ui-monospace', 'monospace'],
         numeric: ['JetBrains Mono', 'Geist Mono', 'ui-monospace', 'monospace'],
@@ -58,10 +58,10 @@ const config: Config = {
       },
 
       /* ========================================================
-         COLOR — Triptide Light Theme (Primary) + Portly Dark Theme
+         COLOR — TripTide Light Theme (Primary) + Portly Dark Theme
          ======================================================== */
       colors: {
-        /* ─── Triptide Light Theme (Default) ─── */
+        /* ─── TripTide Light Theme (Default) ─── */
         canvas: '#f8f9fa',
         ink: '#12131a',
         'ink-soft': '#4a4c59',
@@ -213,10 +213,10 @@ const config: Config = {
       },
 
       /* ========================================================
-         BOX SHADOW — Triptide soft shadows + Portly dark theme shadows
+         BOX SHADOW — TripTide soft shadows + Portly dark theme shadows
          ======================================================== */
       boxShadow: {
-        // Triptide light theme shadows
+        // TripTide light theme shadows
         float: '0 24px 48px -12px rgba(18, 19, 26, 0.06), 0 4px 12px -4px rgba(18, 19, 26, 0.04)',
         'float-lg': '0 32px 64px -16px rgba(18, 19, 26, 0.08), 0 8px 20px -6px rgba(18, 19, 26, 0.05)',
 
@@ -326,6 +326,10 @@ const config: Config = {
     },
   },
   plugins: [],
+  safelist: [
+    'chart-container',
+    'chart-svg',
+  ],
 };
 
 export default config;

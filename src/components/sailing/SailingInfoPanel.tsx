@@ -1,7 +1,7 @@
 'use client';
 
 /* ============================================================
-   TRIPTIDE — SailingInfoPanel Component
+   TRIPTIDE - SailingInfoPanel Component
    Ship metadata, cabin info, solo supplement details, and
    sync status for the sailing detail page.
    ============================================================ */
@@ -35,18 +35,21 @@ export default function SailingInfoPanel({
   lastSyncedAt,
   itinerary,
 }: SailingInfoPanelProps) {
+  const formatValue = (value: string, fallback: string): React.ReactNode =>
+    value ? <>{value}</> : <span className="text-ink-faint/60">{fallback}</span>;
+
   const infoRows = [
     { label: 'Cruise Line', value: line },
     { label: 'Ship', value: ship },
-    { label: 'Destination', value: region || '—' },
-    { label: 'Departure Port', value: port || '—' },
+    { label: 'Destination', value: formatValue(region || '', 'Unknown') },
+    { label: 'Departure Port', value: formatValue(port || '', 'Unknown') },
     { label: 'Duration', value: `${days} Night${days > 1 ? 's' : ''}` },
-    { label: 'Total Cabins', value: totalCabins ? totalCabins.toLocaleString() : '—' },
-    { label: 'Cabin Categories', value: cabinCategories?.join(', ') || '—' },
+    { label: 'Total Cabins', value: totalCabins ? <>{totalCabins.toLocaleString()}</> : <span className="text-ink-faint/60">N/A</span> },
+    { label: 'Cabin Categories', value: cabinCategories?.join(', ') ? <>{cabinCategories!.join(', ')}</> : <span className="text-ink-faint/60">Unknown</span> },
     { label: 'Repositioning', value: isRepositioning ? 'Yes' : 'No' },
     { label: 'Solo Supplement', value: isSoloWaived ? 'Waived' : 'Standard' },
-    { label: 'Ports of Call', value: itinerary ? `${itinerary.length} port${itinerary.length > 1 ? 's' : ''}` : '—' },
-    { label: 'Sync Status', value: syncStatus || '—' },
+    { label: 'Ports of Call', value: itinerary ? `${itinerary.length} port${itinerary.length > 1 ? 's' : ''}` : <span className="text-ink-faint/60">0 ports</span> },
+    { label: 'Sync Status', value: syncStatus ? <>{syncStatus}</> : <span className="text-ink-faint/60">Unsynched</span> },
   ];
 
   return (
@@ -57,7 +60,9 @@ export default function SailingInfoPanel({
         {infoRows.map((row) => (
           <div key={row.label} className="flex items-center justify-between py-2.5">
             <span className="text-sm font-medium text-ink-soft">{row.label}</span>
-            <span className="text-sm font-semibold text-ink">{row.value}</span>
+            <span className="text-sm font-semibold text-ink">
+              {row.value}
+            </span>
           </div>
         ))}
       </div>

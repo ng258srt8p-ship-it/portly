@@ -19,7 +19,22 @@ export default function Sparkline({ data, positive = true, width = 140, height =
     return [x, y];
   });
 
-  const path = points.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  function catmullRomToBezier(pts: {x: number; y: number}[]): string {
+    if (pts.length < 2) return '';
+    const eps = 0.3;
+    let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(i - 1, 0)];
+      const p1 = pts[i];
+      const p2 = pts[Math.min(i + 1, pts.length - 1)];
+      const p3 = pts[Math.min(i + 2, pts.length - 1)];
+      const c1x = p1.x + (p2.x - p0.x) * eps, c1y = p1.y + (p2.y - p0.y) * eps;
+      const c2x = p2.x - (p3.x - p1.x) * eps, c2y = p2.y - (p3.y - p1.y) * eps;
+      d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+    }
+    return d;
+  }
+  const path = catmullRomToBezier(points.map(p => ({x: p[0], y: p[1]})));
   const areaPath = `${path} L${width},${height} L0,${height} Z`;
   const color = positive ? "#0B6B57" : "#2A44E7";
   const last = points[points.length - 1];

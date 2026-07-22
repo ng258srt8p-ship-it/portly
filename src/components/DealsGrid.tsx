@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { BadgeType, Deal, DealFilters as Filters } from '@/types/cruise';
 import Sparkline from '@/components/ui/Sparkline';
@@ -9,6 +9,11 @@ import { fetchDeals } from '@/services/cruiseApi';
 import MaterialIcon from '@/components/ui/MaterialIcon';
 import { useLiveData } from '@/hooks/useLiveData';
 import FilterSelectionGrid from '@/components/FilterSelectionGrid';
+
+interface DealsGridProps {
+  filters: Filters;
+  onFilterChange: (filters: Filters) => void;
+}
 
 const badgeStyles: Record<BadgeType, string> = {
   drop: 'bg-mint-soft text-mint-ink border-mint-ink/15',
@@ -32,57 +37,10 @@ function getStorageLimit(): number {
   return LIMIT_OPTIONS.includes(parsed as any) ? parsed : 20;
 }
 
-export default function DealsGrid() {
+export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
   const router = useRouter();
 
   const [limit, setLimit] = useState(getStorageLimit);
-
-  // ── Filters synced to URL search params ──
-  const parseFilters = (): Filters => {
-    const sp = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-    const f: Filters = {};
-    const cl = sp.get('cruiseLine');
-    if (cl) f.cruiseLine = cl.split(',');
-    const dest = sp.get('destination');
-    if (dest) f.destination = dest.split(',');
-    const dp = sp.get('departurePort');
-    if (dp) f.departurePort = dp.split(',');
-    const dr = sp.get('departureRegion');
-    if (dr) f.departureRegion = dr.split(',');
-    const minN = sp.get('minNights');
-    if (minN) f.minNights = parseInt(minN);
-    const maxN = sp.get('maxNights');
-    if (maxN) f.maxNights = parseInt(maxN);
-    const minP = sp.get('minPrice');
-    if (minP) f.minPrice = parseInt(minP);
-    const maxP = sp.get('maxPrice');
-    if (maxP) f.maxPrice = parseInt(maxP);
-    const bt = sp.get('badgeType');
-    if (bt) f.badgeType = bt.split(',') as ('drop' | 'solo' | 'gold')[];
-    const s = sp.get('sort');
-    if (s) f.sort = s as Filters['sort'];
-    return f;
-  };
-
-  const [filters, setFilters] = useState<Filters>(parseFilters);
-
-  // Sync filters to URL
-  useEffect(() => {
-    const sp = new URLSearchParams();
-    if (filters.cruiseLine?.length) sp.set('cruiseLine', filters.cruiseLine.join(','));
-    if (filters.destination?.length) sp.set('destination', filters.destination.join(','));
-    if (filters.departurePort?.length) sp.set('departurePort', filters.departurePort.join(','));
-    if (filters.departureRegion?.length) sp.set('departureRegion', filters.departureRegion.join(','));
-    if (filters.minNights !== undefined) sp.set('minNights', String(filters.minNights));
-    if (filters.maxNights !== undefined) sp.set('maxNights', String(filters.maxNights));
-    if (filters.minPrice !== undefined) sp.set('minPrice', String(filters.minPrice));
-    if (filters.maxPrice !== undefined) sp.set('maxPrice', String(filters.maxPrice));
-    if (filters.badgeType?.length) sp.set('badgeType', filters.badgeType.join(','));
-    if (filters.sort) sp.set('sort', filters.sort);
-    const qs = sp.toString();
-    const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
-    router.replace(newUrl, { scroll: false });
-  }, [filters, router]);
 
   const fetcher = useCallback(() => fetchDeals(limit, filters), [limit, filters]);
   const { data: deals, loading, error, lastSyncedAt, refresh } = useLiveData(fetcher, { pollIntervalMs: 30000 });
@@ -135,9 +93,10 @@ export default function DealsGrid() {
 
       {/* Filter bar */}
       {deals && !loading && (
-        <FilterSelectionGrid
+        <div className="mb-5">
+          <FilterSelectionGrid
           filters={filters}
-          onChange={setFilters}
+          onChange={onFilterChange}
           availableLines={availableOptions.lines}
           availableRegions={availableOptions.regions}
           availableDestinations={availableOptions.destinations}
@@ -153,6 +112,7 @@ export default function DealsGrid() {
             filters.sort
           )}
         />
+        </div>
       )}
 
       {/* Deal size selector + count */}
@@ -260,30 +220,22 @@ function renderGridContent(
 
       <div className="flex items-center justify-between gap-2 border-t border-black/[0.06] pt-4">
         <span className="text-xs font-medium text-ink-faint">Sails {deal.sailDate}</span>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          {deal.bookingUrl && (
-            <a
-              href={deal.bookingUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-1.5 rounded-full bg-emerald px-4 py-2 text-xs font-bold text-white hover:bg-emerald-dark transition"
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
-              </svg>
-              {deal.bookingLabel || 'Book Now'}
-            </a>
-          )}
+        <div className="flex items-center gap-2 justify-between" >
+          <a
+            href={deal.bookingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`w-[128px] h-[48px] flex items-center justify-center gap-1.5 rounded-full bg-mint-ink px-4 py-2 text-xs font-bold text-white hover:bg-mint hover:text-mint-ink transition ${!deal.bookingUrl ? 'hidden' : ''}`}
+          >
+            <span className="material-symbols-outlined leading-none select-none text-[18px] text-white">link</span>
+            <span className="truncate">{deal.bookingLabel || 'Book Now'}</span>
+          </a>
           <button
             onClick={() => router.push(`/sailing/${deal.id}`)}
-            className="flex-1 flex items-center justify-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs font-bold text-white hover:bg-indigo active:scale-[0.97]"
+            className="w-[128px] h-[48px] flex items-center justify-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs font-bold text-white hover:bg-indigo active:scale-[0.97]"
           >
-            View Deal
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M7 17L17 7M17 7H9M17 7v8" />
-            </svg>
+            <span className="material-symbols-outlined leading-none select-none text-[18px] text-white">arrow_forward</span>
+            <span className="truncate">View Deal</span>
           </button>
         </div>
       </div>

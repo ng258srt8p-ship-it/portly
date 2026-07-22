@@ -48,7 +48,17 @@ export default function DealsGrid() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {loading && !deals
           ? Array.from({ length: 6 }).map((_, i) => <DealCardSkeleton key={i} />)
-          : deals?.map((deal) => (
+          : !deals || deals.length === 0
+            ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-24 text-center">
+                <svg className="mb-4 h-12 w-12 text-ink-faint" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <p className="text-lg font-semibold text-ink-soft">No deals found</p>
+                <p className="mt-1 text-sm text-ink-faint">Check back soon — new fares are being monitored.</p>
+              </div>
+            )
+            : deals.map((deal) => (
               <article
                 key={deal.id}
                 className="group flex flex-col justify-between rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float transition-all duration-300 hover:-translate-y-1 hover:shadow-float-lg"
@@ -92,7 +102,7 @@ export default function DealsGrid() {
 
                 <div className="flex items-center justify-between border-t border-black/[0.06] pt-4">
                   <span className="text-xs font-medium text-ink-faint">Sails {deal.sailDate}</span>
-                  <button className="flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-indigo active:scale-95">
+                  <button aria-label={`View deal — ${deal.cruiseLine} ${deal.ship}`} className="flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-indigo active:scale-95">
                     View Deal
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M7 17L17 7M17 7H9M17 7v8" />

@@ -140,6 +140,7 @@ export default function Hero() {
 
           <div className="flex items-center p-2 lg:pl-2">
             <button
+              aria-label="Search Voyages"
               onClick={handleSearch}
               className="flex w-full shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-indigo px-8 py-4 text-sm font-bold text-white shadow-[0_12px_24px_-8px_rgba(42,68,231,0.55)] hover:bg-indigo-dark active:scale-[0.98] lg:w-auto"
             >

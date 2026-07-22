@@ -23,6 +23,7 @@ export interface FilterSelectionGridProps {
   availableLines: string[];
   availableRegions: string[];
   availableDestinations: string[];
+  availableCabinTypes?: ('Inside' | 'Oceanview' | 'Balcony' | 'Suite')[];
   hasActiveFilters?: boolean;
   onClear?: () => void;
   disabled?: boolean;
@@ -65,22 +66,14 @@ function normalizeLineName(line: string): string {
     .trim();
 }
 
-function deduplicateLines(lines: string[]): string[] {
+function buildLineOptions(lines: string[]): FilterOption[] {
   const seen = new Set<string>();
   return lines.filter((line) => {
     const normalized = normalizeLineName(line);
     if (seen.has(normalized)) return false;
     seen.add(normalized);
     return true;
-  });
-}
-
-function buildLineOptions(lines: string[]): FilterOption[] {
-  const uniqueLines = deduplicateLines(lines);
-  return uniqueLines.map((line) => ({
-    value: line,
-    label: normalizeLineName(line),
-  }));
+  }).map((line) => ({ value: line, label: normalizeLineName(line) }));
 }
 
 // ============================================================================
@@ -93,12 +86,6 @@ function getNightsOption(minNights?: number, maxNights?: number): NightOption | 
   if (minNights === 4 && maxNights === 7) return '4-7';
   if (minNights === 8) return '8-14';
   return null;
-}
-
-function getNightsFromOption(option: NightOption | null): { min: number; max?: number } | null {
-  if (!option) return null;
-  const opt = NIGHT_OPTIONS.find((o) => o.value === option);
-  return opt ? { min: opt.min, max: opt.max } : null;
 }
 
 // ============================================================================
@@ -152,6 +139,8 @@ function MultiSelectDropdown({
         ? options.find((o) => o.value === selected[0])?.label ?? selected[0]
         : `${selectedCount} selected`;
 
+  if (!options.length) return null;
+
   return (
     <div ref={rootRef} className="relative min-w-0 flex-1" data-testid={testId}>
       <button
@@ -159,9 +148,9 @@ function MultiSelectDropdown({
         disabled={disabled}
         onClick={() => !disabled && setOpen((prev) => !prev)}
         className={`
-          flex w-full min-w-0 items-center gap-3 px-4 py-3 text-left
+          flex w-full min-w-0 items-center gap-2 px-2.5 py-2 text-left
           disabled:opacity-40 disabled:cursor-not-allowed
-          rounded-xl border border-black/[0.06] bg-white
+          rounded-lg border border-black/[0.06] bg-white
           transition-colors
           hover:border-black/[0.12] hover:bg-black/[0.02]
           focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 focus-visible:border-indigo
@@ -172,20 +161,20 @@ function MultiSelectDropdown({
         <span className="shrink-0 text-ink-faint text-[11px] font-semibold uppercase tracking-wider">
           {label}
         </span>
-        <span className="flex-1 truncate font-medium text-ink">
+        <span className="flex-1 truncate text-sm font-medium text-ink">
           {displayValue}
         </span>
         <MaterialIcon
           name={open ? 'expand_less' : 'expand_more'}
-          size="sm"
-          className={`text-ink-faint transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          size="xs"
+          className={`shrink-0 text-ink-faint transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
         />
       </button>
 
       {open && !disabled && (
         <div
           className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-64 overflow-y-auto
-            rounded-2xl border border-black/[0.06] bg-white p-1.5 shadow-float-lg
+            rounded-xl border border-black/[0.06] bg-white p-1 shadow-lg
             animate-in fade-in-0 zoom-in-95 duration-150"
           role="listbox"
           aria-label={label}
@@ -200,7 +189,7 @@ function MultiSelectDropdown({
                 aria-selected={isSelected}
                 onClick={() => toggleOption(option.value)}
                 className={`
-                  block w-full truncate rounded-xl px-3.5 py-2.5 text-left text-sm font-medium
+                  block w-full truncate rounded-lg px-3 py-2 text-left text-sm font-medium
                   transition-colors
                   ${isSelected
                     ? 'bg-indigo-mist text-indigo'
@@ -213,20 +202,13 @@ function MultiSelectDropdown({
                   {isSelected && (
                     <MaterialIcon name="check" size="xs" className="text-indigo flex-shrink-0" />
                   )}
-                  <span>{option.label}</span>
-                  {option.count !== undefined && (
-                    <span className="ml-auto text-xs text-ink-faint font-normal">
-                      {option.count}
-                    </span>
-                  )}
+                  <span className="truncate">{option.label}</span>
                 </span>
               </button>
             );
           })}
           {options.length === 0 && (
-            <div className="px-3.5 py-2.5 text-sm text-ink-faint">
-              No options available
-            </div>
+            <div className="px-3 py-2 text-sm text-ink-faint">No options available</div>
           )}
         </div>
       )}
@@ -235,7 +217,7 @@ function MultiSelectDropdown({
 }
 
 // ============================================================================
-// SingleSelectDropdown Component (for Sort)
+// SingleSelectDropdown (Sort)
 // ============================================================================
 
 interface SingleSelectDropdownProps {
@@ -271,15 +253,15 @@ function SingleSelectDropdown({
   const selectedOption = options.find((o) => o.value === value);
 
   return (
-    <div ref={rootRef} className="relative min-w-0 flex-1" data-testid={testId}>
+    <div ref={rootRef} className="relative min-w-0" data-testid={testId}>
       <button
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setOpen((prev) => !prev)}
         className={`
-          flex w-full min-w-0 items-center gap-3 px-4 py-3 text-left
+          flex w-full min-w-0 items-center gap-2 px-2.5 py-2 text-left
           disabled:opacity-40 disabled:cursor-not-allowed
-          rounded-xl border border-black/[0.06] bg-white
+          rounded-lg border border-black/[0.06] bg-white
           transition-colors
           hover:border-black/[0.12] hover:bg-black/[0.02]
           focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 focus-visible:border-indigo
@@ -290,20 +272,20 @@ function SingleSelectDropdown({
         <span className="shrink-0 text-ink-faint text-[11px] font-semibold uppercase tracking-wider">
           {label}
         </span>
-        <span className="flex-1 truncate font-medium text-ink">
+        <span className="flex-1 truncate text-sm font-medium text-ink">
           {selectedOption?.label ?? 'Default'}
         </span>
         <MaterialIcon
           name={open ? 'expand_less' : 'expand_more'}
-          size="sm"
-          className={`text-ink-faint transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          size="xs"
+          className={`shrink-0 text-ink-faint transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
         />
       </button>
 
       {open && !disabled && (
         <div
           className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-64 overflow-y-auto
-            rounded-2xl border border-black/[0.06] bg-white p-1.5 shadow-float-lg
+            rounded-xl border border-black/[0.06] bg-white p-1 shadow-lg
             animate-in fade-in-0 zoom-in-95 duration-150"
           role="listbox"
           aria-label={label}
@@ -316,12 +298,9 @@ function SingleSelectDropdown({
                 type="button"
                 role="option"
                 aria-selected={isSelected}
-                onClick={() => {
-                  onChange(option.value);
-                  setOpen(false);
-                }}
+                onClick={() => onChange(option.value)}
                 className={`
-                  block w-full truncate rounded-xl px-3.5 py-2.5 text-left text-sm font-medium
+                  block w-full truncate rounded-lg px-3 py-2 text-left text-sm font-medium
                   transition-colors
                   ${isSelected
                     ? 'bg-indigo-mist text-indigo'
@@ -330,12 +309,7 @@ function SingleSelectDropdown({
                   focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50
                 `}
               >
-                <span className="flex items-center gap-2">
-                  {isSelected && (
-                    <MaterialIcon name="check" size="xs" className="text-indigo flex-shrink-0" />
-                  )}
-                  <span>{option.label}</span>
-                </span>
+                <span>{option.label}</span>
               </button>
             );
           })}
@@ -364,7 +338,7 @@ function NightsSegmentedGroup({
 }: NightsSegmentedGroupProps) {
   return (
     <div
-      className="inline-flex items-center gap-1 rounded-xl border border-black/[0.06] bg-white p-0.5"
+      className="inline-flex items-center gap-1 rounded-lg border border-black/[0.06] bg-white p-0.5"
       data-testid={testId}
       role="group"
       aria-label="Nights"
@@ -378,7 +352,7 @@ function NightsSegmentedGroup({
             disabled={disabled}
             onClick={() => onChange(isActive ? null : option.value)}
             className={`
-              relative flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium
+              relative flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium
               transition-all duration-150
               ${disabled ? 'opacity-40 cursor-not-allowed' : ''}
               ${isActive
@@ -390,7 +364,6 @@ function NightsSegmentedGroup({
             aria-pressed={isActive}
           >
             <span className="font-semibold tabular-nums">{option.label}</span>
-            <span className="text-[10px] font-normal opacity-70">nights</span>
           </button>
         );
       })}
@@ -424,7 +397,7 @@ function TypePillGroup({
 
   return (
     <div
-      className="inline-flex items-center gap-1.5 flex-wrap"
+      className="inline-flex items-center gap-1 flex-wrap"
       data-testid={testId}
       role="group"
       aria-label="Deal types"
@@ -438,7 +411,7 @@ function TypePillGroup({
             disabled={disabled}
             onClick={() => toggleType(option.value)}
             className={`
-              inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium
+              inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium
               transition-all duration-150
               ${disabled ? 'opacity-40 cursor-not-allowed' : ''}
               ${isActive
@@ -494,21 +467,16 @@ function PriceInputs({
       className="inline-flex items-center gap-1.5"
       data-testid={testId}
     >
-      <label
-        htmlFor="filter-price-min"
-        className="sr-only"
-      >
-        Min price
-      </label>
+      <label htmlFor="filter-price-min" className="sr-only">Min price</label>
       <input
         id="filter-price-min"
         type="number"
-        placeholder="Min $"
+        placeholder="Min"
         value={minPrice ?? ''}
         onChange={handleMinChange}
         disabled={disabled}
         className={`
-          w-20 rounded-lg border border-black/[0.06] bg-white px-2.5 py-2 text-sm font-medium text-ink
+          w-16 rounded-lg border border-black/[0.06] bg-white px-2 py-1.5 text-xs font-medium text-ink
           placeholder:text-ink-faint
           transition-colors
           hover:border-black/[0.12]
@@ -521,21 +489,16 @@ function PriceInputs({
         step="10"
       />
       <span className="text-xs text-ink-faint font-medium">–</span>
-      <label
-        htmlFor="filter-price-max"
-        className="sr-only"
-      >
-        Max price
-      </label>
+      <label htmlFor="filter-price-max" className="sr-only">Max price</label>
       <input
         id="filter-price-max"
         type="number"
-        placeholder="Max $"
+        placeholder="Max"
         value={maxPrice ?? ''}
         onChange={handleMaxChange}
         disabled={disabled}
         className={`
-          w-20 rounded-lg border border-black/[0.06] bg-white px-2.5 py-2 text-sm font-medium text-ink
+          w-16 rounded-lg border border-black/[0.06] bg-white px-2 py-1.5 text-xs font-medium text-ink
           placeholder:text-ink-faint
           transition-colors
           hover:border-black/[0.12]
@@ -567,7 +530,7 @@ function ClearFiltersButton({ onClick, disabled }: ClearFiltersButtonProps) {
       onClick={onClick}
       disabled={disabled}
       className={`
-        inline-flex items-center gap-1.5 rounded-xl border border-coral-ink/15 bg-coral-soft px-3 py-2 text-sm font-bold text-coral-ink
+        inline-flex items-center gap-1.5 rounded-lg border border-coral-ink/15 bg-coral-soft px-2 py-1.5 text-xs font-bold text-coral-ink
         transition-all duration-150
         ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-coral-ink hover:text-white hover:border-coral-ink'}
         focus:outline-none focus-visible:ring-2 focus-visible:ring-coral/50 focus-visible:ring-offset-2
@@ -575,7 +538,7 @@ function ClearFiltersButton({ onClick, disabled }: ClearFiltersButtonProps) {
       data-testid="filter-clear"
     >
       <MaterialIcon name="close" size="xs" />
-      <span>Clear all</span>
+      <span>Clear</span>
     </button>
   );
 }
@@ -590,11 +553,30 @@ export default function FilterSelectionGrid({
   availableLines,
   availableRegions,
   availableDestinations,
+  availableCabinTypes = [],
   hasActiveFilters = false,
   onClear,
   disabled = false,
 }: FilterSelectionGridProps) {
-  // Prepare deduplicated line options
+  // Mobile collapse state
+  const [expanded, setExpanded] = useState(false);
+
+  // Count active filters for badge
+  const activeCount = [
+    filters.cruiseLine?.length || 0,
+    filters.cabinType?.length || 0,
+    filters.destination?.length || 0,
+    filters.departurePort?.length || 0,
+    filters.departureRegion?.length || 0,
+    filters.minNights !== undefined ? 1 : 0,
+    filters.maxNights !== undefined ? 1 : 0,
+    filters.minPrice !== undefined ? 1 : 0,
+    filters.maxPrice !== undefined ? 1 : 0,
+    filters.badgeType?.length || 0,
+    filters.sort ? 1 : 0,
+  ].filter(Boolean).length;
+
+  // Prepare line options
   const lineOptions = buildLineOptions(availableLines);
   const regionOptions: FilterOption[] = availableRegions
     .sort()
@@ -606,22 +588,18 @@ export default function FilterSelectionGrid({
   // Get current nights option
   const currentNights = getNightsOption(filters.minNights, filters.maxNights);
 
-  // Handle line changes
   const handleLinesChange = (lines: string[]) => {
     onChange({ ...filters, cruiseLine: lines.length ? lines : undefined });
   };
 
-  // Handle region changes
   const handleRegionsChange = (regions: string[]) => {
     onChange({ ...filters, departureRegion: regions.length ? regions : undefined });
   };
 
-  // Handle destination changes
   const handleDestinationsChange = (destinations: string[]) => {
     onChange({ ...filters, destination: destinations.length ? destinations : undefined });
   };
 
-  // Handle nights change
   const handleNightsChange = (value: NightOption | null) => {
     if (value === null) {
       onChange({ ...filters, minNights: undefined, maxNights: undefined });
@@ -633,22 +611,18 @@ export default function FilterSelectionGrid({
     }
   };
 
-  // Handle type changes
   const handleTypesChange = (types: TypeOption[]) => {
     onChange({ ...filters, badgeType: types.length ? types : undefined });
   };
 
-  // Handle price changes
   const handlePriceChange = (min: number | undefined, max: number | undefined) => {
     onChange({ ...filters, minPrice: min, maxPrice: max });
   };
 
-  // Handle sort change
   const handleSortChange = (value: string) => {
     onChange({ ...filters, sort: value as DealFilters['sort'] });
   };
 
-  // Handle clear - create empty DealFilters object
   const handleClear = () => {
     onChange({
       cruiseLine: undefined,
@@ -665,13 +639,14 @@ export default function FilterSelectionGrid({
     onClear?.();
   };
 
-  return (
-    <div className="space-y-3" data-testid="filter-selection-grid">
-      {/* Row 1: Geographic Filters (Lines, Regions, Destinations) */}
-      <div className="flex flex-col sm:flex-row items-stretch gap-3">
+  // Shared components used by both mobile and desktop
+  const renderFilters = () => (
+    <>
+      {/* Row 1: Geographic Filters (Line, Region, Destination) */}
+      <div className="flex flex-wrap items-stretch gap-2">
         <MultiSelectDropdown
           label="Line"
-          placeholder="All lines"
+          placeholder="Any line"
           options={lineOptions}
           selected={filters.cruiseLine ?? []}
           onChange={handleLinesChange}
@@ -681,7 +656,7 @@ export default function FilterSelectionGrid({
 
         <MultiSelectDropdown
           label="Region"
-          placeholder="All regions"
+          placeholder="Any region"
           options={regionOptions}
           selected={filters.departureRegion ?? []}
           onChange={handleRegionsChange}
@@ -690,8 +665,8 @@ export default function FilterSelectionGrid({
         />
 
         <MultiSelectDropdown
-          label="Destination"
-          placeholder="All destinations"
+          label="Dest"
+          placeholder="Any dest"
           options={destinationOptions}
           selected={filters.destination ?? []}
           onChange={handleDestinationsChange}
@@ -701,57 +676,82 @@ export default function FilterSelectionGrid({
       </div>
 
       {/* Row 2: Nights, Type, Price, Sort, Clear */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <span className="shrink-0 text-ink-faint text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap">
-            Nights
-          </span>
-          <NightsSegmentedGroup
-            value={currentNights}
-            onChange={handleNightsChange}
-            testId="filter-nights"
-            disabled={disabled}
-          />
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <NightsSegmentedGroup
+          value={currentNights}
+          onChange={handleNightsChange}
+          testId="filter-nights"
+          disabled={disabled}
+        />
 
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <span className="shrink-0 text-ink-faint text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap">
-            Type
-          </span>
-          <TypePillGroup
-            value={(filters.badgeType as TypeOption[]) ?? []}
-            onChange={handleTypesChange}
-            testId="filter-type"
-            disabled={disabled}
-          />
-        </div>
+        <TypePillGroup
+          value={(filters.badgeType as TypeOption[]) ?? []}
+          onChange={handleTypesChange}
+          testId="filter-type"
+          disabled={disabled}
+        />
 
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <PriceInputs
-            minPrice={filters.minPrice}
-            maxPrice={filters.maxPrice}
-            onChange={handlePriceChange}
-            testId="filter-price"
-            disabled={disabled}
-          />
-        </div>
+        <PriceInputs
+          minPrice={filters.minPrice}
+          maxPrice={filters.maxPrice}
+          onChange={handlePriceChange}
+          testId="filter-price"
+          disabled={disabled}
+        />
 
-        <div className="flex items-center gap-3 flex-1 min-w-0 sm:flex-[0_0_auto]">
-          <SingleSelectDropdown
-            label="Sort"
-            options={SORT_OPTIONS}
-            value={filters.sort ?? ''}
-            onChange={handleSortChange}
-            testId="filter-sort"
-            disabled={disabled}
-          />
-        </div>
+        <SingleSelectDropdown
+          label="Sort"
+          options={SORT_OPTIONS}
+          value={filters.sort ?? ''}
+          onChange={handleSortChange}
+          testId="filter-sort"
+          disabled={disabled}
+        />
 
         {hasActiveFilters && (
-          <div className="flex items-center sm:flex-[0_0_auto]">
-            <ClearFiltersButton onClick={handleClear} disabled={disabled} />
+          <ClearFiltersButton onClick={handleClear} disabled={disabled} />
+        )}
+      </div>
+    </>
+  );
+
+  // ─── Mobile Collapse Toggle ───
+  return (
+    <div data-testid="filter-selection-grid" className="space-y-2">
+      {/* Mobile: collapsed toggle + expandable body (hidden on desktop) */}
+      <div className="block lg:hidden">
+        <button
+          onClick={() => setExpanded((prev) => !prev)}
+          className="flex w-full items-center justify-between gap-2 rounded-lg border border-black/[0.06] bg-white px-3 py-2 text-sm font-medium text-ink transition-colors hover:border-black/[0.12] hover:bg-black/[0.02]"
+          aria-expanded={expanded}
+          aria-haspopup="listbox"
+        >
+          <span className="flex items-center gap-2">
+            <MaterialIcon name="filter_list" size="sm" />
+            Filters
+            {activeCount > 0 && (
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-indigo text-[9px] font-bold text-white">
+                {activeCount}
+              </span>
+            )}
+          </span>
+          <MaterialIcon
+            name={expanded ? 'expand_less' : 'expand_more'}
+            size="sm"
+            className="shrink-0 text-ink-faint transition-transform duration-200"
+          />
+        </button>
+
+        {expanded && (
+          <div className="py-2">
+            {renderFilters()}
           </div>
         )}
+      </div>
+
+      {/* Desktop: always visible, 2-row layout (hidden on mobile) */}
+      <div className="hidden lg:block">
+        {renderFilters()}
       </div>
     </div>
   );

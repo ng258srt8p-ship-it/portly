@@ -9,8 +9,8 @@ import { useLiveData } from '@/hooks/useLiveData';
 import SailingHero from '@/components/sailing/SailingHero';
 import ItineraryTimeline from '@/components/sailing/ItineraryTimeline';
 import PriceHistoryPanel from '@/components/sailing/PriceHistoryPanel';
-import NimDealAnalysis from '@/components/sailing/NimDealAnalysis';
-import NimPriceForecast from '@/components/sailing/NimPriceForecast';
+import EnhancedDealAnalysis from '@/components/sailing/EnhancedDealAnalysis';
+import EnhancedPriceForecast from '@/components/sailing/EnhancedPriceForecast';
 import SailingInfoPanel from '@/components/sailing/SailingInfoPanel';
 
 interface SailingData {
@@ -35,7 +35,6 @@ export default function SailingDetailPage() {
 
   const fetcher = useMemo(
     () => async () => {
-      if (isNaN(sailingId)) throw new Error('Invalid sailing ID');
       const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const res = await fetch(`${API_BASE}/api/sailing/${sailingId}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to load sailing');
@@ -98,7 +97,8 @@ export default function SailingDetailPage() {
                 port={data.sailing.port}
                 days={data.sailing.days}
                 departureDate={data.sailing.departureDate}
-                price={data.cabinBreakdown[0]?.raw?.totalOutTheDoor || 0}
+                price={data?.cabinBreakdown?.[0]?.raw?.totalOutTheDoor || 0}
+                cabinType={data?.cabinBreakdown?.[0]?.cabinType || ''}
               />
 
               {/* Itinerary + Info 2-col on desktop */}
@@ -126,20 +126,21 @@ export default function SailingDetailPage() {
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <PriceHistoryPanel
                   priceHistory={data.priceHistory}
-                  currentPrice={data.cabinBreakdown[0]?.raw?.totalOutTheDoor || 0}
+                  currentPrice={data?.cabinBreakdown?.[0]?.raw?.totalOutTheDoor || 0}
                   cabinBreakdown={data.cabinBreakdown}
                 />
-                <NimDealAnalysis sailingId={data.sailing.id} />
               </div>
+              {/* Enhanced Deal Analysis (Phase 2) */}
+              <EnhancedDealAnalysis sailingId={data.sailing.id} />
 
               {/* Cabin Pricing */}
-              <div className="rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float">
+              <div id="cabin-pricing" className="rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float">
                 <h2 className="mb-6 font-display text-2xl font-bold text-ink">Cabin Pricing</h2>
                 <PriceComparisonTable sailingId={data.sailing.id} />
               </div>
 
-              {/* Price Forecast */}
-              <NimPriceForecast sailingId={data.sailing.id} />
+              {/* Enhanced Price Forecast (Phase 2) */}
+              <EnhancedPriceForecast sailingId={data.sailing.id} />
 
               {/* Book CTA */}
               {data.sailing.bookingUrl && (

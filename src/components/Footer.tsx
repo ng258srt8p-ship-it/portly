@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { MaterialIcon } from '@/components/ui/MaterialIcon';
 
 export default function Footer() {
   return (
@@ -8,14 +9,7 @@ export default function Footer() {
           <div className="max-w-sm">
             <Link href="/" className="flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo text-white">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M2 17c2 1.5 4 1.5 6 0s4-1.5 6 0 4 1.5 6 0M2 12c2 1.5 4 1.5 6 0s4-1.5 6 0 4 1.5 6 0"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                  />
-                </svg>
+                <MaterialIcon name="directions_boat_filled" size="sm" className="text-white" />
               </span>
               <span className="font-display text-xl font-bold text-ink">TripTide</span>
             </Link>

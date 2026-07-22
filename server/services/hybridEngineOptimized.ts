@@ -15,6 +15,7 @@
 
 import { getPool } from '../db/pool';
 import { generateSailingsWithPricing, UnifiedSailingRecord, initWorkerPool, getWorkerPoolStatus } from './syncGeneratorOptimized';
+import { sanitizeDealContent } from '../utils/contentFormatter';
 import { analyzeSailingDealOptimized, generatePriceForecastOptimized } from './analyticsOptimized';
 import { createHash } from 'crypto';
 
@@ -530,7 +531,7 @@ async function phase3IncrementalAnalysis(
           pricing: pricingResult.rows,
         };
 
-        const analysis = await analyzeSailingDealOptimized(String(sid), sailingData, true);
+        const analysis = sanitizeDealContent(await analyzeSailingDealOptimized(String(sid), sailingData, true));
 
         await pool.query(
           `UPDATE sailings SET deal_analysis = $1, deal_analysis_generated_at = NOW() WHERE id = $2`,
@@ -539,7 +540,7 @@ async function phase3IncrementalAnalysis(
 
         // Generate and cache price forecast
         try {
-          const forecast = await generatePriceForecastOptimized(String(sid), true);
+          const forecast = sanitizeDealContent(await generatePriceForecastOptimized(String(sid), true));
           await pool.query(
             `UPDATE sailings SET price_forecast = $1, price_forecast_generated_at = NOW() WHERE id = $2`,
             [forecast, sid]

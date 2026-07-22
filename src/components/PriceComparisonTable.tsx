@@ -137,7 +137,7 @@ export function PriceComparisonTable({
           {tierOrder.map((tier) => (
             <div
               key={tier}
-              className="group grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-3 px-4 py-4 md:py-3 transition-all duration-200 cursor-pointer border-2 bg-surface border-subtle hover:border-default animate-pulse"
+              className="group grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-3 px-4 py-3 md:py-3 transition-all duration-200 cursor-pointer border-2 bg-surface border-subtle hover:border-default animate-pulse items-center"
             >
               <div className="md:col-span-3 flex items-center gap-3">
                 <MaterialIcon name={tierMeta[tier]?.icon || 'bed'} size="md" />
@@ -220,7 +220,7 @@ export function PriceComparisonTable({
           <div
             key={cabin.tier}
             data-testid="cabin-row"
-            className={`group grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-3 px-4 py-4 md:py-3 transition-all duration-200 cursor-pointer border-2 ${cabin.isBestValue ? 'bg-neon-teal-500/10 border-neon-teal-500 shadow-hard-teal' : 'bg-surface border-subtle hover:border-default'} ${!cabin.available ? 'opacity-50' : ''}`}
+            className={`group grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-3 px-4 py-3 transition-all duration-200 cursor-pointer border-2 items-center ${cabin.isBestValue ? 'bg-neon-teal-500/10 border-neon-teal-500 shadow-hard-teal' : 'bg-surface border-subtle hover:border-default'} ${!cabin.available ? 'opacity-50' : ''}`}
             onClick={() => setExpandedTier(expandedTier === cabin.tier ? null : cabin.tier)}
           >
             {/* Mobile: Expandable row */}
@@ -284,7 +284,7 @@ export function PriceComparisonTable({
             <div className="hidden md:flex col-span-1 items-center justify-end">
               <button
                 onClick={() => router.push(`/sailing/${resolvedSailingId}?cabin=${cabin.tier}`)}
-                className={`btn-sm font-interface text-xs font-semibold
+                className={`btn-sm flex-shrink-0 font-interface text-xs font-semibold
                   ${cabin.available ? 'btn-primary' : 'btn-secondary opacity-50 cursor-not-allowed'}
                 `}
                 disabled={!cabin.available}
@@ -329,6 +329,7 @@ export function PriceComparisonTable({
                       {formatPrice(cabin.total)}
                     </span>
                   </div>
+                  <p className="text-xs text-ink-faint">Includes base fare + taxes/fees + gratuities</p>
                   <div className="flex justify-between items-center text-sm">
                     <span className="font-interface text-xs text-tertiary">Per person / night</span>
                     <span className="font-mono tabular-nums text-sm text-neon-teal-400 font-semibold">

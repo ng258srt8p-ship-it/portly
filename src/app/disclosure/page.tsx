@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Metadata } from "next";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "Fare Disclosure - TripTide",
@@ -10,65 +12,13 @@ export const metadata: Metadata = {
 
 export default function DisclosurePage() {
   return (
-    <main className="min-h-screen bg-canvas">
-      <header className="fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-4 sm:px-6">
-        <div className="w-full max-w-6xl">
-          <div className="flex w-full flex-nowrap items-center justify-between gap-3 rounded-full border px-3 py-2.5 backdrop-blur-xl transition-all duration-300 sm:px-4 border-transparent bg-white/40">
-            <Link href="/" className="flex shrink-0 items-center gap-2">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo text-white">
-                <MaterialIcon
-                  name="directions_boat_filled"
-                  size="sm"
-                  className="text-white"
-                />
-              </span>
-              <span className="whitespace-nowrap font-display text-lg font-bold text-ink sm:text-xl">
-                TripTide
-              </span>
-            </Link>
-            <nav className="hidden min-w-0 items-center gap-1 rounded-full bg-black/[0.03] p-1 lg:flex">
-              <Link
-                href="/deals"
-                className="whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium text-ink-soft transition-colors hover:text-ink xl:px-4"
-              >
-                Explore Deals
-              </Link>
-              <Link
-                href="/history"
-                className="whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium text-ink-soft transition-colors hover:text-ink xl:px-4"
-              >
-                Price History Maps
-              </Link>
-              <Link
-                href="/solo"
-                className="whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium text-ink-soft transition-colors hover:text-ink xl:px-4"
-              >
-                Solo Hub
-              </Link>
-            </nav>
-            <div className="flex shrink-0 items-center gap-2">
-              <Link
-                href="/alerts"
-                className="hidden shrink-0 whitespace-nowrap rounded-full bg-indigo px-4 py-2.5 text-xs font-semibold text-white shadow-[0_8px_20px_-6px_rgba(42,68,231,0.55)] hover:bg-indigo-dark active:scale-[0.97] sm:block sm:text-sm lg:px-5"
-              >
-                Create Price Alert
-              </Link>
-              <Link
-                href="/alerts"
-                className="block shrink-0 whitespace-nowrap rounded-full bg-indigo px-3.5 py-2.5 text-xs font-semibold text-white shadow-[0_8px_20px_-6px_rgba(42,68,231,0.55)] hover:bg-indigo-dark active:scale-[0.97] sm:hidden"
-              >
-                Alert
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <>
+      <Header />
       <main className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl">
           <section className="mb-16">
             <span className="inline-flex items-center gap-2 rounded-full border border-black/[0.06] bg-white px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint shadow-float">
-              <span className="h-1.5 w-1.5 rounded-full animate-pulse bg-coral" />
+              <span className="h-1.5 w-1.5 rounded-full bg-coral" />
               Fare Disclosure
             </span>
             <h1 className="mt-6 font-display text-4xl font-extrabold leading-[1.15] tracking-tight text-ink sm:text-6xl sm:leading-[1.1]">
@@ -368,147 +318,7 @@ export default function DisclosurePage() {
           </section>
         </div>
       </main>
-
-      <footer className="border-t border-black/[0.06] bg-white px-4 py-16 sm:px-6">
-        <div className="mx-auto max-w-7xl">
-          <div className="flex flex-col justify-between gap-10 md:flex-row">
-            <div className="max-w-sm">
-              <Link href="/" className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo text-white">
-                  <MaterialIcon
-                    name="directions_boat_filled"
-                    size="sm"
-                    className="text-white"
-                  />
-                </span>
-                <span className="font-display text-xl font-bold text-ink">
-                  TripTide
-                </span>
-              </Link>
-              <p className="mt-4 text-sm text-ink-soft">
-                An independent cruise price tracking and forecasting engine. We
-                monitor fares across every major line so you never overpay for a
-                stateroom again.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-10 sm:grid-cols-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
-                  Product
-                </p>
-                <ul className="mt-4 space-y-3">
-                  <li>
-                    <Link
-                      href="/deals"
-                      className="text-sm text-ink-soft hover:text-indigo"
-                    >
-                      Explore Deals
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/history"
-                      className="text-sm text-ink-soft hover:text-indigo"
-                    >
-                      Price History Maps
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/solo"
-                      className="text-sm text-ink-soft hover:text-indigo"
-                    >
-                      Solo Hub
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/alerts"
-                      className="text-sm text-ink-soft hover:text-indigo"
-                    >
-                      Price Alerts
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
-                  Company
-                </p>
-                <ul className="mt-4 space-y-3">
-                  <li>
-                    <Link
-                      href="/about"
-                      className="text-sm text-ink-soft hover:text-indigo"
-                    >
-                      About
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/press"
-                      className="text-sm text-ink-soft hover:text-indigo"
-                    >
-                      Press
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/careers"
-                      className="text-sm text-ink-soft hover:text-indigo"
-                    >
-                      Careers
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/contact"
-                      className="text-sm text-ink-soft hover:text-indigo"
-                    >
-                      Contact
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
-                  Legal
-                </p>
-                <ul className="mt-4 space-y-3">
-                  <li>
-                    <Link
-                      href="/privacy"
-                      className="text-sm text-ink-soft hover:text-indigo"
-                    >
-                      Privacy
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/terms"
-                      className="text-sm text-ink-soft hover:text-indigo"
-                    >
-                      Terms
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      href="/disclosure"
-                      className="text-sm text-ink-soft hover:text-indigo"
-                    >
-                      Fare Disclosure
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-black/[0.06] pt-8 text-xs text-ink-faint sm:flex-row">
-            <span>© 2026 TripTide, Inc. All rights reserved.</span>
-            <span className="font-mono-tab">triptide.net</span>
-          </div>
-        </div>
-      </footer>
-    </main>
+      <Footer />
+    </>
   );
 }

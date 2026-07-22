@@ -24,6 +24,10 @@ export default function ComparisonMatrix() {
   const fetcher = useMemo(() => fetchItineraries, []);
   const { data: itineraries, loading, error, lastSyncedAt, refresh } = useLiveData(fetcher, { pollIntervalMs: 45000 });
 
+  const handleSyncComplete = () => {
+    // Toast is managed at the App level — this callback triggers it
+  };
+
   const rows = useMemo(() => {
     if (!itineraries) return [];
     return itineraries.flatMap((it) =>
@@ -54,7 +58,7 @@ export default function ComparisonMatrix() {
               changes.
             </p>
             <div className="mt-4">
-              <SyncStatus loading={loading} lastSyncedAt={lastSyncedAt} onRefresh={refresh} />
+              <SyncStatus loading={loading} lastSyncedAt={lastSyncedAt} onRefresh={refresh} onSyncComplete={handleSyncComplete} />
             </div>
           </div>
 
@@ -65,7 +69,7 @@ export default function ComparisonMatrix() {
                 <button
                   key={n}
                   onClick={() => setPassengers(n)}
-                  className={`h-9 w-9 rounded-full font-mono-tab text-sm font-bold transition-all ${
+                  className={`h-11 w-11 rounded-full font-mono-tab text-sm font-bold transition-all ${
                     passengers === n
                       ? "bg-indigo text-white shadow-[0_6px_14px_-4px_rgba(42,68,231,0.6)]"
                       : "text-ink-soft hover:bg-white hover:text-ink"
@@ -91,8 +95,17 @@ export default function ComparisonMatrix() {
         )}
 
         <div className="overflow-hidden rounded-[28px] border border-black/[0.06] bg-white shadow-float-lg">
-          <div className="scrollbar-none overflow-x-auto">
-            <table className="w-full min-w-[1080px] border-collapse text-left">
+          {loading && rows.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <svg className="mb-4 h-12 w-12 text-ink-faint" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <p className="text-lg font-semibold text-ink-soft">No itineraries found</p>
+              <p className="mt-1 text-sm text-ink-faint">Check back soon — new fares are being monitored.</p>
+            </div>
+          ) : (
+            <div className="scrollbar-none overflow-x-auto">
+              <table className="w-full min-w-[1080px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-black/[0.06] bg-canvas/70 text-xs font-semibold uppercase tracking-wide text-ink-faint">
                   <th className="px-6 py-4 font-semibold">Cruise Line</th>
@@ -146,7 +159,7 @@ export default function ComparisonMatrix() {
                             ${row.total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                           </td>
                           <td className="px-6 py-4 text-right align-top">
-                            <button className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-black/[0.08] px-3.5 py-2 text-xs font-bold text-ink transition-all group-hover:border-indigo group-hover:bg-indigo group-hover:text-white active:scale-95">
+                            <button aria-label={`View analytics deal — ${row.cabin.cabinClass} in ${row.cruiseLine}`} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-black/[0.08] px-3.5 py-2 text-xs font-bold text-ink transition-all group-hover:border-indigo group-hover:bg-indigo group-hover:text-white active:scale-95">
                               View Analytics Deal
                               <svg
                                 width="11"
@@ -168,7 +181,8 @@ export default function ComparisonMatrix() {
                     })}
               </tbody>
             </table>
-          </div>
+            </div>
+          )}
         </div>
 
         <p className="mt-4 text-center text-xs text-ink-faint">

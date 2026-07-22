@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     'cruise deals',
     'solo cruise',
     'all-in cruise pricing',
-    'triptide',
+    'trip tide',
     'cruise tracking',
   ],
   openGraph: {
@@ -85,7 +85,12 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-canvas text-ink font-interface antialiased">
-        {children}
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-indigo focus:px-4 focus:py-2 focus:text-white focus:shadow-lg">
+          Skip to main content
+        </a>
+        <main id="main-content">
+          {children}
+        </main>
       </body>
     </html>
   );

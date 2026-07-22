@@ -607,20 +607,26 @@ router.get('/api/deals', async (req: Request, res: Response) => {
       }
 
       const trendRows = await dbQuery(
-        `SELECT sailing_id, total_usd, cabin_type
+        `SELECT sailing_id, total_usd, cabin_type, passenger_count
          FROM v_price_trends
-         ORDER BY sailing_id, recorded_date ASC, passenger_count ASC, cabin_type`
+         WHERE passenger_count = 2
+         ORDER BY sailing_id, recorded_date ASC, cabin_type`
       );
       if (trendRows) {
         for (const r of trendRows) {
+          // Group by both cabin_type AND passenger_count so history arrays
+          // don't get interleaved when the same cabin type has records for
+          // different passenger counts in the underlying data.
           const ct = String(r.cabin_type);
+          const pc = String(r.passenger_count);
+          const key = ct + '-' + pc;
           if (!historyBySailingAndCabin[r.sailing_id]) {
             historyBySailingAndCabin[r.sailing_id] = {};
           }
-          if (!historyBySailingAndCabin[r.sailing_id][ct]) {
-            historyBySailingAndCabin[r.sailing_id][ct] = [];
+          if (!historyBySailingAndCabin[r.sailing_id][key]) {
+            historyBySailingAndCabin[r.sailing_id][key] = [];
           }
-          historyBySailingAndCabin[r.sailing_id][ct].push(parseFloat(r.total_usd));
+          historyBySailingAndCabin[r.sailing_id][key].push(parseFloat(r.total_usd));
         }
       }
     }
@@ -652,10 +658,12 @@ router.get('/api/deals', async (req: Request, res: Response) => {
 
       const cheapestCabinType = String(row.cabin_type);
       const cabinHistory = historyBySailingAndCabin[row.id];
-      const realHistory = cabinHistory?.[cheapestCabinType];
-      const history = realHistory && realHistory.length > 0
-        ? realHistory
-        : [currentPrice];
+      // Use (cabin_type + '-2') as the key to match pax=2 history from
+      // v_price_trends, since the sparkline always displays 2-passenger pricing.
+      const realHistory = cabinHistory?.[cheapestCabinType + '-2'];
+      const history = (realHistory && realHistory.length > 0)
+        ? realHistory.slice(-12)
+        : [];
 
       return {
         id: row.id, cruiseLine: row.cruise_line, ship: row.ship_name,
@@ -690,7 +698,7 @@ router.get('/api/deals', async (req: Request, res: Response) => {
           case 'date-asc': return new Date(a.sailDate).getTime() - new Date(b.sailDate).getTime();
           case 'date-desc': return new Date(b.sailDate).getTime() - new Date(a.sailDate).getTime();
           case 'drop-desc': return b.dropPercent - a.dropPercent;
-          default: return 0;
+          default: return new Date(a.sailDate).getTime() - new Date(b.sailDate).getTime();
         }
       });
     }

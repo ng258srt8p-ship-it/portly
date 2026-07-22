@@ -237,6 +237,7 @@ export default function DealsFilters({
             </span>
             <input
               type="number"
+              aria-label="Minimum price filter"
               placeholder="Min $"
               value={filters.minPrice ?? ''}
               onChange={(e) =>
@@ -251,6 +252,7 @@ export default function DealsFilters({
             <span className="text-xs text-ink-faint">–</span>
             <input
               type="number"
+              aria-label="Maximum price filter"
               placeholder="Max $"
               value={filters.maxPrice ?? ''}
               onChange={(e) =>
@@ -264,6 +266,7 @@ export default function DealsFilters({
             />
 
             <select
+                          aria-label="Sort by"
                           value={filters.sort ?? ''}
                           onChange={(e) =>
                             onChange({ ...filters, sort: (e.target.value || undefined) as FilterState['sort'] })

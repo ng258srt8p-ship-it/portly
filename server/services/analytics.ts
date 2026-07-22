@@ -7,6 +7,7 @@
 
 import { getPool } from '../db/pool';
 import { callOpenCode } from '../utils/openCodeClient';
+import { sanitizeDealContent } from '../utils/contentFormatter';
 
 // ─── generateMarketSummary ──────────────────────────────────────────────────
 
@@ -332,7 +333,7 @@ Based on this data, provide:
     { max_tokens: 1200, temperature: 0.3 }
   );
 
-  return result;
+  return sanitizeDealContent(result);
 }
 
 // ─── analyzeAllSailings ─────────────────────────────────────────────────────
@@ -365,7 +366,7 @@ export async function analyzeAllSailings(closePool = false): Promise<string> {
       const chunk = ids.slice(i, i + CHUNK_SIZE);
       const chunkPromises = chunk.map(async (sid: number) => {
         try {
-          const analysis = await analyzeSailingDeal(String(sid), true);
+          const analysis = sanitizeDealContent(await analyzeSailingDeal(String(sid), true));
           if (analysis && analysis.length > 0) {
             await pool.query(
               `UPDATE sailings SET deal_analysis = $1, deal_analysis_generated_at = NOW() WHERE id = $2`,

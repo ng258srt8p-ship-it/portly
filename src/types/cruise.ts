@@ -106,4 +106,5 @@ export interface DealFilters {
   maxPrice?: number;
   badgeType?: ('drop' | 'solo' | 'gold')[];
   sort?: 'price-asc' | 'price-desc' | 'nights-asc' | 'nights-desc' | 'date-asc' | 'date-desc' | 'drop-desc';
+  cabinType?: ('Inside' | 'Oceanview' | 'Balcony' | 'Suite')[];
 }

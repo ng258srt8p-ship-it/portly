@@ -4,9 +4,10 @@ interface SyncStatusProps {
   loading: boolean;
   lastSyncedAt: number | null;
   onRefresh: () => void;
+  onSyncComplete?: () => void;
 }
 
-export default function SyncStatus({ loading, lastSyncedAt, onRefresh }: SyncStatusProps) {
+export default function SyncStatus({ loading, lastSyncedAt, onRefresh, onSyncComplete }: SyncStatusProps) {
   const [, forceTick] = useState(0);
 
   useEffect(() => {
@@ -23,15 +24,31 @@ export default function SyncStatus({ loading, lastSyncedAt, onRefresh }: SyncSta
         ? "Synced just now"
         : `Synced ${secondsAgo}s ago`;
 
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!loading && lastSyncedAt) {
+      setShowSuccess(true);
+      const timer = setTimeout(() => setShowSuccess(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, lastSyncedAt]);
+
+  useEffect(() => {
+    if (!loading && lastSyncedAt) {
+      onSyncComplete?.();
+    }
+  }, [loading, lastSyncedAt]);
+
   return (
-    <div className="flex items-center gap-2 rounded-full border border-black/[0.06] bg-white px-3 py-1.5 shadow-float">
-      <span className={`h-1.5 w-1.5 rounded-full ${loading ? "animate-pulse bg-coral" : "bg-mint-ink"}`} />
-      <span className="font-mono-tab text-[11px] font-medium text-ink-soft">{label}</span>
+    <div className="flex items-center gap-2 rounded-full border border-black/[0.06] bg-white px-3 py-1.5 shadow-float" aria-live="polite" aria-label="Live fare sync status">
+      <span className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${showSuccess ? "bg-success" : loading ? "animate-pulse bg-coral" : "bg-mint-ink"}`} />
+      <span className="font-mono-tab text-[11px] font-medium text-ink-soft" aria-live="polite">{label}</span>
       <button
         onClick={onRefresh}
         disabled={loading}
         aria-label="Refresh live fares"
-        className="flex h-5 w-5 items-center justify-center rounded-full text-ink-faint hover:bg-black/[0.05] hover:text-indigo disabled:opacity-40"
+        className="flex h-11 w-11 items-center justify-center rounded-full text-ink-faint hover:bg-black/[0.05] hover:text-indigo disabled:opacity-40"
       >
         <svg
           width="11"
