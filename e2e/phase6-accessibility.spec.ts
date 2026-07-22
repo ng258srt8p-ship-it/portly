@@ -2,18 +2,54 @@
  * Phase 6: Global Accessibility Audit — WCAG AA Compliance Tests
  *
  * Verifies WCAG AA contrast ratios and accessibility features across
- * all components on the sailing detail page.
+ * all components on the sailing detail page. Uses mocked API data
+ * since the Remix backend build is a separate concern.
  */
 
 import { test, expect } from '@playwright/test';
 
+test.setTimeout(60000);
+
 const BASE_URL = process.env.PW_BASE_URL || 'http://localhost:3002';
 
+// Mock API response since Remix server build is a separate concern
+const MOCK_DEAL_ANALYSIS = {
+  dealScore: 72,
+  justification: [
+    { title: 'Why This Is a Deal', content: 'Price trending below average for this cabin type. No hidden fees detected.' },
+    { title: 'Insider Tips', content: 'Book soon — inventory is limited for this cabin tier.' },
+  ],
+  hiddenCosts: { mandatoryGratuities: 150, wifiCost: 200, resortFees: 0 },
+  cabinValueBreakdown: {
+    Interior: { perNight: 120, valueRating: 'good' },
+    Oceanview: { perNight: 180, valueRating: 'great' },
+    Balcony: { perNight: 250, valueRating: 'excellent' },
+    Suite: { perNight: 400, valueRating: 'overpriced' },
+  },
+  pricingDeepDive: 'This sailing scores well across all dimensions. Price trend is falling (-5.2%). Hidden costs add $200 to your real total.',
+  priceTrend: 'falling',
+  inventoryIntelligence: 'Low availability — expect prices to rise.',
+};
+
+function setupMockApi(page: any): Promise<void> {
+  return page.route('**/api/enhanced/deal-analysis/*', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: MOCK_DEAL_ANALYSIS }),
+    });
+  });
+}
+
 test.describe('Phase 6 — WCAG AA Contrast & Accessibility', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupMockApi(page);
+  });
+
   // Verify hero price label has higher contrast (text-ink-faint/80 vs old /60)
   test('Hero price label has improved contrast', async ({ page }) => {
     await page.goto(`${BASE_URL}/sailing/1049`);
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid="enhanced-deal-analysis"]', { timeout: 30000 });
 
     // Check that breadcrumb line uses improved contrast
     const heroBreadcrumbs = page.locator('p.text-ink-faint\\/80');
@@ -27,12 +63,8 @@ test.describe('Phase 6 — WCAG AA Contrast & Accessibility', () => {
   // Verify all info panel values use muted styling for empty states
   test('Empty state values use muted text colors', async ({ page }) => {
     await page.goto(`${BASE_URL}/sailing/1049`);
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid="enhanced-deal-analysis"]', { timeout: 30000 });
 
-    // Check for "N/A" text (used when totalCabins is null)
-    const naText = page.locator('text=N/A');
-    // Either present or not depending on data — but shouldn't have plain "-" fallbacks
-    const dashFallback = page.locator('text=—').first();
     const bodyText = await page.evaluate(() => document.body.innerText);
 
     // Ensure no raw em-dash fallbacks remain (replaced by N/A, Unknown, etc.)
@@ -51,26 +83,14 @@ test.describe('Phase 6 — WCAG AA Contrast & Accessibility', () => {
   // Verify deal analysis cards use white backgrounds (not colored tints)
   test('Deal analysis cards have uniform white backgrounds', async ({ page }) => {
     await page.goto(`${BASE_URL}/sailing/1049`);
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid="enhanced-deal-analysis"]', { timeout: 30000 });
 
-    // Check that card backgrounds are NOT colored tints
-    const cardBackgrounds = await page.evaluate(() => {
+    const cardClasses = await page.evaluate(() => {
       const cards = document.querySelectorAll('[data-testid]');
       return Array.from(cards).map(el => el.getAttribute('class') || '');
     });
 
-    // No colored backgrounds should remain in card containers (except buttons)
-    const coloredBgCards = cardBackgrounds.filter(cls =>
-      cls.includes('bg-amber-50') ||
-      cls.includes('bg-emerald-50') ||
-      cls.includes('bg-blue-50') ||
-      cls.includes('bg-violet-50') ||
-      cls.includes('bg-indigo-mist') ||
-      cls.includes('bg-rose-50')
-    );
-
-    // Buttons can have colored backgrounds, cards should not (exclude button classes)
-    const cardContainers = cardBackgrounds.filter(cls =>
+    const cardContainers = cardClasses.filter(cls =>
       cls.includes('rounded-xl') || cls.includes('border border-')
     );
 
@@ -89,7 +109,7 @@ test.describe('Phase 6 — WCAG AA Contrast & Accessibility', () => {
   // Verify cabin pricing table rows have consistent heights (no py-4)
   test('Table rows use consistent padding', async ({ page }) => {
     await page.goto(`${BASE_URL}/sailing/1049`);
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid="enhanced-deal-analysis"]', { timeout: 30000 });
 
     const rowPadding = await page.evaluate(() => {
       const rows = document.querySelectorAll('div.grid-cols-1.md\\:grid-cols-12');
@@ -108,16 +128,19 @@ test.describe('Phase 6 — WCAG AA Contrast & Accessibility', () => {
     expect(rowsWithCenter.length, 'All rows should have items-center').toBeGreaterThan(0);
   });
 
-  // Verify total column has breakdown label
+  // Verify total column has breakdown label (in mobile expanded view)
   test('Total column shows price breakdown label', async ({ page }) => {
     await page.goto(`${BASE_URL}/sailing/1049`);
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid="enhanced-deal-analysis"]', { timeout: 30000 });
 
-    // Check for the breakdown label in mobile expanded view
+    // Expand a cabin row to reveal mobile details
+    const expandBtn = page.locator('div[data-testid="cabin-row"]').first();
+    await expandBtn.click({ force: true });
+    await page.waitForTimeout(1000);
+
     const totalLabel = page.locator('p.text-xs.text-ink-faint');
     await expect(totalLabel.first()).toBeVisible();
 
-    // Should contain "Includes base fare" text
     const firstLabel = await totalLabel.first().textContent();
     expect(firstLabel).toContain('Includes base fare');
   });
@@ -125,30 +148,25 @@ test.describe('Phase 6 — WCAG AA Contrast & Accessibility', () => {
   // Verify no duplicate CTA buttons remain on page
   test('Only one Book This Cruise CTA exists', async ({ page }) => {
     await page.goto(`${BASE_URL}/sailing/1049`);
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid="enhanced-deal-analysis"]', { timeout: 30000 });
 
-    // Count CTA buttons - should be exactly 1
     const ctaButtons = await page.locator('[data-testid="deal-cta"]');
     await expect(ctaButtons.first()).toBeVisible();
 
-    // Should NOT have "Book Now - Great Value" text anywhere
     const bodyText = await page.evaluate(() => document.body.innerText);
     expect(bodyText).not.toContain('Book Now - Great Value');
     expect(bodyText).not.toContain('View All');
-
-    // Should have "Book This Cruise" (exactly once)
     expect(bodyText).toContain('Book This Cruise');
   });
 
   // Visual regression snapshot for accessibility state
   test('Visual regression snapshot (accessibility)', async ({ page }) => {
     await page.goto(`${BASE_URL}/sailing/1049`);
-    await page.waitForTimeout(5000);
+    await page.waitForSelector('[data-testid="enhanced-deal-analysis"]', { timeout: 30000 });
 
     const body = await page.$('body');
     expect(body).toBeTruthy();
 
-    // Snapshot — visually verify contrast and accessibility improvements
     await expect(page).toHaveScreenshot('phase6-accessibility.png');
   });
 });
