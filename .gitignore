@@ -1,5 +1,40 @@
-out
-dist
-node_modules
-.vscode-test/
-*.vsix
+# dependencies
+node_modules/
+workers/node_modules/
+scrapers/node_modules/
+
+# next.js
+.next/
+out/
+
+# production
+dist/
+
+# env — never commit secrets
+.env
+.env.local
+.env.production
+.env*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# wrangler
+.wrangler/
+.dev.vars
+
+# logs
+*.log
+npm-debug.log*
+
+# testing
+coverage/
+test-results/
