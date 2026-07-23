@@ -27,7 +27,7 @@ async function upsertToD1(sailings: SailingRecord[]): Promise<InsertResult> {
     try {
       const resp = await fetch(`${apiUrl}/api/deals`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.SCRAPER_SECRET}` },
         body: JSON.stringify({ ...s, fingerprint: fp }),
       });
       if (resp.ok) {

@@ -4,6 +4,7 @@ import { cors } from 'hono/cors';
 export type Env = {
   DB: D1Database;
   CACHE: KVNamespace;
+  SCRAPER_SECRET: string;
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -136,6 +137,10 @@ app.get('/api/search', async (c) => {
 
 // POST /api/deals — upsert sailing from scraper
 app.post('/api/deals', async (c) => {
+  const auth = c.req.header('Authorization');
+  if (auth !== `Bearer ${c.env.SCRAPER_SECRET}`) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
   const body = await c.req.json<{
     id: string;
     fingerprint: string;

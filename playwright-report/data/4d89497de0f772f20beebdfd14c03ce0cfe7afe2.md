@@ -1,0 +1,232 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: phase6-accessibility.spec.ts >> Phase 6 — WCAG AA Contrast & Accessibility >> Only one Book This Cruise CTA exists
+- Location: e2e/phase6-accessibility.spec.ts:149:7
+
+# Error details
+
+```
+TimeoutError: page.waitForSelector: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator('[data-testid="enhanced-deal-analysis"]') to be visible
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - link "Skip to main content" [ref=e2]:
+    - /url: "#main-content"
+  - main [ref=e3]:
+    - generic [ref=e6]:
+      - button "TripTide" [ref=e7] [cursor=pointer]:
+        - generic [ref=e9]: directions_boat_filled
+        - generic [ref=e10]: TripTide
+      - navigation [ref=e11]:
+        - button "Explore Deals" [ref=e12] [cursor=pointer]
+        - button "Price History Maps" [ref=e13] [cursor=pointer]
+        - button "Solo Hub" [ref=e14] [cursor=pointer]
+      - generic [ref=e15]:
+        - button "Toggle dark mode" [ref=e16] [cursor=pointer]:
+          - generic [ref=e17]: dark_mode
+        - button "Create Price Alert" [ref=e18] [cursor=pointer]
+    - main [ref=e19]:
+      - generic [ref=e21]:
+        - paragraph [ref=e22]: "Failed to load sailing details: Load failed"
+        - paragraph [ref=e23]:
+          - text: Sailing may not exist. Try running a sync to generate data, or go back to
+          - link "the homepage" [ref=e24]:
+            - /url: /
+          - text: .
+    - generic [ref=e26]:
+      - generic [ref=e27]:
+        - generic [ref=e28]:
+          - link "TripTide" [ref=e29]:
+            - /url: /
+            - generic [ref=e31]: directions_boat_filled
+            - generic [ref=e32]: TripTide
+          - paragraph [ref=e33]: An independent cruise price tracking and forecasting engine. We monitor fares across every major line so you never overpay for a stateroom again.
+        - generic [ref=e34]:
+          - generic [ref=e35]:
+            - paragraph [ref=e36]: Product
+            - list [ref=e37]:
+              - listitem [ref=e38]:
+                - link "Explore Deals" [ref=e39]:
+                  - /url: /deals
+              - listitem [ref=e40]:
+                - link "Price History Maps" [ref=e41]:
+                  - /url: /history
+              - listitem [ref=e42]:
+                - link "Solo Hub" [ref=e43]:
+                  - /url: /solo
+              - listitem [ref=e44]:
+                - link "Price Alerts" [ref=e45]:
+                  - /url: /alerts
+          - generic [ref=e46]:
+            - paragraph [ref=e47]: Company
+            - list [ref=e48]:
+              - listitem [ref=e49]:
+                - link "About" [ref=e50]:
+                  - /url: /about
+              - listitem [ref=e51]:
+                - link "Press" [ref=e52]:
+                  - /url: /press
+              - listitem [ref=e53]:
+                - link "Careers" [ref=e54]:
+                  - /url: /careers
+              - listitem [ref=e55]:
+                - link "Contact" [ref=e56]:
+                  - /url: /contact
+          - generic [ref=e57]:
+            - paragraph [ref=e58]: Legal
+            - list [ref=e59]:
+              - listitem [ref=e60]:
+                - link "Privacy" [ref=e61]:
+                  - /url: /privacy
+              - listitem [ref=e62]:
+                - link "Terms" [ref=e63]:
+                  - /url: /terms
+              - listitem [ref=e64]:
+                - link "Fare Disclosure" [ref=e65]:
+                  - /url: /disclosure
+      - generic [ref=e66]:
+        - generic [ref=e67]: © 2026 TripTide, Inc. All rights reserved.
+        - generic [ref=e68]: triptide.net
+  - alert [ref=e69]
+```
+
+# Test source
+
+```ts
+  51  |     await page.goto(`${BASE_URL}/sailing/1049`);
+  52  |     await page.waitForSelector('[data-testid="enhanced-deal-analysis"]', { timeout: 30000 });
+  53  | 
+  54  |     // Check that breadcrumb line uses improved contrast
+  55  |     const heroBreadcrumbs = page.locator('p.text-ink-faint\\/80');
+  56  |     await expect(heroBreadcrumbs).toHaveCount(1);
+  57  | 
+  58  |     // Hero text should be visible on dark background
+  59  |     const heroText = page.locator('div.relative.z-10 p');
+  60  |     await expect(heroText.first()).toBeVisible();
+  61  |   });
+  62  | 
+  63  |   // Verify all info panel values use muted styling for empty states
+  64  |   test('Empty state values use muted text colors', async ({ page }) => {
+  65  |     await page.goto(`${BASE_URL}/sailing/1049`);
+  66  |     await page.waitForSelector('[data-testid="enhanced-deal-analysis"]', { timeout: 30000 });
+  67  | 
+  68  |     const bodyText = await page.evaluate(() => document.body.innerText);
+  69  | 
+  70  |     // Ensure no raw em-dash fallbacks remain (replaced by N/A, Unknown, etc.)
+  71  |     expect(bodyText).not.toContain('—');
+  72  | 
+  73  |     // Should contain "Unknown" for string fields
+  74  |     expect(bodyText).toContain('Unknown');
+  75  | 
+  76  |     // Should contain "0 ports" instead of "—"
+  77  |     expect(bodyText).toContain('0 ports');
+  78  | 
+  79  |     // Should contain "Unsynched" instead of "—"
+  80  |     expect(bodyText).toContain('Unsynched');
+  81  |   });
+  82  | 
+  83  |   // Verify deal analysis cards use white backgrounds (not colored tints)
+  84  |   test('Deal analysis cards have uniform white backgrounds', async ({ page }) => {
+  85  |     await page.goto(`${BASE_URL}/sailing/1049`);
+  86  |     await page.waitForSelector('[data-testid="enhanced-deal-analysis"]', { timeout: 30000 });
+  87  | 
+  88  |     const cardClasses = await page.evaluate(() => {
+  89  |       const cards = document.querySelectorAll('[data-testid]');
+  90  |       return Array.from(cards).map(el => el.getAttribute('class') || '');
+  91  |     });
+  92  | 
+  93  |     const cardContainers = cardClasses.filter(cls =>
+  94  |       cls.includes('rounded-xl') || cls.includes('border border-')
+  95  |     );
+  96  | 
+  97  |     const cardsWithColoredBg = cardContainers.filter(cls =>
+  98  |       cls.includes('bg-amber-50') ||
+  99  |       cls.includes('bg-emerald-50') ||
+  100 |       cls.includes('bg-blue-50') ||
+  101 |       cls.includes('bg-violet-50') ||
+  102 |       cls.includes('bg-indigo-mist') ||
+  103 |       cls.includes('bg-rose-50')
+  104 |     );
+  105 | 
+  106 |     expect(cardsWithColoredBg.length, 'Cards should use white backgrounds').toBe(0);
+  107 |   });
+  108 | 
+  109 |   // Verify cabin pricing table rows have consistent heights (no py-4)
+  110 |   test('Table rows use consistent padding', async ({ page }) => {
+  111 |     await page.goto(`${BASE_URL}/sailing/1049`);
+  112 |     await page.waitForSelector('[data-testid="enhanced-deal-analysis"]', { timeout: 30000 });
+  113 | 
+  114 |     const rowPadding = await page.evaluate(() => {
+  115 |       const rows = document.querySelectorAll('div.grid-cols-1.md\\:grid-cols-12');
+  116 |       return Array.from(rows).map(el => el.getAttribute('class') || '');
+  117 |     });
+  118 | 
+  119 |     const rowsWithPy4 = rowPadding.filter(cls => cls.includes('py-4'));
+  120 |     expect(rowsWithPy4.length, 'No rows should use py-4').toBe(0);
+  121 | 
+  122 |     // Should have py-3
+  123 |     const rowsWithPy3 = rowPadding.filter(cls => cls.includes('py-3'));
+  124 |     expect(rowsWithPy3.length, 'All rows should use py-3').toBeGreaterThan(0);
+  125 | 
+  126 |     // Should have items-center for vertical alignment
+  127 |     const rowsWithCenter = rowPadding.filter(cls => cls.includes('items-center'));
+  128 |     expect(rowsWithCenter.length, 'All rows should have items-center').toBeGreaterThan(0);
+  129 |   });
+  130 | 
+  131 |   // Verify total column has breakdown label (in mobile expanded view)
+  132 |   test('Total column shows price breakdown label', async ({ page }) => {
+  133 |     await page.goto(`${BASE_URL}/sailing/1049`);
+  134 |     await page.waitForSelector('[data-testid="enhanced-deal-analysis"]', { timeout: 30000 });
+  135 | 
+  136 |     // Expand a cabin row to reveal mobile details
+  137 |     const expandBtn = page.locator('div[data-testid="cabin-row"]').first();
+  138 |     await expandBtn.click({ force: true });
+  139 |     await page.waitForTimeout(1000);
+  140 | 
+  141 |     const totalLabel = page.locator('p.text-xs.text-ink-faint');
+  142 |     await expect(totalLabel.first()).toBeVisible();
+  143 | 
+  144 |     const firstLabel = await totalLabel.first().textContent();
+  145 |     expect(firstLabel).toContain('Includes base fare');
+  146 |   });
+  147 | 
+  148 |   // Verify no duplicate CTA buttons remain on page
+  149 |   test('Only one Book This Cruise CTA exists', async ({ page }) => {
+  150 |     await page.goto(`${BASE_URL}/sailing/1049`);
+> 151 |     await page.waitForSelector('[data-testid="enhanced-deal-analysis"]', { timeout: 30000 });
+      |                ^ TimeoutError: page.waitForSelector: Timeout 30000ms exceeded.
+  152 | 
+  153 |     const ctaButtons = await page.locator('[data-testid="deal-cta"]');
+  154 |     await expect(ctaButtons.first()).toBeVisible();
+  155 | 
+  156 |     const bodyText = await page.evaluate(() => document.body.innerText);
+  157 |     expect(bodyText).not.toContain('Book Now - Great Value');
+  158 |     expect(bodyText).not.toContain('View All');
+  159 |     expect(bodyText).toContain('Book This Cruise');
+  160 |   });
+  161 | 
+  162 |   // Visual regression snapshot for accessibility state
+  163 |   test('Visual regression snapshot (accessibility)', async ({ page }) => {
+  164 |     await page.goto(`${BASE_URL}/sailing/1049`);
+  165 |     await page.waitForSelector('[data-testid="enhanced-deal-analysis"]', { timeout: 30000 });
+  166 | 
+  167 |     const body = await page.$('body');
+  168 |     expect(body).toBeTruthy();
+  169 | 
+  170 |     await expect(page).toHaveScreenshot('phase6-accessibility.png');
+  171 |   });
+  172 | });
+  173 | 
+```

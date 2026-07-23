@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NVIDIA NIM LLM Monitor</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        
+        .status-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .status-item {
+            text-align: center;
+        }
+        
+        .status-label {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        
+        .status-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .success { color: #27ae60; }
+        .warning { color: #f39c12; }
+        .error { color: #e74c3c; }
+        .info { color: #3498db; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            color: #2c3e50;
+        }
+        
+        tr:hover td {
+            background-color: #f8f9fa;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        .status-healthy { background-color: #27ae60; }
+        .status-warning { background-color: #f39c12; }
+        .status-error { background-color: #e74c3c; }
+        .status-unknown { background-color: #95a5a6; }
+        
+        .requests-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .requests-table {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        
+        .requests-table table {
+            min-width: 100%;
+        }
+        
+        .refresh-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+            margin: 10px 5px;
+        }
+        
+        .refresh-btn:hover {
+            background: #2980b9;
+        }
+        
+        .refresh-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+        
+        .error-message {
+            background: #ffeaa7;
+            color: #d35400;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #d35400;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>NVIDIA NIM LLM Usage Monitor</h1>
+        
+        <div class="status-panel">
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="status-label">Total Requests</div>
+                    <div class="status-value" id="total-requests">0</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Success Rate (200)</div>
+                    <div class="status-value success" id="success-rate">0%</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Error Rate (429)</div>
+                    <div class="status-value error" id="error-rate">0%</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Active Models</div>
+                    <div class="status-value info" id="active-models">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="error-message" class="error-message" style="display: none;"></div>
+        
+        <div style="margin-bottom: 20px;">
+            <button class="refresh-btn" id="refreshBtn">Refresh Data</button>
+            <span id="lastUpdated" style="margin-left: 15px; color: #7f8c8d; font-size: 0.9rem;">Last updated: Never</span>
+        </div>
+        
+        <h2>Model Usage Details</h2>
+        <div id="models-container">
+            <!-- Model rows will be inserted here -->
+        </div>
+        
+        <div class="requests-panel">
+            <h2>Recent Requests (Rolling List)</h2>
+            <div class="requests-table" id="requests-container">
+                <!-- Individual requests will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            refreshInterval: 5000, // 5 seconds
+            apiEndpoint: '/api/nim-metrics' // Default endpoint
+        };
+        
+        // State
+        let isUpdating = false;
+        
+        // DOM Elements
+        const elements = {
+            totalRequests: document.getElementById('total-requests'),
+            successRate: document.getElementById('success-rate'),
+            errorRate: document.getElementById('error-rate'),
+            activeModels: document.getElementById('active-models'),
+            errorMessage: document.getElementById('error-message'),
+            refreshBtn: document.getElementById('refreshBtn'),
+            lastUpdated: document.getElementById('lastUpdated'),
+            modelsContainer: document.getElementById('models-container'),
+            requestsContainer: document.getElementById('requests-container')
+        };
+        
+        // Fetch metrics from API
+        async function fetchMetrics() {
+            if (isUpdating) return;
+            isUpdating = true;
+            
+            try {
+                elements.refreshBtn.disabled = true;
+                elements.errorMessage.style.display = 'none';
+                
+                // Try to fetch from the API endpoint
+                let metrics = null;
+                
+                try {
+                    const response = await fetch(CONFIG.apiEndpoint);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    metrics = await response.json();
+                } catch (apiError) {
+                    // If API fails, show helpful message
+                    throw new Error('Unable to fetch metrics data. Please ensure the NIM metrics endpoint is running.');
+                }
+                
+                if (metrics) {
+                    updateUI(metrics);
+                    const now = new Date();
+                    elements.lastUpdated.textContent = `Last updated: ${now.toLocaleTimeString()}`;
+                } else {
+                    throw new Error('No metrics data received');
+                }
+            } catch (error) {
+                console.error('Error fetching metrics:', error);
+                elements.errorMessage.textContent = error.message;
+                elements.errorMessage.style.display = 'block';
+                
+                // Show demo data if this is likely a direct file open
+                if (window.location.protocol === 'file:') {
+                    showDemoData();
+                }
+            } finally {
+                isUpdating = false;
+                elements.refreshBtn.disabled = false;
+            }
+        }
+        
+        // Update UI with metrics data
+        function updateUI(metrics) {
+            // Update status bar
+            elements.totalRequests.textContent = metrics.totalRequests?.toLocaleString() || '0';
+            
+            const successRate = metrics.successRate !== undefined 
+                ? (metrics.successRate * 100).toFixed(1) + '%' 
+                : '0%';
+            elements.successRate.textContent = successRate;
+            elements.successRate.className = `status-value ${parseFloat(successRate) >= 95 ? 'success' : parseFloat(successRate) >= 80 ? 'warning' : 'error'}`;
+            
+            const errorRate = metrics.errorRate !== undefined 
+                ? (metrics.errorRate * 100).toFixed(1) + '%' 
+                : '0%';
+            elements.errorRate.textContent = errorRate;
+            elements.errorRate.className = `status-value ${parseFloat(errorRate) < 5 ? 'success' : parseFloat(errorRate) < 15 ? 'warning' : 'error'}`;
+            
+            elements.activeModels.textContent = metrics.activeModels || '0';
+            
+            // Update models table
+            if (metrics.models && metrics.models.length > 0) {
+                updateModelsTable(metrics.models);
+            } else {
+                elements.modelsContainer.innerHTML = '<div class="no-data">No model data available</div>';
+            }
+            
+            // Update requests table
+            if (metrics.recentRequests && metrics.recentRequests.length > 0) {
+                updateRequestsTable(metric.recentRequests);
+            } else {
+                elements.requestsContainer.innerHTML = '<div class="no-data">No request data available</div>';
+            }
+        }
+        
+        // Update the models table
+        function updateModelsTable(models) {
+            let tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Requests</th>
+                            <th>Input Tokens</th>
+                            <th>Output Tokens</th>
+                            <th>Errors (429)</th>
+                            <th>Success Rate</th>
+                            <th>Avg Latency</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            models.forEach(model => {
+                const successRate = model.totalRequests > 0 
+                    ? ((model.successfulRequests || 0) / model.totalRequests * 100).toFixed(1) + '%'
+                    : '0%';
+                
+                const statusClass = model.errorRate > 0.1 ? 'status-error' : 
+                                   model.errorRate > 0.01 ? 'status-warning' : 'status-healthy';
+                
+                tableHTML += `
+                    <tr>
+                        <td>${model.name || 'Unknown'}</td>
+                        <td>${(model.totalRequests || 0).toLocaleString()}</td>
+                        <td>${(model.inputTokens || 0).toLocaleString()}</td>
+                        <td>${(model.outputTokens || 0).toLocaleString()}</td>
+                        <td>${(model.error429Count || 0).toLocaleString()}</td>
+                        <td>${successRate}</td>
+                        <td>${model.avgLatencyMs ? `${model.avgLatencyMs}ms` : 'N/A'}</td>
+                        <td><span class="status-indicator ${statusClass}"></span>${model.status || 'Unknown'}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            
+            modelsContainer.innerHTML = tableHTML;
+        }
+        
+        // Update the requests table (rolling list)
+        function updateRequestsTable(requests) {
+            let tableHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Model</th>
+                            <th>Request Type</th>
+                            <th>Input Tokens</th>
+                            <th>Output Tokens</th>
+                            <th>Status</th>
+                            <th>Latency</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            // Show the most recent requests first (reverse order)
+            const recentRequests = [...requests].reverse();
+            
+            recentRequests.forEach(request => {
+                const time = new Date(request.timestamp || Date.now()).toLocaleTimeString();
+                const statusClass = request.statusCode === 200 ? 'status-healthy' : 
+                                 request.statusCode === 429 ? 'status-warning' : 'status-error';
+                
+                tableHTML += `
+                    <tr>
+                        <td>${time}</td>
+                        <td>${request.model || 'Unknown'}</td>
+                        <td>${request.type || 'Unknown'}</td>
+                        <td>${(request.inputTokens || 0).toLocaleString()}</td>
+                        <td>${(request.outputTokens || 0).toLocaleString()}</td>
+                        <td><span class="status-indicator ${statusClass}"></span>${request.statusCode}</td>
+                        <td>${request.latencyMs ? `${request.latencyMs}ms` : 'N/A'}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            
+            requestsContainer.innerHTML = tableHTML;
+        }
+        
+        // Show demo data for testing when no API is available
+        function showDemoData() {
+            console.log('Showing demo data');
+            
+            // Update status bar with demo data
+            elements.totalRequests.textContent = '1,245';
+            elements.successRate.textContent = '98.2%';
+            elements.successRate.className = 'status-value success';
+            elements.errorRate.textContent = '1.8%';
+            elements.errorRate.className = 'status-value success';
+            elements.activeModels.textContent = '4';
+            
+            // Update models table with demo data
+            const demoModels = [
+                {
+                    name: 'mimo-v2.5-free',
+                    totalRequests: 450,
+                    inputTokens: 125000,
+                    outputTokens: 85000,
+                    error429Count: 5,
+                    successRate: '98.9%',
+                    avgLatencyMs: 320,
+                    status: 'Healthy'
+                },
+                {
+                    name: 'nemotron-3-super',
+                    totalRequests: 320,
+                    inputTokens: 89000,
+                    outputTokens: 62000,
+                    error429Count: 7,
+                    successRate: '97.8%',
+                    avgLatencyMs: 850,
+                    status: 'Warning'
+                },
+                {
+                    name: 'llama-3-70b',
+                    totalRequests: 280,
+                    inputTokens: 75000,
+                    outputTokens: 53000,
+                    error429Count: 22,
+                    successRate: '92.1%',
+                    avgLatencyMs: 1200,
+                    status: 'Error'
+                },
+                {
+                    name: 'mixtral-8x7b',
+                    totalRequests: 195,
+                    inputTokens: 52000,
+                    outputTokens: 38000,
+                    error429Count: 1,
+                    successRate: '99.5%',
+                    avgLatencyMs: 450,
+                    status: 'Healthy'
+                }
+            ];
+            
+            updateModelsTable(demoModels);
+            
+            // Update requests table with demo data
+            const demoRequests = [
+                { 
+                    timestamp: Date.now() - 1000, 
+                    model: 'mimo-v2.5-free', 
+                    type: 'chat', 
+                    inputTokens: 120, 
+                    outputTokens: 45, 
+                    statusCode: 200, 
+                    latencyMs: 320 
+                },
+                { 
+                    timestamp: Date.now() - 5000, 
+                    model: 'nemotron-3-super', 
+                    type: 'completion', 
+                    inputTokens: 2000, 
+                    outputTokens: 150, 
+                    statusCode: 200, 
+                    latencyMs: 850 
+                },
+                { 
+                    timestamp: Date.now() - 12000, 
+                    model: 'llama-3-70b', 
+                    type: 'chat', 
+                    inputTokens: 500, 
+                    outputTokens: 200, 
+                    statusCode: 429, 
+                    latencyMs: 5000 
+                },
+                { 
+                    timestamp: Date.now() - 20000, 
+                    model: 'mixtral-8x7b', 
+                    type: 'embedding', 
+                    inputTokens: 1000, 
+                    outputTokens: 0, 
+                    statusCode: 200, 
+                    latencyMs: 450 
+                },
+                { 
+                    timestamp: Date.now() - 30000, 
+                    model: 'mimo-v2.5-free', 
+                    type: 'chat', 
+                    inputTokens: 300, 
+                    outputTokens: 120, 
+                    statusCode: 200, 
+                    latencyMs: 280 
+                },
+                { 
+                    timestamp: Date.now() - 45000, 
+                    model: 'nemotron-3-super', 
+                    type: 'completion', 
+                    inputTokens: 1500, 
+                    outputTokens: 100, 
+                    statusCode: 429, 
+                    latencyMs: 6200 
+                },
+                { 
+                    timestamp: Date.now() - 60000, 
+                    model: 'llama-3-70b', 
+                    type: 'chat', 
+                    inputTokens: 800, 
+                    outputTokens: 300, 
+                    statusCode: 200, 
+                    latencyMs: 950 
+                }
+            ];
+            
+            updateRequestsTable(demoRequests);
+            
+            // Update timestamp
+            const now = new Date();
+            elements.lastUpdated.textContent = `Last updated: ${now.toLocaleTimeString()} (Demo Data)`;
+        }
+        
+        // Event listeners
+        elements.refreshBtn.addEventListener('click', fetchMetrics);
+        
+        // Initialize
+        function init() {
+            // Fetch data immediately
+            fetchMetrics();
+            
+            // Set up periodic refresh
+            setInterval(() => {
+                if (!document.hidden) { // Only update when tab is visible
+                    fetchMetrics();
+                }
+            }, CONFIG.refreshInterval);
+            
+            // Also update when window becomes visible
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    fetchMetrics();
+                }
+            });
+        }
+        
+        // Start the application
+        init();
+    </script>
+</body>
+</html>

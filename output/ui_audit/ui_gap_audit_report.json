@@ -1,0 +1,588 @@
+{
+  "timestamp": "2026-07-23T02:24:53.307Z",
+  "totalPages": 16,
+  "totalComponents": 29,
+  "totalFindings": 20,
+  "findingsBySeverity": {
+    "low": 12,
+    "high": 4,
+    "medium": 4
+  },
+  "findingsByCategory": {
+    "accessibility": 10,
+    "missing-state": 4,
+    "edge-case": 4,
+    "responsive-gap": 2
+  },
+  "pages": [
+    {
+      "page": "page.tsx",
+      "component": "components/page.tsx",
+      "path": "app/page.tsx",
+      "findings": [
+        {
+          "id": "FINDING-1",
+          "severity": "low",
+          "category": "accessibility",
+          "page": "page.tsx",
+          "component": "components/page.tsx",
+          "description": "Interactive elements lack ARIA labels/roles",
+          "fix": "Add aria-label, aria-describedby, or role attributes to interactive elements",
+          "wcag": "4.1.2"
+        }
+      ],
+      "totalElements": 1,
+      "coveredElements": 0
+    },
+    {
+      "page": "layout.tsx",
+      "component": "components/layout.tsx",
+      "path": "app/layout.tsx",
+      "findings": [],
+      "totalElements": 1,
+      "coveredElements": 1
+    },
+    {
+      "page": "page.tsx",
+      "component": "components/page.tsx",
+      "path": "app/solo/page.tsx",
+      "findings": [
+        {
+          "id": "FINDING-2",
+          "severity": "low",
+          "category": "accessibility",
+          "page": "page.tsx",
+          "component": "components/page.tsx",
+          "description": "Interactive elements lack ARIA labels/roles",
+          "fix": "Add aria-label, aria-describedby, or role attributes to interactive elements",
+          "wcag": "4.1.2"
+        }
+      ],
+      "totalElements": 28,
+      "coveredElements": 27
+    },
+    {
+      "page": "page.tsx",
+      "component": "components/page.tsx",
+      "path": "app/privacy/page.tsx",
+      "findings": [],
+      "totalElements": 13,
+      "coveredElements": 13
+    },
+    {
+      "page": "page.tsx",
+      "component": "components/page.tsx",
+      "path": "app/terms/page.tsx",
+      "findings": [],
+      "totalElements": 15,
+      "coveredElements": 15
+    },
+    {
+      "page": "page.tsx",
+      "component": "components/page.tsx",
+      "path": "app/history/page.tsx",
+      "findings": [
+        {
+          "id": "FINDING-3",
+          "severity": "low",
+          "category": "accessibility",
+          "page": "page.tsx",
+          "component": "components/page.tsx",
+          "description": "Interactive elements lack ARIA labels/roles",
+          "fix": "Add aria-label, aria-describedby, or role attributes to interactive elements",
+          "wcag": "4.1.2"
+        }
+      ],
+      "totalElements": 19,
+      "coveredElements": 18
+    },
+    {
+      "page": "page.tsx",
+      "component": "components/page.tsx",
+      "path": "app/disclosure/page.tsx",
+      "findings": [],
+      "totalElements": 23,
+      "coveredElements": 23
+    },
+    {
+      "page": "page.tsx",
+      "component": "components/page.tsx",
+      "path": "app/deals/page.tsx",
+      "findings": [],
+      "totalElements": 1,
+      "coveredElements": 0
+    },
+    {
+      "page": "ExploreDealsHero.tsx",
+      "component": "components/ExploreDealsHero.tsx",
+      "path": "app/deals/ExploreDealsHero.tsx",
+      "findings": [
+        {
+          "id": "FINDING-4",
+          "severity": "high",
+          "category": "missing-state",
+          "page": "ExploreDealsHero.tsx",
+          "component": "components/ExploreDealsHero.tsx",
+          "description": "Page/component likely fetches data but lacks a loading state (skeleton/shimmer/spinner)",
+          "fix": "Add a loading state with skeleton loaders for card grids, table rows, or form fields"
+        },
+        {
+          "id": "FINDING-5",
+          "severity": "low",
+          "category": "accessibility",
+          "page": "ExploreDealsHero.tsx",
+          "component": "components/ExploreDealsHero.tsx",
+          "description": "Interactive elements lack ARIA labels/roles",
+          "fix": "Add aria-label, aria-describedby, or role attributes to interactive elements",
+          "wcag": "4.1.2"
+        }
+      ],
+      "totalElements": 6,
+      "coveredElements": 4
+    },
+    {
+      "page": "page.tsx",
+      "component": "components/page.tsx",
+      "path": "app/contact/page.tsx",
+      "findings": [],
+      "totalElements": 19,
+      "coveredElements": 19
+    },
+    {
+      "page": "page.tsx",
+      "component": "components/page.tsx",
+      "path": "app/press/page.tsx",
+      "findings": [],
+      "totalElements": 49,
+      "coveredElements": 49
+    },
+    {
+      "page": "page.tsx",
+      "component": "components/page.tsx",
+      "path": "app/careers/page.tsx",
+      "findings": [],
+      "totalElements": 43,
+      "coveredElements": 43
+    },
+    {
+      "page": "page.tsx",
+      "component": "components/page.tsx",
+      "path": "app/alerts/page.tsx",
+      "findings": [
+        {
+          "id": "FINDING-6",
+          "severity": "high",
+          "category": "missing-state",
+          "page": "page.tsx",
+          "component": "components/page.tsx",
+          "description": "Page/component likely fetches data but lacks a loading state (skeleton/shimmer/spinner)",
+          "fix": "Add a loading state with skeleton loaders for card grids, table rows, or form fields"
+        }
+      ],
+      "totalElements": 11,
+      "coveredElements": 10
+    },
+    {
+      "page": "page.tsx",
+      "component": "components/page.tsx",
+      "path": "app/about/page.tsx",
+      "findings": [],
+      "totalElements": 41,
+      "coveredElements": 41
+    },
+    {
+      "page": "page.tsx",
+      "component": "components/page.tsx",
+      "path": "app/fare-disclosure/page.tsx",
+      "findings": [],
+      "totalElements": 1,
+      "coveredElements": 1
+    },
+    {
+      "page": "page.tsx",
+      "component": "components/page.tsx",
+      "path": "app/sailing/[id]/page.tsx",
+      "findings": [],
+      "totalElements": 18,
+      "coveredElements": 18
+    },
+    {
+      "page": "TrustStrip.tsx",
+      "component": "components/TrustStrip.tsx",
+      "path": "components/TrustStrip.tsx",
+      "findings": [],
+      "totalElements": 3,
+      "coveredElements": 3
+    },
+    {
+      "page": "PriceComparisonTable.tsx",
+      "component": "components/PriceComparisonTable.tsx",
+      "path": "components/PriceComparisonTable.tsx",
+      "findings": [
+        {
+          "id": "FINDING-7",
+          "severity": "low",
+          "category": "accessibility",
+          "page": "PriceComparisonTable.tsx",
+          "component": "components/PriceComparisonTable.tsx",
+          "description": "Interactive elements lack ARIA labels/roles",
+          "fix": "Add aria-label, aria-describedby, or role attributes to interactive elements",
+          "wcag": "4.1.2"
+        }
+      ],
+      "totalElements": 56,
+      "coveredElements": 55
+    },
+    {
+      "page": "Footer.tsx",
+      "component": "components/Footer.tsx",
+      "path": "components/Footer.tsx",
+      "findings": [
+        {
+          "id": "FINDING-8",
+          "severity": "low",
+          "category": "accessibility",
+          "page": "Footer.tsx",
+          "component": "components/Footer.tsx",
+          "description": "Interactive elements lack ARIA labels/roles",
+          "fix": "Add aria-label, aria-describedby, or role attributes to interactive elements",
+          "wcag": "4.1.2"
+        }
+      ],
+      "totalElements": 6,
+      "coveredElements": 5
+    },
+    {
+      "page": "FilterSelectionGrid.tsx",
+      "component": "components/FilterSelectionGrid.tsx",
+      "path": "components/FilterSelectionGrid.tsx",
+      "findings": [],
+      "totalElements": 24,
+      "coveredElements": 24
+    },
+    {
+      "page": "FilterBar.tsx",
+      "component": "components/FilterBar.tsx",
+      "path": "components/FilterBar.tsx",
+      "findings": [
+        {
+          "id": "FINDING-9",
+          "severity": "medium",
+          "category": "edge-case",
+          "page": "FilterBar.tsx",
+          "component": "components/FilterBar.tsx",
+          "description": "2 interactive elements without classes",
+          "fix": "Add classes for visual styling, hover/focus states, and accessibility"
+        }
+      ],
+      "totalElements": 41,
+      "coveredElements": 40
+    },
+    {
+      "page": "DealsGrid.tsx",
+      "component": "components/DealsGrid.tsx",
+      "path": "components/DealsGrid.tsx",
+      "findings": [
+        {
+          "id": "FINDING-10",
+          "severity": "high",
+          "category": "missing-state",
+          "page": "DealsGrid.tsx",
+          "component": "components/DealsGrid.tsx",
+          "description": "Page/component likely fetches data but lacks a loading state (skeleton/shimmer/spinner)",
+          "fix": "Add a loading state with skeleton loaders for card grids, table rows, or form fields"
+        },
+        {
+          "id": "FINDING-11",
+          "severity": "low",
+          "category": "accessibility",
+          "page": "DealsGrid.tsx",
+          "component": "components/DealsGrid.tsx",
+          "description": "Interactive elements lack ARIA labels/roles",
+          "fix": "Add aria-label, aria-describedby, or role attributes to interactive elements",
+          "wcag": "4.1.2"
+        }
+      ],
+      "totalElements": 37,
+      "coveredElements": 35
+    },
+    {
+      "page": "DealsFilters.tsx",
+      "component": "components/DealsFilters.tsx",
+      "path": "components/DealsFilters.tsx",
+      "findings": [
+        {
+          "id": "FINDING-12",
+          "severity": "medium",
+          "category": "edge-case",
+          "page": "DealsFilters.tsx",
+          "component": "components/DealsFilters.tsx",
+          "description": "1 interactive elements without classes",
+          "fix": "Add classes for visual styling, hover/focus states, and accessibility"
+        }
+      ],
+      "totalElements": 12,
+      "coveredElements": 11
+    },
+    {
+      "page": "CruiseCard.tsx",
+      "component": "components/CruiseCard.tsx",
+      "path": "components/CruiseCard.tsx",
+      "findings": [],
+      "totalElements": 20,
+      "coveredElements": 20
+    },
+    {
+      "page": "button.tsx",
+      "component": "components/button.tsx",
+      "path": "components/ui/button.tsx",
+      "findings": [],
+      "totalElements": 1,
+      "coveredElements": 0
+    },
+    {
+      "page": "Tag.tsx",
+      "component": "components/Tag.tsx",
+      "path": "components/ui/Tag.tsx",
+      "findings": [],
+      "totalElements": 1,
+      "coveredElements": 0
+    },
+    {
+      "page": "SyncStatus.tsx",
+      "component": "components/SyncStatus.tsx",
+      "path": "components/ui/SyncStatus.tsx",
+      "findings": [],
+      "totalElements": 2,
+      "coveredElements": 2
+    },
+    {
+      "page": "Sparkline.tsx",
+      "component": "components/Sparkline.tsx",
+      "path": "components/ui/Sparkline.tsx",
+      "findings": [],
+      "totalElements": 1,
+      "coveredElements": 0
+    },
+    {
+      "page": "MaterialIcon.tsx",
+      "component": "components/MaterialIcon.tsx",
+      "path": "components/ui/MaterialIcon.tsx",
+      "findings": [],
+      "totalElements": 1,
+      "coveredElements": 0
+    },
+    {
+      "page": "Dropdown.tsx",
+      "component": "components/Dropdown.tsx",
+      "path": "components/ui/Dropdown.tsx",
+      "findings": [
+        {
+          "id": "FINDING-13",
+          "severity": "low",
+          "category": "accessibility",
+          "page": "Dropdown.tsx",
+          "component": "components/Dropdown.tsx",
+          "description": "Interactive elements lack ARIA labels/roles",
+          "fix": "Add aria-label, aria-describedby, or role attributes to interactive elements",
+          "wcag": "4.1.2"
+        },
+        {
+          "id": "FINDING-14",
+          "severity": "medium",
+          "category": "edge-case",
+          "page": "Dropdown.tsx",
+          "component": "components/Dropdown.tsx",
+          "description": "2 interactive elements without classes",
+          "fix": "Add classes for visual styling, hover/focus states, and accessibility"
+        }
+      ],
+      "totalElements": 4,
+      "coveredElements": 2
+    },
+    {
+      "page": "Header.tsx",
+      "component": "components/Header.tsx",
+      "path": "components/layout/Header.tsx",
+      "findings": [],
+      "totalElements": 12,
+      "coveredElements": 12
+    },
+    {
+      "page": "SearchHero.tsx",
+      "component": "components/SearchHero.tsx",
+      "path": "components/search/SearchHero.tsx",
+      "findings": [
+        {
+          "id": "FINDING-15",
+          "severity": "high",
+          "category": "missing-state",
+          "page": "SearchHero.tsx",
+          "component": "components/SearchHero.tsx",
+          "description": "Data-fetching page/component lacks an error state or error boundary",
+          "fix": "Add error handling with retry option: show user-friendly error message and retry button"
+        }
+      ],
+      "totalElements": 14,
+      "coveredElements": 13
+    },
+    {
+      "page": "SailingInfoPanel.tsx",
+      "component": "components/SailingInfoPanel.tsx",
+      "path": "components/sailing/SailingInfoPanel.tsx",
+      "findings": [],
+      "totalElements": 3,
+      "coveredElements": 3
+    },
+    {
+      "page": "SailingHero.tsx",
+      "component": "components/SailingHero.tsx",
+      "path": "components/sailing/SailingHero.tsx",
+      "findings": [],
+      "totalElements": 5,
+      "coveredElements": 5
+    },
+    {
+      "page": "PriceTrajectoryChart.tsx",
+      "component": "components/PriceTrajectoryChart.tsx",
+      "path": "components/sailing/PriceTrajectoryChart.tsx",
+      "findings": [],
+      "totalElements": 1,
+      "coveredElements": 1
+    },
+    {
+      "page": "PriceHistoryPanel.tsx",
+      "component": "components/PriceHistoryPanel.tsx",
+      "path": "components/sailing/PriceHistoryPanel.tsx",
+      "findings": [
+        {
+          "id": "FINDING-16",
+          "severity": "low",
+          "category": "accessibility",
+          "page": "PriceHistoryPanel.tsx",
+          "component": "components/PriceHistoryPanel.tsx",
+          "description": "Interactive elements lack ARIA labels/roles",
+          "fix": "Add aria-label, aria-describedby, or role attributes to interactive elements",
+          "wcag": "4.1.2"
+        },
+        {
+          "id": "FINDING-17",
+          "severity": "low",
+          "category": "responsive-gap",
+          "page": "PriceHistoryPanel.tsx",
+          "component": "components/PriceHistoryPanel.tsx",
+          "description": "Has 1 responsive breakpoint(s) — may be missing mobile/tablet/desktop coverage",
+          "fix": "Add breakpoints for all device sizes: sm:, md:, lg:, xl:, 2xl:"
+        },
+        {
+          "id": "FINDING-18",
+          "severity": "medium",
+          "category": "edge-case",
+          "page": "PriceHistoryPanel.tsx",
+          "component": "components/PriceHistoryPanel.tsx",
+          "description": "1 interactive elements without classes",
+          "fix": "Add classes for visual styling, hover/focus states, and accessibility"
+        }
+      ],
+      "totalElements": 6,
+      "coveredElements": 3
+    },
+    {
+      "page": "NimPriceForecast.tsx",
+      "component": "components/NimPriceForecast.tsx",
+      "path": "components/sailing/NimPriceForecast.tsx",
+      "findings": [],
+      "totalElements": 8,
+      "coveredElements": 8
+    },
+    {
+      "page": "NimDealAnalysis.tsx",
+      "component": "components/NimDealAnalysis.tsx",
+      "path": "components/sailing/NimDealAnalysis.tsx",
+      "findings": [],
+      "totalElements": 47,
+      "coveredElements": 47
+    },
+    {
+      "page": "LiveRateAlert.tsx",
+      "component": "components/LiveRateAlert.tsx",
+      "path": "components/sailing/LiveRateAlert.tsx",
+      "findings": [],
+      "totalElements": 6,
+      "coveredElements": 6
+    },
+    {
+      "page": "ItineraryTimeline.tsx",
+      "component": "components/ItineraryTimeline.tsx",
+      "path": "components/sailing/ItineraryTimeline.tsx",
+      "findings": [
+        {
+          "id": "FINDING-19",
+          "severity": "low",
+          "category": "responsive-gap",
+          "page": "ItineraryTimeline.tsx",
+          "component": "components/ItineraryTimeline.tsx",
+          "description": "Has 1 responsive breakpoint(s) — may be missing mobile/tablet/desktop coverage",
+          "fix": "Add breakpoints for all device sizes: sm:, md:, lg:, xl:, 2xl:"
+        }
+      ],
+      "totalElements": 9,
+      "coveredElements": 8
+    },
+    {
+      "page": "HiddenCostDisplay.tsx",
+      "component": "components/HiddenCostDisplay.tsx",
+      "path": "components/sailing/HiddenCostDisplay.tsx",
+      "findings": [],
+      "totalElements": 9,
+      "coveredElements": 9
+    },
+    {
+      "page": "EnhancedPriceForecast.tsx",
+      "component": "components/EnhancedPriceForecast.tsx",
+      "path": "components/sailing/EnhancedPriceForecast.tsx",
+      "findings": [],
+      "totalElements": 55,
+      "coveredElements": 55
+    },
+    {
+      "page": "EnhancedDealAnalysis.tsx",
+      "component": "components/EnhancedDealAnalysis.tsx",
+      "path": "components/sailing/EnhancedDealAnalysis.tsx",
+      "findings": [
+        {
+          "id": "FINDING-20",
+          "severity": "low",
+          "category": "accessibility",
+          "page": "EnhancedDealAnalysis.tsx",
+          "component": "components/EnhancedDealAnalysis.tsx",
+          "description": "Interactive elements lack ARIA labels/roles",
+          "fix": "Add aria-label, aria-describedby, or role attributes to interactive elements",
+          "wcag": "4.1.2"
+        }
+      ],
+      "totalElements": 66,
+      "coveredElements": 65
+    },
+    {
+      "page": "CabinValueComparison.tsx",
+      "component": "components/CabinValueComparison.tsx",
+      "path": "components/sailing/CabinValueComparison.tsx",
+      "findings": [],
+      "totalElements": 7,
+      "coveredElements": 7
+    },
+    {
+      "page": "CabinUpgradeTracker.tsx",
+      "component": "components/CabinUpgradeTracker.tsx",
+      "path": "components/sailing/CabinUpgradeTracker.tsx",
+      "findings": [],
+      "totalElements": 6,
+      "coveredElements": 6
+    }
+  ],
+  "recommendations": [
+    "🟠 HIGH: Resolve 4 high-severity issues for consistent UX",
+    "♿ A11Y: Improve WCAG compliance — add aria-labels, roles, alt text, keyboard nav"
+  ]
+}

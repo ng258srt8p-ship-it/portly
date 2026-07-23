@@ -18,9 +18,12 @@ jobs:
         run: |
           cd scrapers && npm ci
           cd ../workers && npm ci
+      - name: Install Playwright browsers
+        run: cd scrapers && npx playwright install --with-deps chromium
       - name: Run scraper
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          cd scrapers && npx tsx run.ts
+          WORKER_API_URL: https://portly-api.vqh9mnrdbp.workers.dev
+          SCRAPER_SECRET: ${{ secrets.SCRAPER_SECRET }}
+        run: cd scrapers && npx tsx run.ts
