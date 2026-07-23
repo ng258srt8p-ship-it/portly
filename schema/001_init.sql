@@ -122,7 +122,7 @@ SELECT
   cl.name AS cruise_line,
   sh.name AS ship,
   d.name AS destination,
-  p.name AS departure_port,
+  s.departure_port AS departure_port,
   s.departure_region,
   s.duration,
   s.nights,
@@ -140,6 +140,5 @@ FROM sailings s
 JOIN cruise_lines cl ON s.cruise_line_id = cl.id
 JOIN ships sh ON s.ship_id = sh.id
 LEFT JOIN destinations d ON s.destination_id = d.id
-LEFT JOIN ports p ON s.departure_port_id = p.id
 WHERE s.price IS NOT NULL
 ORDER BY s.drop_percent DESC;
