@@ -38,3 +38,14 @@ npm-debug.log*
 # testing
 coverage/
 test-results/
+
+# junk — cleanup
+playwright-report/
+.pi/
+.hermes/
+agents/
+goals/
+output/
+e2e/
+scripts/
+nim-monitor*.html

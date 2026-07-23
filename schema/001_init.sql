@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS sailings (
   ship_id INTEGER NOT NULL REFERENCES ships(id),
   destination_id INTEGER REFERENCES destinations(id),
   departure_port_id INTEGER REFERENCES ports(id),
+  departure_port TEXT,
   departure_region TEXT,
   sail_date TEXT NOT NULL,
   nights INTEGER NOT NULL,
