@@ -1,7 +1,7 @@
 export type BadgeType = "drop" | "solo" | "gold";
 
 export interface Deal {
-  id: number;
+  id: string;
   cruiseLine: string;
   ship: string;
   destination: string;

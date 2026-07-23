@@ -3,7 +3,7 @@ node_modules/
 workers/node_modules/
 scrapers/node_modules/
 
-# next.js
+# Next.js
 .next/
 out/
 

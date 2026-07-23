@@ -11,6 +11,33 @@ const app = new Hono<{ Bindings: Env }>();
 
 app.use('/*', cors());
 
+// ── Helpers ──────────────────────────────────────────────
+
+function snakeToCamel(str: string): string {
+  return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+}
+
+function mapKeys(obj: any): any {
+  if (Array.isArray(obj)) return obj.map(mapKeys);
+  if (obj && typeof obj === 'object') {
+    const result: any = {};
+    for (const [k, v] of Object.entries(obj)) {
+      result[snakeToCamel(k)] = mapKeys(v);
+    }
+    return result;
+  }
+  return obj;
+}
+
+function formatSailing(row: any): any {
+  const r = mapKeys(row);
+  // Parse history JSON string → array
+  if (typeof r.history === 'string') {
+    try { r.history = JSON.parse(r.history); } catch { r.history = []; }
+  }
+  return r;
+}
+
 // GET /api/deals
 app.get('/api/deals', async (c) => {
   const limit = Math.min(Number(c.req.query('limit') || 20), 100);
@@ -53,7 +80,7 @@ app.get('/api/deals', async (c) => {
   binds.push(limit, offset);
 
   const { results } = await c.env.DB.prepare(sql).bind(...binds).all();
-  return c.json(results);
+  return c.json(results.map(formatSailing));
 });
 
 // GET /api/sailing/:id
@@ -93,7 +120,7 @@ app.get('/api/sailing/:id', async (c) => {
     })),
   };
 
-  return c.json(itinerary);
+  return c.json(formatSailing(itinerary));
 });
 
 // GET /api/history
@@ -115,7 +142,7 @@ app.get('/api/stats', async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT COUNT(*) AS tracked_sailings, COALESCE(SUM(nights), 0) AS pricing_snapshots FROM sailings WHERE price IS NOT NULL`
   ).all();
-  return c.json(results[0] || { trackedSailings: 0, pricingSnapshots: 0 });
+  return c.json(mapKeys(results[0] || { trackedSailings: 0, pricingSnapshots: 0 }));
 });
 
 // GET /api/search
@@ -132,7 +159,7 @@ app.get('/api/search', async (c) => {
      LIMIT 20`
   ).bind(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`).all();
 
-  return c.json({ results });
+  return c.json({ results: results.map(formatSailing) });
 });
 
 // POST /api/deals — upsert sailing from scraper
