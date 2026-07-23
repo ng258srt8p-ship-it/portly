@@ -1,4 +1,5 @@
-import { CarnivalAdapter, PrincessAdapter, HollandAmericaAdapter, CunardAdapter, RCIGroupAdapter } from './carnival-corp';
+import { CarnivalAdapter, PrincessAdapter, HollandAmericaAdapter, CunardAdapter } from './carnival-corp';
+import { RCIGroupAdapter } from './royal-caribbean';
 import { SourceAdapter, SailingRecord } from './base';
 import { decideDedup, makeFingerprint } from './dedup';
 
