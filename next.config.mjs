@@ -15,7 +15,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:3001/api/:path*',
+        destination: 'https://portly-api.vqh9mnrdbp.workers.dev/api/:path*',
       },
     ];
   },
