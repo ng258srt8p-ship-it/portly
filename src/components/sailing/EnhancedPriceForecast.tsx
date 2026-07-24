@@ -140,7 +140,7 @@ export default function EnhancedPriceForecast({ sailingId }: EnhancedPriceForeca
     setLoading(true);
     setError(null);
 
-    const API_BASE = '';
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
     (async () => {
       try {

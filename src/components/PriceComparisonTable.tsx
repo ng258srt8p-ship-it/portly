@@ -62,7 +62,7 @@ export function PriceComparisonTable({
   // Self-fetch cabin pricing from the backend if no prop prices provided
   const fetcher = useMemo(
     () => async () => {
-      const API_BASE = '';
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
       // Resolve the sailing ID dynamically: if not provided, fetch the first available sailing from deals
       let sid = sailingId;
       if (!sid) {

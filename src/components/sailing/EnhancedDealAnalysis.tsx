@@ -84,7 +84,7 @@ export default function EnhancedDealAnalysis({ sailingId }: EnhancedDealAnalysis
     let cancelled = false;
     setLoading(true);
     setError(null);
-    const API_BASE = '';
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
     const url = force
       ? `${API_BASE}/api/enhanced/deal-analysis/${sailingId}?forceRefresh=true`
       : `${API_BASE}/api/enhanced/deal-analysis/${sailingId}`;

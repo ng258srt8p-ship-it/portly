@@ -7,15 +7,63 @@ import { SourceAdapter, SailingRecord, SailingDetail } from './base';
 // ============================================================
 
 // Helper: generate 5-point synthetic price history (90-day trend)
+// Uses a deterministic seed from currentPrice + originalPrice so each sailing
+// gets a unique curve shape, not the same linear interpolation every time.
 function genHistory(currentPrice: number, originalPrice: number): number[] {
   const delta = originalPrice - currentPrice;
-  return [
-    Math.round(originalPrice),
-    Math.round(originalPrice - delta * 0.25),
-    Math.round(originalPrice - delta * 0.5),
-    Math.round(originalPrice - delta * 0.75),
-    Math.round(currentPrice),
-  ];
+  // Deterministic pseudo-random based on price values
+  const seed = (currentPrice * 9301 + originalPrice * 49297) % 233280;
+  const rng = (offset: number) => {
+    const x = Math.sin(seed + offset * 137.5) * 10000;
+    return x - Math.floor(x);
+  };
+
+  // Pick a curve shape based on the seed
+  const shapeType = Math.floor(rng(0) * 4);
+  switch (shapeType) {
+    case 0: // Steady decline (original)
+      return [
+        Math.round(originalPrice),
+        Math.round(originalPrice - delta * 0.25),
+        Math.round(originalPrice - delta * 0.5),
+        Math.round(originalPrice - delta * 0.75),
+        Math.round(currentPrice),
+      ];
+    case 1: { // Decline with mid-cycle bump (promo pulled then re-applied)
+      const bumpFactor = 0.15 + rng(1) * 0.10;
+      return [
+        Math.round(originalPrice),
+        Math.round(originalPrice - delta * 0.35),
+        Math.round(originalPrice - delta * (0.35 - bumpFactor)), // bump up
+        Math.round(originalPrice - delta * 0.60),
+        Math.round(currentPrice),
+      ];
+    }
+    case 2: { // V-shape: big drop then partial recovery
+      return [
+        Math.round(originalPrice),
+        Math.round(originalPrice - delta * 0.55),
+        Math.round(originalPrice - delta * (0.85 + rng(2) * 0.10)), // bottom
+        Math.round(originalPrice - delta * (0.35 + rng(3) * 0.15)), // partial recovery
+        Math.round(currentPrice),
+      ];
+    }
+    case 3: { // Stair-step: flat then sudden drop
+      const stepPoint = 1 + Math.floor(rng(4) * 2); // step at index 1 or 2
+      const vals: number[] = [];
+      for (let i = 0; i < 5; i++) {
+        if (i <= stepPoint) {
+          vals.push(Math.round(originalPrice - delta * (i / stepPoint) * 0.20));
+        } else {
+          vals.push(Math.round(originalPrice - delta * (0.20 + (i - stepPoint) / (5 - stepPoint) * 0.80)));
+        }
+      }
+      vals[vals.length - 1] = Math.round(currentPrice);
+      return vals;
+    }
+    default:
+      return [Math.round(originalPrice), Math.round(currentPrice)];
+  }
 }
 
 // Helper: generate 4 cabin categories from a base price
