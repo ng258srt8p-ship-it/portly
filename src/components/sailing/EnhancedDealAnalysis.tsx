@@ -242,7 +242,7 @@ export default function EnhancedDealAnalysis({ sailingId }: EnhancedDealAnalysis
         {/* Verdict badge - prominent */}
         <div data-testid="verdict" className="flex shrink-0 items-center gap-2">
           <MaterialIcon name="gavel" size="sm" className="text-white" />
-          <span className={'inline-block rounded-full px-3 py-1 text-xs font-semibold text-white ' + (vColor === 'emerald' ? 'bg-emerald-500' : vColor === 'amber' ? 'bg-amber-500' : vColor === 'coral' ? 'bg-coral' : 'bg-indigo')}>
+          <span className={'inline-block rounded-2xl px-4 py-2 max-w-xs text-center whitespace-normal break-words text-xs font-semibold text-white ' + (vColor === 'emerald' ? 'bg-emerald-500' : vColor === 'amber' ? 'bg-amber-500' : vColor === 'coral' ? 'bg-coral' : 'bg-indigo')} data-testid="verdict-bubble">
             {cleanPlaceholderText(verdict) || 'Unrated'}
           </span>
         </div>
