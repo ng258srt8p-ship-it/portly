@@ -177,13 +177,13 @@ function genCabins(basePrice: number, _nights: number) {
 
 export { genHistory, genCabins, genPriceHistoryDates, genMultiCabinPriceHistory };
 
-// Helper: generate 5 ISO date strings spaced over the 90 days before sail date
+// Helper: generate 5 ISO date strings spaced over the 90 days before today
 function genPriceHistoryDates(sailDate: string): string[] {
-  const sail = new Date(sailDate);
+  const today = new Date();
   const out: string[] = [];
   for (let i = 4; i >= 0; i--) {
-    const d = new Date(sail);
-    d.setDate(d.getDate() - i * 18); // 72, 54, 36, 18, 0 days before sail
+    const d = new Date(today);
+    d.setDate(d.getDate() - i * 18); // 72, 54, 36, 18, 0 days before today
     out.push(d.toISOString().slice(0, 10));
   }
   return out;
