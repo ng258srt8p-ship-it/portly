@@ -40,7 +40,8 @@ export default function SailingHero({
     year: 'numeric',
   });
 
-  const priceLabel = cabinType ? `Starting at $${price.toLocaleString()} from ${cabinType}` : `Starting at $${price.toLocaleString()}`;
+  const roundedPrice = Math.round(price);
+  const priceLabel = cabinType ? `Starting at $${roundedPrice.toLocaleString()} from ${cabinType}` : `Starting at $${roundedPrice.toLocaleString()}`;
 
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink via-[#1a1b24] to-ink p-8 text-white shadow-float sm:p-12">
@@ -74,12 +75,12 @@ export default function SailingHero({
         {/* Price section */}
         <div className="mt-8 flex flex-wrap items-baseline gap-4">
           <span className="font-mono-tab text-5xl font-black tracking-tight sm:text-6xl">
-            ${price.toLocaleString()}
+            ${roundedPrice.toLocaleString()}
           </span>
           {hasDrop && (
             <>
               <span className="font-mono-tab text-2xl text-white/60 line-through sm:text-3xl">
-                ${originalPrice!.toLocaleString()}
+                ${Math.round(originalPrice!).toLocaleString()}
               </span>
               <span className="rounded-full bg-coral-ink px-4 py-1.5 text-sm font-bold text-white">
                 -{dropPercent}% Drop

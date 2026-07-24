@@ -20,6 +20,7 @@ export interface SailingRecord {
   history: number[];
   bookingUrl?: string;
   bookingLabel?: string;
+  itinerary?: string[];
 }
 
 export interface CabinRate {
@@ -32,6 +33,7 @@ export interface CabinRate {
 export interface PriceHistoryEntry {
   price: number;
   date: string;
+  cabinClass?: string;
 }
 
 export interface SailingDetail extends SailingRecord {

@@ -190,8 +190,9 @@ function renderGridContent(
             <h3 className="mt-1 truncate font-display text-xl font-bold text-ink">{deal.ship}</h3>
           </div>
           <span
-            className={`whitespace-nowrap rounded-full border px-3 py-1 text-[11px] font-bold ${badgeStyles[deal.badgeType]}`}
+            className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-3 py-1 text-[11px] font-bold ${badgeStyles[deal.badgeType]}`}
           >
+            <MaterialIcon name={deal.badgeType === 'drop' ? 'trending_down' : deal.badgeType === 'solo' ? 'person' : 'star'} size="xs" />
             {deal.badgeText}
           </span>
         </div>

@@ -176,7 +176,7 @@ export function PriceComparisonTable({
   }
 
   const formatPrice = (amount: number) =>
-    `${currency === 'USD' ? '$' : ''}${amount.toLocaleString()}`;
+    `${currency === 'USD' ? '$' : ''}${Math.round(amount).toLocaleString()}`;
 
   return (
     <div className="w-full">

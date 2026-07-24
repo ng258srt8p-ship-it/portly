@@ -169,7 +169,7 @@ function SparklineChart({ data, dates, cabinType }: { data: number[]; dates: str
             r={hoveredIdx === i ? 5 : 3}
             fill={hoveredIdx === i ? hoverColor : color}
             className="transition-all"
-            pointer-events="none"
+            pointerEvents="none"
           />
           {/* Vertical hover guide line */}
           {hoveredIdx === i && (

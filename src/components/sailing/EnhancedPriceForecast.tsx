@@ -260,7 +260,7 @@ export default function EnhancedPriceForecast({ sailingId }: EnhancedPriceForeca
 
       {/* Per-Cabin Forecasts Grid */}
       {data.cabinForecasts && data.cabinForecasts.length > 0 && (
-        <div className="grid grid-cols-2 gap-3" data-testid="cabin-forecasts-grid">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="cabin-forecasts-grid">
           {data.cabinForecasts.map(forecast => (
             <CabinForecastCard key={forecast.cabinType} forecast={forecast} />
           ))}
@@ -300,29 +300,28 @@ export default function EnhancedPriceForecast({ sailingId }: EnhancedPriceForeca
               </span>
             )}
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {(() => {
               const windows = data.trendContext.windows;
               const firstMagnitude = windows[0]?.magnitude ?? null;
               const hasDuplicateMagnitudes =
                 firstMagnitude !== null && windows.every((w) => w.magnitude === firstMagnitude);
-              return windows.map((w, i) => (
+              return windows.map((w: any, i: number) => (
                 <div key={i} className="rounded-lg bg-white p-2.5 text-center shadow-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">{w.period}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">{w.period ?? (w.windowDays ? w.windowDays + 'd' : '—')}</p>
                   <p className={`mt-0.5 text-sm font-bold tabular-nums ${
-                    w.direction === 'rising' ? 'text-coral' :
-                    w.direction === 'falling' ? 'text-emerald-600' : 'text-ink-soft'
+                    (w.direction === 'rising' || (w.changePercent ?? 0) > 0) ? 'text-coral' :
+                    (w.direction === 'falling' || (w.changePercent ?? 0) < 0) ? 'text-emerald-600' : 'text-ink-soft'
                   }`}>
                     {hasDuplicateMagnitudes && windows.length > 1
                       ? null
-                      : `${w.magnitude > 0 ? '+' : ''}${w.magnitude.toFixed(1)}%`
+                      : ((w.magnitude ?? w.changePercent ?? 0) > 0 ? '+' : '') + (w.magnitude ?? w.changePercent ?? 0).toFixed(1) + '%'
                     }
                   </p>
                   <p className="text-[10px] text-ink-faint">
                     {hasDuplicateMagnitudes && windows.length > 1
                       ? 'Data unavailable'
-                      : `${w.snapshots} snapshots`
-                    }
+                      : (w.snapshots ?? '') + ' snapshots'}
                   </p>
                 </div>
               ));
@@ -424,15 +423,17 @@ export default function EnhancedPriceForecast({ sailingId }: EnhancedPriceForeca
             <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Price Drop Alerts</h3>
           </div>
           <div className="space-y-2">
-            {data.alerts.map((alert: PriceAlert, i: number) => (
+            {data.alerts.map((alert: any, i: number) => (
               <div key={i} className="flex items-center justify-between rounded-lg bg-rose-50 p-3">
                 <div>
-                  <p className="text-sm font-medium text-ink">{alert.cabinType}</p>
-                  <p className="text-xs text-ink-faint">Alert triggers at ${alert.triggerPrice.toLocaleString()}</p>
+                  <p className="text-sm font-medium text-ink">{alert.cabinType ?? alert.type ?? 'Alert'}</p>
+                  <p className="text-xs text-ink-faint">{alert.message ?? (alert.triggerPrice ? 'Alert triggers at $' + alert.triggerPrice.toLocaleString() : '')}</p>
                 </div>
-                <span className="text-sm font-bold text-rose-600 tabular-nums">
-                  Save ${alert.savings.toLocaleString()}
-                </span>
+                {alert.savings != null && (
+                  <span className="text-sm font-bold text-rose-600 tabular-nums">
+                    Save ${alert.savings.toLocaleString()}
+                  </span>
+                )}
               </div>
             ))}
           </div>

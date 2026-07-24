@@ -248,6 +248,24 @@ export default function EnhancedDealAnalysis({ sailingId }: EnhancedDealAnalysis
         </div>
       </div>
 
+      {/* ===== Deal Score Justification ===== */}
+      {data.dealScoreJustification && Array.isArray(data.dealScoreJustification) && data.dealScoreJustification.length > 0 && (
+        <div className="rounded-xl border border-emerald-500/15 bg-white p-4" data-testid="deal-score-justification">
+          <div className="mb-3 flex items-center gap-1.5">
+            <MaterialIcon name="fact_check" size="sm" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Why This Score</h3>
+          </div>
+          <div className="space-y-2.5">
+            {data.dealScoreJustification.map((s: Section, i: number) => (
+              <div key={i} className="bg-white/70 rounded-lg p-3">
+                <h4 className="text-sm font-semibold text-emerald-900 mb-0.5">{s.title}</h4>
+                <p className="text-sm leading-relaxed text-emerald-800/80">{s.content}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ===== Justification ===== */}
       {justificationSections.length > 0 && (
         <div className="rounded-xl border border-amber-100 bg-white p-4" data-testid="deal-justification">
@@ -340,7 +358,7 @@ export default function EnhancedDealAnalysis({ sailingId }: EnhancedDealAnalysis
               Cabin Value Comparison
             </h3>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {Object.entries(data.cabinValueBreakdown as Record<string, { perNight: number; valueRating: string }>).map(([cabin, value]) => {
               const rating = value?.valueRating || 'Fair';
               const perNight = typeof value?.perNight === 'number' ? Math.round(value.perNight) : 0;
@@ -429,6 +447,16 @@ export default function EnhancedDealAnalysis({ sailingId }: EnhancedDealAnalysis
             </div>
             <p className="text-sm text-ink-soft">Value score for this ship and route</p>
           </div>
+          {data.shipValueScoreJustification && Array.isArray(data.shipValueScoreJustification) && data.shipValueScoreJustification.length > 0 && (
+            <div className="mt-3 space-y-2.5" data-testid="ship-value-justification">
+              {data.shipValueScoreJustification.map((s: Section, i: number) => (
+                <div key={i} className="bg-white/70 rounded-lg p-3 border border-blue-500/10">
+                  <h4 className="text-sm font-semibold text-blue-900 mb-0.5">{s.title}</h4>
+                  <p className="text-sm leading-relaxed text-blue-800/80">{s.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

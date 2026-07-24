@@ -22,12 +22,12 @@ interface CabinValueComparisonProps {
   passengerCount?: number;
 }
 
-const RATING_STYLES: Record<string, { bg: string; text: string; border: string; emoji: string }> = {
-  excellent: { bg: 'bg-emerald-50', text: 'text-emerald-800', border: 'border-emerald-200', emoji: '🏆' },
-  great: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', emoji: '✨' },
-  good: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', emoji: '👍' },
-  fair: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', emoji: '⚖️' },
-  overpriced: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', emoji: '⚠️' },
+const RATING_STYLES: Record<string, { bg: string; text: string; border: string; icon: string }> = {
+  excellent: { bg: 'bg-emerald-50', text: 'text-emerald-800', border: 'border-emerald-200', icon: 'workspace_premium' },
+  great: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', icon: 'auto_awesome' },
+  good: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', icon: 'thumb_up' },
+  fair: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', icon: 'balance' },
+  overpriced: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', icon: 'warning' },
 };
 
 export default function CabinValueComparison({
@@ -67,7 +67,7 @@ export default function CabinValueComparison({
             >
               <div className="flex items-center gap-2">
                 {isBest && (
-                  <span className="text-xs" title="Best value">🏆</span>
+                  <MaterialIcon name="workspace_premium" size="xs" className="text-amber-500" />
                 )}
                 <span className="text-sm font-medium text-ink">{cabin}</span>
               </div>
@@ -76,7 +76,7 @@ export default function CabinValueComparison({
                   ${value.perNight}/night
                 </span>
                 <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${styles.bg} ${styles.text} ${styles.border}`}>
-                  {styles.emoji} {value.valueRating}
+                  <MaterialIcon name={styles.icon} size="xs" /> {value.valueRating}
                 </span>
               </div>
             </div>

@@ -64,7 +64,7 @@ async function upsertToD1(sailings: SailingRecord[], dryRun: boolean): Promise<I
                       portTax: c.portTaxPerPerson,
                       gratuityPerNight: c.gratuityPerPersonPerNight,
                     })),
-                    priceHistory: detail.priceHistory?.map(p => ({ price: p.price, date: p.date })),
+                    priceHistory: detail.priceHistory?.map(p => ({ price: p.price, date: p.date, cabinClass: p.cabinClass })),
                   }),
                 });
                 if (!detailResp.ok) {

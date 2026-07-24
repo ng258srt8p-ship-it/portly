@@ -116,6 +116,8 @@ export default function SailingDetailPage() {
                     region={data.sailing.region}
                     port={data.sailing.port}
                     days={data.sailing.days}
+                    totalCabins={data?.cabinBreakdown?.length || undefined}
+                    cabinCategories={data?.cabinBreakdown?.map((c: any) => c.cabinType).filter(Boolean) || undefined}
                     itinerary={data.sailing.route}
                   />
                 </div>
