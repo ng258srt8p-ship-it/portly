@@ -555,7 +555,7 @@ export default function FilterSelectionGrid({
   availableRegions,
   availableDestinations,
   availableShips = [],
-  availableCabinTypes = [],
+  availableCabinType = [],
   hasActiveFilters = false,
   onClear,
   disabled = false,
