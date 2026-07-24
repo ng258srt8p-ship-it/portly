@@ -1,4 +1,6 @@
-import { CarnivalAdapter, PrincessAdapter, HollandAmericaAdapter, CunardAdapter } from './carnival-corp';
+import { CarnivalCruiseLineAdapter } from './carnival-cruise-line';
+import { PrincessCruiseLineAdapter } from './princess-cruise-line';
+import { HollandAmericaLineAdapter } from './holland-america-line';
 import { RCIGroupAdapter } from './royal-caribbean';
 import { SourceAdapter, SailingRecord } from './base';
 import { decideDedup, makeFingerprint } from './dedup';
@@ -15,7 +17,6 @@ async function upsertToD1(sailings: SailingRecord[]): Promise<InsertResult> {
   const apiUrl = process.env.WORKER_API_URL || 'https://portly-api.vqh9mnrdbp.workers.dev';
 
   for (const s of sailings) {
-    // Check fingerprint via D1 direct — in CI this uses wrangler d1 execute
     const fp = makeFingerprint({
       cruiseLine: s.cruiseLine,
       sailDate: s.sailDate,
@@ -23,8 +24,6 @@ async function upsertToD1(sailings: SailingRecord[]): Promise<InsertResult> {
       departurePort: s.departurePort,
       nights: s.nights,
     });
-
-    // For now, just POST to the Worker API which handles upsert
     try {
       const resp = await fetch(`${apiUrl}/api/deals`, {
         method: 'POST',
@@ -47,10 +46,9 @@ async function main(): Promise<void> {
   console.log('[Scraper Run] Starting...');
 
   const adapters: SourceAdapter[] = [
-    new CarnivalAdapter(),
-    new PrincessAdapter(),
-    new HollandAmericaAdapter(),
-    new CunardAdapter(),
+    new CarnivalCruiseLineAdapter(),
+    new PrincessCruiseLineAdapter(),
+    new HollandAmericaLineAdapter(),
     new RCIGroupAdapter(),
   ];
 
@@ -60,6 +58,7 @@ async function main(): Promise<void> {
   for (const adapter of adapters) {
     console.log(`[${adapter.name}] Fetching sailings...`);
     try {
+      await adapter.initialize();
       const sailings = await adapter.fetchSailings();
       console.log(`[${adapter.name}] Found ${sailings.length} sailings`);
 
@@ -69,8 +68,10 @@ async function main(): Promise<void> {
 
       console.log(`[${adapter.name}] Inserted: ${result.inserted}, Skipped: ${result.skipped}, Errors: ${result.errors}`);
     } catch (err) {
-      console.error(`[${adapter.name}] Error: ${err}`);
+      console.error(`[${adapter.name}] Error:`, err);
       totalErrors++;
+    } finally {
+      await adapter.destroy();
     }
   }
 
