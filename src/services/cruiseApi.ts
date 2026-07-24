@@ -50,6 +50,8 @@ export async function fetchDeals(limit: number = 20, filters?: DealFilters): Pro
     if (filters.maxPrice !== undefined) params.set('maxPrice', String(filters.maxPrice));
     if (filters.badgeType?.length) params.set('badgeType', filters.badgeType.join(','));
     if (filters.sort) params.set('sort', filters.sort);
+    if (filters.adults !== undefined && filters.adults !== 2) params.set('adults', String(filters.adults));
+    if (filters.children !== undefined && filters.children > 0) params.set('children', String(filters.children));
   }
   return getJSON<Deal[]>(`${API_BASE}/api/deals?${params}`);
 }

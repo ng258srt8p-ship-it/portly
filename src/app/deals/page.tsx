@@ -31,6 +31,13 @@ function parseFiltersFromURL(): DealFilters {
   if (bt) f.badgeType = bt.split(',') as ('drop' | 'solo' | 'gold')[];
   const s = sp.get('sort');
   if (s) f.sort = s as DealFilters['sort'];
+  const ad = sp.get('adults');
+  if (ad) f.adults = Math.min(8, Math.max(1, parseInt(ad) || 2));
+  // Backward compat: old "passengers" param maps to adults
+  const ps = sp.get('passengers');
+  if (ps && !ad) f.adults = Math.min(8, Math.max(1, parseInt(ps) || 2));
+  const ch = sp.get('children');
+  if (ch) f.children = Math.min(6, Math.max(0, parseInt(ch) || 0));
   return f;
 }
 
@@ -51,6 +58,8 @@ export default function DealsPage() {
     if (filters.maxPrice !== undefined) sp.set('maxPrice', String(filters.maxPrice));
     if (filters.badgeType?.length) sp.set('badgeType', filters.badgeType.join(','));
     if (filters.sort) sp.set('sort', filters.sort);
+    if (filters.adults !== undefined && filters.adults !== 2) sp.set('adults', String(filters.adults));
+    if (filters.children !== undefined && filters.children > 0) sp.set('children', String(filters.children));
     const qs = sp.toString();
     const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
     router.replace(newUrl, { scroll: false });

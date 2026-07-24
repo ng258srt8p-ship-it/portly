@@ -61,13 +61,15 @@ export default function Hero() {
 
   const [destination, setDestination] = useState(destinations[0]);
   const [cruiseLine, setCruiseLine] = useState(cruiseLines[0]);
-  const [passengers, setPassengers] = useState(2);
+  const [adults, setAdults] = useState(2);
+  const [children, setChildren] = useState(0);
 
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (destination && destination !== "Any Destination") params.set("destination", destination);
     if (cruiseLine && cruiseLine !== "Any Cruise Line") params.set("cruiseLine", cruiseLine);
-    if (passengers > 1) params.set("passengers", String(passengers));
+    if (adults !== 2) params.set("adults", String(adults));
+    if (children > 0) params.set("children", String(children));
     router.push(`/deals?${params.toString()}`);
   };
 
@@ -110,31 +112,56 @@ export default function Hero() {
           <Dropdown label="Destination" value={destination} options={destinations} onChange={setDestination} icon={<CompassIcon />} disabled={loading} />
           <Dropdown label="Cruise Line" value={cruiseLine} options={cruiseLines} onChange={setCruiseLine} icon={<ShipIcon />} disabled={loading} />
 
-          <div className="flex flex-1 items-center justify-between gap-4 px-6 py-4">
+          <div className="flex flex-1 items-center justify-between gap-4 px-6 py-4" data-testid="guest-selector">
             <div className="flex min-w-0 flex-col text-left">
-              <span className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Passengers</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Guests</span>
               <span className="font-mono-tab text-lg font-semibold text-ink">
-                {passengers} Guest{passengers > 1 ? "s" : ""}
+                {adults + children} Guest{adults + children > 1 ? "s" : ""}
               </span>
             </div>
-            <div className="flex shrink-0 items-center gap-1 rounded-full bg-black/[0.04] p-1">
-              <button
-                aria-label="Decrease passengers"
-                onClick={() => setPassengers((p) => Math.max(1, p - 1))}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
-                disabled={passengers <= 1}
-              >
-                −
-              </button>
-              <span className="w-6 text-center font-mono-tab text-sm font-semibold">{passengers}</span>
-              <button
-                aria-label="Increase passengers"
-                onClick={() => setPassengers((p) => Math.min(4, p + 1))}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
-                disabled={passengers >= 4}
-              >
-                +
-              </button>
+            <div className="flex shrink-0 items-center gap-3">
+              {/* Adults counter */}
+              <div className="flex items-center gap-1" data-testid="adults-counter">
+                <span className="text-xs font-semibold text-ink-soft mr-1">Adults</span>
+                <button
+                  aria-label="Decrease adults"
+                  onClick={() => setAdults((p) => Math.max(1, p - 1))}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
+                  disabled={adults <= 1}
+                >
+                  −
+                </button>
+                <span className="w-5 text-center font-mono-tab text-sm font-semibold">{adults}</span>
+                <button
+                  aria-label="Increase adults"
+                  onClick={() => setAdults((p) => Math.min(8, p + 1))}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
+                  disabled={adults >= 8}
+                >
+                  +
+                </button>
+              </div>
+              {/* Children counter */}
+              <div className="flex items-center gap-1" data-testid="children-counter">
+                <span className="text-xs font-semibold text-ink-soft mr-1">Children</span>
+                <button
+                  aria-label="Decrease children"
+                  onClick={() => setChildren((p) => Math.max(0, p - 1))}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
+                  disabled={children <= 0}
+                >
+                  −
+                </button>
+                <span className="w-5 text-center font-mono-tab text-sm font-semibold">{children}</span>
+                <button
+                  aria-label="Increase children"
+                  onClick={() => setChildren((p) => Math.min(6, p + 1))}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
+                  disabled={children >= 6}
+                >
+                  +
+                </button>
+              </div>
             </div>
           </div>
 
