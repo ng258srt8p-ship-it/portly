@@ -100,7 +100,9 @@ app.get('/api/sailing/:id', async (c) => {
 
   if (!sails.results.length) return c.json({ error: 'Not found' }, 404);
 
-  const sailing = sails.results[0];
+  const s = sails.results[0] as any;
+
+  // Fetch cabin prices
   const cabins = await c.env.DB.prepare(
     `SELECT cc.name AS cabin_class, cp.base_fare_per_person, cp.port_tax_per_person, cp.gratuity_per_person_per_night
      FROM cabin_prices cp
@@ -108,22 +110,47 @@ app.get('/api/sailing/:id', async (c) => {
      WHERE cp.sailing_id = ?`
   ).bind(id).all();
 
-  const itinerary = {
-    id: sailing.id,
-    cruiseLine: sailing.cruise_line,
-    ship: sailing.ship,
-    route: `${sailing.departure_port || ''} → ${sailing.destination || ''}`,
-    nights: sailing.nights,
-    sailDate: sailing.sail_date,
-    cabins: cabins.results.map((c: any) => ({
+  // Fetch price history
+  const history = await c.env.DB.prepare(
+    `SELECT price, recorded_at FROM price_history WHERE sailing_id = ? ORDER BY recorded_at ASC`
+  ).bind(id).all();
+
+  // Build route array: [departurePort, ...ports if known, destination]
+  const routeParts: string[] = [];
+  if (s.departure_port) routeParts.push(s.departure_port);
+  routeParts.push(s.destination || '');
+
+  // Response shape matches frontend SailingData interface
+  const response = {
+    sailing: {
+      id: s.id,
+      line: s.cruise_line,
+      ship: s.ship,
+      days: s.nights,
+      port: s.departure_port || '',
+      route: routeParts,
+      region: s.departure_region || s.destination || '',
+      departureDate: s.sail_date,
+      bookingUrl: s.booking_url || undefined,
+    },
+    cabinBreakdown: cabins.results.map((c: any) => ({
+      cabinType: c.cabin_class,
       cabinClass: c.cabin_class,
       baseFarePerPerson: c.base_fare_per_person,
       portTaxPerPerson: c.port_tax_per_person,
       gratuityPerPersonPerNight: c.gratuity_per_person_per_night,
+      nights: s.nights,
+      raw: {
+        totalOutTheDoor: (c.base_fare_per_person || 0) + (c.port_tax_per_person || 0) + ((c.gratuity_per_person_per_night || 0) * (s.nights || 0)),
+      },
+    })),
+    priceHistory: history.results.map((h: any) => ({
+      price: h.price,
+      date: h.recorded_at,
     })),
   };
 
-  return c.json(formatSailing(itinerary));
+  return c.json(response);
 });
 
 // GET /api/history
@@ -187,7 +214,14 @@ app.post('/api/deals', async (c) => {
     badgeText?: string;
     bookingUrl?: string;
     bookingLabel?: string;
+    departureRegion?: string;
   }>();
+
+  // Normalize fields to prevent undefined binds
+  const departPort = body.departurePort ?? null;
+  const departRegion = body.departureRegion ?? null;
+  const bookingUrl = body.bookingUrl ?? null;
+  const bookingLabel = body.bookingLabel ?? null;
 
   // Ensure cruise_line exists (D1 doesn't support RETURNING — use last_insert_rowid)
   let cl = await c.env.DB.prepare('SELECT id FROM cruise_lines WHERE name = ?').bind(body.cruiseLine).first<{ id: number }>();
@@ -237,19 +271,60 @@ app.post('/api/deals', async (c) => {
     return c.json({ action: 'updated', sailingId: existing.id });
   }
 
-  // Insert new sailing — aligned with live DB schema (departure_port_id, not departure_port; includes source)
+  // Insert new sailing — aligned with live DB schema (departure_port text column + booking fields)
   const insertResult = await c.env.DB.prepare(
     `INSERT INTO sailings (id, cruise_line_id, ship_id, destination_id, departure_port_id, departure_region,
-      sail_date, nights, duration, price, original_price, badge_text, fingerprint, history, source)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      departure_port, sail_date, nights, duration, price, original_price, badge_text, booking_url, booking_label,
+      fingerprint, history, source)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
-    body.id, cl!.id, ship!.id, destId, null, null,
+    body.id, cl!.id, ship!.id, destId, null, departRegion,
+    departPort,
     body.sailDate, body.nights, body.duration || `${body.nights} nights`,
     body.price, body.originalPrice, body.badgeText || '⭐ Popular',
+    bookingUrl, bookingLabel,
     body.fingerprint, JSON.stringify([body.price]), 'scraper'
   ).run();
 
   return c.json({ action: 'inserted', sailingId: body.id });
+});
+
+// POST /api/sailing/:id/details — seed cabin prices + price history for a sailing
+app.post('/api/sailing/:id/details', async (c) => {
+  const auth = c.req.header('Authorization');
+  if (auth !== `Bearer ${c.env.SCRAPER_SECRET}`) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const id = c.req.param('id');
+  const body = await c.req.json<{
+    cabins: Array<{ cabinClass: string; baseFare: number; portTax: number; gratuityPerNight: number }>;
+    priceHistory?: Array<{ price: number; date?: string }>;
+  }>();
+
+  // Ensure cabin categories exist + insert cabin prices
+  for (const cab of body.cabins) {
+    let cat = await c.env.DB.prepare('SELECT id FROM cabin_categories WHERE name = ?').bind(cab.cabinClass).first<{ id: number }>();
+    if (!cat) {
+      await c.env.DB.prepare('INSERT INTO cabin_categories (name) VALUES (?)').bind(cab.cabinClass).run();
+      cat = await c.env.DB.prepare('SELECT last_insert_rowid() as id').first<{ id: number }>();
+    }
+    await c.env.DB.prepare(
+      `INSERT INTO cabin_prices (sailing_id, cabin_category_id, base_fare_per_person, port_tax_per_person, gratuity_per_person_per_night)
+       VALUES (?, ?, ?, ?, ?)`
+    ).bind(id, cat!.id, cab.baseFare, cab.portTax, cab.gratuityPerNight).run();
+  }
+
+  // Insert price history if provided
+  if (body.priceHistory) {
+    for (const ph of body.priceHistory) {
+      await c.env.DB.prepare(
+        `INSERT INTO price_history (sailing_id, cabin_category_id, price, recorded_at) VALUES (?, 1, ?, ?)`
+      ).bind(id, ph.price, ph.date || new Date().toISOString()).run();
+    }
+  }
+
+  return c.json({ action: 'details_seeded', sailingId: id, cabins: body.cabins.length, history: body.priceHistory?.length || 0 });
 });
 
 export default app;

@@ -29,8 +29,14 @@ export interface CabinRate {
   gratuityPerPersonPerNight: number;
 }
 
+export interface PriceHistoryEntry {
+  price: number;
+  date: string;
+}
+
 export interface SailingDetail extends SailingRecord {
   cabins: CabinRate[];
+  priceHistory?: PriceHistoryEntry[];
 }
 
 export abstract class SourceAdapter {

@@ -20,7 +20,7 @@ import { cleanText } from '@/utils/text';
 import type { PriceForecastOutput, CabinForecast, CompetingSailingData, PriceAlert } from '@/types/enhancedAnalytics';
 
 interface EnhancedPriceForecastProps {
-  sailingId: number;
+  sailingId: string | number;
 }
 
 /* ------------------------------------------------------------------ */
@@ -140,7 +140,7 @@ export default function EnhancedPriceForecast({ sailingId }: EnhancedPriceForeca
     setLoading(true);
     setError(null);
 
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const API_BASE = '';
 
     (async () => {
       try {

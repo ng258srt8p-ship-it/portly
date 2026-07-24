@@ -36,7 +36,7 @@ interface PriceComparisonTableProps {
   cabinPrices?: CabinPrice[];
   currency?: string;
   showTaxes?: boolean;
-  sailingId?: number;
+  sailingId?: string | number;
 }
 
 const tierOrder = ['interior', 'oceanview', 'balcony', 'suite', 'specialty'] as const;
@@ -56,13 +56,13 @@ export function PriceComparisonTable({
   sailingId,
 }: PriceComparisonTableProps) {
   const [expandedTier, setExpandedTier] = useState<string | null>(null);
-  const [resolvedSailingId, setResolvedSailingId] = useState<number | undefined>(sailingId);
+  const [resolvedSailingId, setResolvedSailingId] = useState<string | number | undefined>(sailingId);
   const router = useRouter();
 
   // Self-fetch cabin pricing from the backend if no prop prices provided
   const fetcher = useMemo(
     () => async () => {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const API_BASE = '';
       // Resolve the sailing ID dynamically: if not provided, fetch the first available sailing from deals
       let sid = sailingId;
       if (!sid) {
@@ -89,20 +89,20 @@ export function PriceComparisonTable({
     ? propPrices
     : apiPrices
         ? apiPrices.map((cb: any) => {
-            const tier = (cb.cabinType?.toLowerCase() || 'interior') as CabinPrice['tier'];
-            const numericTotal = cb.raw?.totalOutTheDoor || parseFloat(cb.total.replace(/[$,]/g, '')) || 0;
-            const numericBase = cb.raw?.perPersonBase || parseFloat(cb.baseFare.replace(/[$,]/g, '')) || 0;
-            const numericFees = cb.raw?.totalFees || parseFloat(cb.portFees.replace(/[$,]/g, '')) || 0;
-            const numericTips = cb.raw?.totalGratuities || parseFloat(cb.gratuities.replace(/[$,]/g, '')) || 0;
-            const numericPerDay = cb.raw?.perPersonPerDay || parseFloat(cb.perPersonPerDay.replace(/[$,]/g, '')) || 0;
+            const tier = (cb.cabinType?.toLowerCase() || cb.cabinClass?.toLowerCase() || 'interior') as CabinPrice['tier'];
+            const numericBase = cb.baseFarePerPerson || cb.raw?.perPersonBase || 0;
+            const numericFees = cb.portTaxPerPerson || cb.raw?.totalFees || 0;
+            const nightlyGratuity = cb.gratuityPerPersonPerNight || 0;
+            const numericTotal = cb.raw?.totalOutTheDoor || (numericBase + numericFees + (nightlyGratuity * (cb.nights || 7)));
+            const numericPerDay = cb.raw?.perPersonPerDay || (numericTotal / (cb.nights || 7));
 
             return {
               tier,
-              label: cb.cabinType,
+              label: cb.cabinType || cb.cabinClass,
               icon: tier === 'suite' ? 'crown' : tier === 'balcony' ? 'deck' : tier === 'oceanview' ? 'window' : 'bed',
               baseFare: numericBase,
               taxesAndFees: numericFees,
-              gratuities: numericTips,
+              gratuities: nightlyGratuity,
               total: numericTotal,
               perPersonPerDay: numericPerDay,
               available: true,

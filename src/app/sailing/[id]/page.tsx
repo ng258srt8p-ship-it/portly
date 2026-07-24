@@ -31,12 +31,11 @@ interface SailingData {
 
 export default function SailingDetailPage() {
   const params = useParams();
-  const sailingId = parseInt(params?.id as string);
+  const sailingId = params?.id as string;
 
   const fetcher = useMemo(
     () => async () => {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const res = await fetch(`${API_BASE}/api/sailing/${sailingId}`, { cache: 'no-store' });
+      const res = await fetch(`/api/sailing/${sailingId}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to load sailing');
       return res.json();
     },
@@ -45,14 +44,14 @@ export default function SailingDetailPage() {
 
   const { data, loading, error } = useLiveData<SailingData>(fetcher);
 
-  if (isNaN(sailingId)) {
+  if (!sailingId) {
     return (
       <>
         <Header />
         <main className="min-h-screen pt-28 px-4 sm:px-6">
           <div className="mx-auto max-w-7xl">
             <div className="rounded-3xl border border-coral-ink/15 bg-coral-soft p-8">
-              <p className="text-coral-ink">Invalid sailing ID. Please use a valid numeric ID.</p>
+              <p className="text-coral-ink">No sailing ID provided.</p>
             </div>
           </div>
         </main>
