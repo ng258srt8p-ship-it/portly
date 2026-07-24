@@ -50,15 +50,94 @@ const CABIN_MULTIPLIERS: Record<string, number> = {
   Suite: 3.4,
 };
 
+// Each cabin type has its own pricing behavior:
+// - Inside: deepest discounts (cruise lines discount lead-in fares hardest to fill cabins)
+// - Oceanview: moderate discounts
+// - Balcony: smaller discounts (premium inventory, lines protect yield)
+// - Suite: minimal discounts, sometimes price increases (luxury inventory holds value)
+// Additionally, each cabin type gets a different curve SHAPE so charts don't look identical:
+// - Inside: steady decline (linear waterfall)
+// - Oceanview: decline with a mid-cycle price bump (temporary promo reversal)
+// - Balcony: V-shape (drop then partial recovery as inventory tightens)
+// - Suite: mostly flat with slight uptick (yield protection)
+interface CabinPriceBehavior {
+  multiplier: number;
+  dropPercent: number;      // how much this cabin drops from its own peak
+  curveShape: 'linear' | 'bump' | 'vshape' | 'uptick';
+}
+
+const CABIN_BEHAVIORS: Record<string, CabinPriceBehavior> = {
+  Inside:    { multiplier: 0.75, dropPercent: 0.30, curveShape: 'linear' },
+  Oceanview: { multiplier: 1.0,  dropPercent: 0.22, curveShape: 'bump' },
+  Balcony:   { multiplier: 1.65, dropPercent: 0.15, curveShape: 'vshape' },
+  Suite:     { multiplier: 3.4,  dropPercent: 0.06, curveShape: 'uptick' },
+};
+
+// Generate a 5-point price trajectory for a single cabin type
+function genCabinHistory(baseFare: number, behavior: CabinPriceBehavior): number[] {
+  const peak = Math.round(baseFare / (1 - behavior.dropPercent));
+  const current = Math.round(baseFare);
+  const drop = peak - current;
+
+  switch (behavior.curveShape) {
+    case 'linear': {
+      // Steady decline: peak → 75% drop → 50% → 25% → current
+      return [
+        peak,
+        Math.round(peak - drop * 0.25),
+        Math.round(peak - drop * 0.50),
+        Math.round(peak - drop * 0.75),
+        current,
+      ];
+    }
+    case 'bump': {
+      // Decline with mid-cycle bump: peak → partial drop → temporary reversal → resume drop → current
+      return [
+        peak,
+        Math.round(peak - drop * 0.35),
+        Math.round(peak - drop * 0.20), // bump up (promo reversal)
+        Math.round(peak - drop * 0.55),
+        current,
+      ];
+    }
+    case 'vshape': {
+      // V-shape: peak → big drop → deeper drop → partial recovery → current
+      return [
+        peak,
+        Math.round(peak - drop * 0.55),
+        Math.round(peak - drop * 0.85), // bottom of V
+        Math.round(peak - drop * 0.40), // partial recovery
+        current,
+      ];
+    }
+    case 'uptick': {
+      // Mostly flat with slight uptick: start slightly below peak → flat → slight rise → higher
+      const startVal = Math.round(peak - drop * 0.30);
+      return [
+        startVal,
+        Math.round(startVal - (current - startVal) * 0.10),
+        Math.round(startVal + (current - startVal) * 0.30),
+        Math.round(startVal + (current - startVal) * 0.65),
+        current, // current is the highest point
+      ];
+    }
+    default:
+      return [peak, peak, peak, peak, current];
+  }
+}
+
 // Helper: generate multi-cabin price history (5 dates × 4 cabin types = 20 entries)
-function genMultiCabinPriceHistory(currentPrice: number, originalPrice: number, sailDate: string) {
+// Each cabin gets its own independent trajectory with realistic pricing behavior.
+function genMultiCabinPriceHistory(currentInsidePrice: number, _originalPrice: number, sailDate: string) {
   const dates = genPriceHistoryDates(sailDate);
-  const priceHistory = genHistory(currentPrice, originalPrice);
   const entries: Array<{ price: number; date: string; cabinClass: string }> = [];
-  for (const [cabinClass, mult] of Object.entries(CABIN_MULTIPLIERS)) {
+
+  for (const [cabinClass, behavior] of Object.entries(CABIN_BEHAVIORS)) {
+    const baseFare = Math.round(currentInsidePrice * behavior.multiplier);
+    const prices = genCabinHistory(baseFare, behavior);
     for (let i = 0; i < dates.length; i++) {
       entries.push({
-        price: Math.round(priceHistory[i] * mult),
+        price: prices[i],
         date: dates[i],
         cabinClass,
       });
