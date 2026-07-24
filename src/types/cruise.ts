@@ -110,4 +110,5 @@ export interface DealFilters {
   adults?: number;           // 1-8, default 2
   children?: number;         // 0-6, default 0
   childAges?: number[];      // ages 0-17 for each child
+  ship?: string[];           // ship name filter
 }

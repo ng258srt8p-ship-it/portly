@@ -23,7 +23,8 @@ export interface FilterSelectionGridProps {
   availableLines: string[];
   availableRegions: string[];
   availableDestinations: string[];
-  availableCabinTypes?: ('Inside' | 'Oceanview' | 'Balcony' | 'Suite')[];
+  availableShips?: string[];
+  availableCabinType?: ('Inside' | 'Oceanview' | 'Balcony' | 'Suite')[];
   hasActiveFilters?: boolean;
   onClear?: () => void;
   disabled?: boolean;
@@ -553,6 +554,7 @@ export default function FilterSelectionGrid({
   availableLines,
   availableRegions,
   availableDestinations,
+  availableShips = [],
   availableCabinTypes = [],
   hasActiveFilters = false,
   onClear,
@@ -568,6 +570,7 @@ export default function FilterSelectionGrid({
     filters.destination?.length || 0,
     filters.departurePort?.length || 0,
     filters.departureRegion?.length || 0,
+    filters.ship?.length || 0,
     filters.minNights !== undefined ? 1 : 0,
     filters.maxNights !== undefined ? 1 : 0,
     filters.minPrice !== undefined ? 1 : 0,
@@ -584,6 +587,9 @@ export default function FilterSelectionGrid({
   const destinationOptions: FilterOption[] = availableDestinations
     .sort()
     .map((dest) => ({ value: dest, label: dest }));
+  const shipOptions: FilterOption[] = [...new Set(availableShips)]
+    .sort()
+    .map((ship) => ({ value: ship, label: ship }));
 
   // Get current nights option
   const currentNights = getNightsOption(filters.minNights, filters.maxNights);
@@ -598,6 +604,10 @@ export default function FilterSelectionGrid({
 
   const handleDestinationsChange = (destinations: string[]) => {
     onChange({ ...filters, destination: destinations.length ? destinations : undefined });
+  };
+
+  const handleShipsChange = (ships: string[]) => {
+    onChange({ ...filters, ship: ships.length ? ships : undefined });
   };
 
   const handleNightsChange = (value: NightOption | null) => {
@@ -672,6 +682,16 @@ export default function FilterSelectionGrid({
           onChange={handleDestinationsChange}
           testId="filter-destination"
           disabled={destinationOptions.length <= 1 || disabled}
+        />
+
+        <MultiSelectDropdown
+          label="Ship"
+          placeholder="Any ship"
+          options={shipOptions}
+          selected={filters.ship ?? []}
+          onChange={handleShipsChange}
+          testId="filter-ship"
+          disabled={shipOptions.length <= 1 || disabled}
         />
       </div>
 

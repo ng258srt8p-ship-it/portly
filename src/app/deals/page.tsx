@@ -38,6 +38,8 @@ function parseFiltersFromURL(): DealFilters {
   if (ps && !ad) f.adults = Math.min(8, Math.max(1, parseInt(ps) || 2));
   const ch = sp.get('children');
   if (ch) f.children = Math.min(6, Math.max(0, parseInt(ch) || 0));
+  const sh = sp.get('ship');
+  if (sh) f.ship = sh.split(',');
   return f;
 }
 
@@ -60,6 +62,7 @@ export default function DealsPage() {
     if (filters.sort) sp.set('sort', filters.sort);
     if (filters.adults !== undefined && filters.adults !== 2) sp.set('adults', String(filters.adults));
     if (filters.children !== undefined && filters.children > 0) sp.set('children', String(filters.children));
+    if (filters.ship?.length) sp.set('ship', filters.ship.join(','));
     const qs = sp.toString();
     const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
     router.replace(newUrl, { scroll: false });

@@ -52,12 +52,13 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
 
   // Extract available filter options from full deals data
   const availableOptions = useMemo(() => {
-    if (!deals) return { lines: [], destinations: [], ports: [], regions: [] };
+    if (!deals) return { lines: [], destinations: [], ports: [], regions: [], ships: [] };
     return {
       lines: [...new Set(deals.map((d) => d.cruiseLine))].sort(),
       destinations: [...new Set(deals.map((d) => d.destination))].sort(),
       ports: [...new Set(deals.map((d) => d.departurePort))].sort(),
       regions: [...new Set(deals.map((d) => d.departureRegion).filter(Boolean))].sort() as string[],
+      ships: [...new Set(deals.map((d) => d.ship))].sort(),
     };
   }, [deals]);
 
@@ -100,10 +101,12 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
           availableLines={availableOptions.lines}
           availableRegions={availableOptions.regions}
           availableDestinations={availableOptions.destinations}
+          availableShips={availableOptions.ships}
           hasActiveFilters={Boolean(
             filters.cruiseLine?.length ||
             filters.destination?.length ||
             filters.departureRegion?.length ||
+            filters.ship?.length ||
             filters.minNights !== undefined ||
             filters.maxNights !== undefined ||
             filters.minPrice !== undefined ||

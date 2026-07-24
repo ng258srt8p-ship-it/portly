@@ -78,6 +78,9 @@ app.get('/api/deals', async (c) => {
   const badgeType = c.req.query('badgeType');
   if (badgeType) { where += ' AND s.badge_type IN (' + badgeType.split(',').map(() => '?').join(',') + ')'; binds.push(...badgeType.split(',')); }
 
+  const ship = c.req.query('ship');
+  if (ship) { where += ' AND sh.name = ?'; binds.push(ship); }
+
   const limitClause = limit > 0 ? ' LIMIT ? OFFSET ?' : '';
   const sql = `SELECT s.*, cl.name AS cruise_line, sh.name AS ship, d.name AS destination FROM sailings s JOIN cruise_lines cl ON s.cruise_line_id = cl.id JOIN ships sh ON s.ship_id = sh.id LEFT JOIN destinations d ON s.destination_id = d.id ${where} ORDER BY ${orderBy}${limitClause}`;
   if (limit > 0) binds.push(limit, offset);
