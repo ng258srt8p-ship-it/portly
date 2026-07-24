@@ -78,18 +78,18 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
       </div>
 
       {error && (
-        <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-3xl border border-coral-ink/15 bg-coral-soft p-6 sm:flex-row sm:items-center">
-          <p className="text-sm font-medium text-coral-ink">
-            Couldn&apos;t reach the TripTide fare service. {error}
-          </p>
-          <button
-            onClick={refresh}
-            className="shrink-0 rounded-full bg-coral-ink px-4 py-2 text-xs font-bold text-white hover:opacity-90"
-          >
-            Retry
-          </button>
+        <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-3xl border border-amber-ink/15 bg-amber-soft p-6 sm:flex-row sm:items-center">
+         <p className="text-sm font-medium text-amber-ink">
+           Live prices temporarily unavailable. {error}
+         </p>
+         <button
+           onClick={refresh}
+           className="shrink-0 rounded-full bg-ink px-4 py-2 text-xs font-bold text-white hover:opacity-90"
+         >
+           Retry
+         </button>
         </div>
-      )}
+       )}
 
       {/* Filter bar */}
       {deals && !loading && (

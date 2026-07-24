@@ -15,7 +15,6 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.0",
-    "firecrawl": "^4.30.0",
     "pg": "^8.22.0"
   },
   "devDependencies": {
