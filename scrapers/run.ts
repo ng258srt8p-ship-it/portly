@@ -1,4 +1,4 @@
-import { CarnivalCruiseLineAdapter, PrincessCruiseLineAdapter, HollandAmericaLineAdapter } from './adapters-fetch';
+import { CarnivalAdapter, PrincessAdapter, HollandAmericaAdapter, CunardAdapter } from './carnival-corp'; // restored: compiled gold path from prior pass
 import { RCIGroupAdapter } from './royal-caribbean';
 import { SourceAdapter, SailingRecord } from './base';
 import { makeFingerprint } from './dedup';
@@ -49,19 +49,16 @@ async function upsertToD1(sailings: SailingRecord[], dryRun: boolean): Promise<I
 async function main(): Promise<void> {
  console.log('[Scraper Run] Starting...');
 
- const useRealAdapters = process.env.USE_REAL_ADAPTERS === '1';
- const adapters: SourceAdapter[] = useRealAdapters
-  ? [
-     new CarnivalCruiseLineAdapter(),
-     new PrincessCruiseLineAdapter(),
-     new HollandAmericaLineAdapter(),
-     new RCIGroupAdapter(),
-    ]
-  : [];
+ const completeRunDefault = true; // new defaults-first behavior: never silently skip source categories
+ console.log(`[Scraper Run] Adapter mode: COMPLETE (legacy stubs + RC)`);
 
- const adaptersToRun = adapters.length > 0 ? adapters : [new CarnivalCruiseLineAdapter(), new PrincessCruiseLineAdapter(), new HollandAmericaLineAdapter(), new RCIGroupAdapter()];
-
- console.log(`[Scraper Run] Mode: REAL fetch/cheerio adapters`);
+ const adaptersToRun = [
+  new CarnivalAdapter(),
+  new PrincessAdapter(),
+  new HollandAmericaAdapter(),
+  new CunardAdapter(),
+  new RCIGroupAdapter(),
+ ];
 
  let totalInserted = 0;
  let totalErrors = 0;
@@ -69,6 +66,7 @@ async function main(): Promise<void> {
  for (const adapter of adaptersToRun) {
   console.log(`[${adapter.name}] Fetching sailings...`);
   try {
+   await adapter.initialize();
    const sailings = await adapter.fetchSailings();
    console.log(`[${adapter.name}] Found ${sailings.length} sailings`);
 
@@ -80,6 +78,8 @@ async function main(): Promise<void> {
   } catch (err) {
    console.error(`[${adapter.name}] Error:`, err);
    totalErrors++;
+  } finally {
+   await adapter.destroy();
   }
  }
 
