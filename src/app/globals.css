@@ -2,21 +2,18 @@
    TRIPTIDE + PORTLY — Global Styles & Typography
    ============================================================
    Font Stack:
-     Display:  'Syne', 'Clash Display', sans-serif
+     Display:  'Plus Jakarta Sans', 'Inter', sans-serif
      Interface: 'Plus Jakarta Sans', 'Inter', sans-serif
-     Tabular:   'JetBrains Mono', 'Geist Mono', monospace
+     Tabular:   'JetBrains Mono', ui-monospace, monospace
 
    Dual Theme System:
      Light (Default): TripTide's indigo/mint/coral on canvas
      Dark (.dark):    dark theme accents
    ============================================================ */
 
-@import url('https://api.fontshare.com/v2/css?f[]=syne@400,500,600,700,800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-@import url('https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-@import url('https://api.fontshare.com/v2/css?f[]=geist-mono@400,500,600,700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
 
 /* ============================================================
@@ -40,10 +37,10 @@
   --color-ink-faint: #8b8d9a;
 
   /* ─── Font Families (used by CSS helper classes) ─── */
-  --font-display: 'Syne', 'Clash Display', system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   --font-body: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Geist Mono', ui-monospace, monospace;
-  --font-brand: 'Syne', 'Clash Display', system-ui, sans-serif;
+  --font-brand: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
 
   /* Brand Colors */
   --color-indigo: #2a44e7;
@@ -138,10 +135,10 @@
   --color-ink-faint: #a0a8be;
 
   /* Brand colors adjusted for dark mode */
-  --font-display: 'Syne', 'Clash Display', system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   --font-body: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'Geist Mono', ui-monospace, monospace;
-  --font-brand: 'Syne', 'Clash Display', system-ui, sans-serif;
+  --font-brand: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
 
   /* Brand colors adjusted for dark mode */
   --color-indigo: #60a5fa;

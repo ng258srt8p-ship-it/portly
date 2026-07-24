@@ -188,7 +188,7 @@ export default function PressPage() {
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   <div className="rounded-xl border border-black/[0.05] bg-white p-4 shadow-float">
                     <p className="font-display text-2xl font-bold text-ink">
-                      Syne (Display)
+                      Plus Jakarta Sans (Display)
                     </p>
                     <p className="mt-1 text-sm text-ink-soft">
                       Headlines, hero text, numbers

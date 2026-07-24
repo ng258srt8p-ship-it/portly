@@ -39,23 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Tier 1: Brand Display Fonts — Syne */}
-        <link
-          rel="preconnect"
-          href="https://api.fontshare.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preload"
-          href="https://api.fontshare.com/v2/css?f[]=syne@400,500,600,700,800&display=swap"
-          as="style"
-        />
-        <link
-          rel="stylesheet"
-          href="https://api.fontshare.com/v2/css?f[]=syne@400,500,600,700,800&display=swap"
-        />
-
-        {/* Tier 2: Interface Fonts — Plus Jakarta Sans */}
+        {/* Tier 1: Interface + Display Fonts — Plus Jakarta Sans (used for all headings and body) */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
@@ -67,7 +51,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
 
-        {/* Tier 3: Tabular Fonts — JetBrains Mono */}
+        {/* Tier 2: Tabular Fonts — JetBrains Mono */}
         <link
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap"
           rel="stylesheet"
