@@ -436,7 +436,7 @@ app.get('/api/enhanced/deal-analysis/:id', async (c) => {
       is_ai_enhanced: !!aiContent,
       dealScore,
       dealScoreJustification,
-      verdict: dropPct >= 25 ? 'Exceptional value — price has dropped significantly below recent highs. Strong buy opportunity.' : dropPct >= 15 ? 'Good deal — below recent average. Worth booking soon.' : 'Fair price — in line with recent trends. Monitor for further drops.',
+      verdict: aiContent?.verdict || (dropPct >= 25 ? 'Exceptional value — price has dropped significantly below recent highs. Strong buy opportunity.' : dropPct >= 15 ? 'Good deal — below recent average. Worth booking soon.' : 'Fair price — in line with recent trends. Monitor for further drops.'),
       priceTrend,
       pricingDeepDive: aiContent?.pricingDeepDive || `The current fare of $${price.toLocaleString()} represents a ${dropPct}% discount from the recent high of $${original.toLocaleString()}. On a per-night basis, you're paying $${perNight}/night, which ${dropPct >= 20 ? 'is well below the typical range for this route' : 'is competitive for this category'}.`,
       hiddenCosts: {
