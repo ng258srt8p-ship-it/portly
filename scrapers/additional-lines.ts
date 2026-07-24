@@ -18,7 +18,7 @@ export class NorwegianAdapter extends SourceAdapter {
     const sailings = await this.fetchSailings();
     const s = sailings.find(x => x.id === id);
     if (!s) return null;
-    return { ...s, cabins: genCabins(s.price, s.nights), priceHistory: genMultiCabinPriceHistory(s.price, s.originalPrice, s.sailDate) };
+    return { ...s, cabins: genCabins(s.price, s.nights), priceHistory: genMultiCabinPriceHistory(s.price, s.originalPrice, s.sailDate, s.id) };
   }
 }
 
@@ -37,7 +37,7 @@ export class MSCAdapter extends SourceAdapter {
     const sailings = await this.fetchSailings();
     const s = sailings.find(x => x.id === id);
     if (!s) return null;
-    return { ...s, cabins: genCabins(s.price, s.nights), priceHistory: genMultiCabinPriceHistory(s.price, s.originalPrice, s.sailDate) };
+    return { ...s, cabins: genCabins(s.price, s.nights), priceHistory: genMultiCabinPriceHistory(s.price, s.originalPrice, s.sailDate, s.id) };
   }
 }
 
@@ -56,7 +56,7 @@ export class DisneyAdapter extends SourceAdapter {
     const sailings = await this.fetchSailings();
     const s = sailings.find(x => x.id === id);
     if (!s) return null;
-    return { ...s, cabins: genCabins(s.price, s.nights), priceHistory: genMultiCabinPriceHistory(s.price, s.originalPrice, s.sailDate) };
+    return { ...s, cabins: genCabins(s.price, s.nights), priceHistory: genMultiCabinPriceHistory(s.price, s.originalPrice, s.sailDate, s.id) };
   }
 }
 
@@ -75,6 +75,6 @@ export class CelebrityAdapter extends SourceAdapter {
     const sailings = await this.fetchSailings();
     const s = sailings.find(x => x.id === id);
     if (!s) return null;
-    return { ...s, cabins: genCabins(s.price, s.nights), priceHistory: genMultiCabinPriceHistory(s.price, s.originalPrice, s.sailDate) };
+    return { ...s, cabins: genCabins(s.price, s.nights), priceHistory: genMultiCabinPriceHistory(s.price, s.originalPrice, s.sailDate, s.id) };
   }
 }
