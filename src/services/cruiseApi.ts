@@ -36,7 +36,9 @@ async function getJSON<T>(url: string): Promise<T> {
 
 /** Fetch the latest cruise deals (rated by value) */
 export async function fetchDeals(limit: number = 20, filters?: DealFilters): Promise<Deal[]> {
-  const params = new URLSearchParams({ limit: String(limit) });
+  const params = new URLSearchParams();
+  // limit=0 means "All" — omit the param so the API returns all rows
+  if (limit > 0) params.set('limit', String(limit));
   if (filters) {
     if (filters.cruiseLine?.length) params.set('cruiseLine', filters.cruiseLine.join(','));
     if (filters.destination?.length) params.set('destination', filters.destination.join(','));

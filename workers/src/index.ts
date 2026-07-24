@@ -40,7 +40,9 @@ function formatSailing(row: any): any {
 
 // GET /api/deals
 app.get('/api/deals', async (c) => {
-  const limit = Math.min(Number(c.req.query('limit') || 20), 100);
+  // limit=0 means "All" — omit LIMIT clause entirely
+  const limitParam = Number(c.req.query('limit') || 20);
+  const limit = limitParam > 0 ? Math.min(limitParam, 500) : 0;
   const offset = Number(c.req.query('offset') || 0);
   const sort = c.req.query('sort') || 'drop-desc';
 
@@ -76,8 +78,9 @@ app.get('/api/deals', async (c) => {
   const badgeType = c.req.query('badgeType');
   if (badgeType) { where += ' AND s.badge_type IN (' + badgeType.split(',').map(() => '?').join(',') + ')'; binds.push(...badgeType.split(',')); }
 
-  const sql = `SELECT s.*, cl.name AS cruise_line, sh.name AS ship, d.name AS destination FROM sailings s JOIN cruise_lines cl ON s.cruise_line_id = cl.id JOIN ships sh ON s.ship_id = sh.id LEFT JOIN destinations d ON s.destination_id = d.id ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
-  binds.push(limit, offset);
+  const limitClause = limit > 0 ? ' LIMIT ? OFFSET ?' : '';
+  const sql = `SELECT s.*, cl.name AS cruise_line, sh.name AS ship, d.name AS destination FROM sailings s JOIN cruise_lines cl ON s.cruise_line_id = cl.id JOIN ships sh ON s.ship_id = sh.id LEFT JOIN destinations d ON s.destination_id = d.id ${where} ORDER BY ${orderBy}${limitClause}`;
+  if (limit > 0) binds.push(limit, offset);
 
   const { results } = await c.env.DB.prepare(sql).bind(...binds).all();
   return c.json(results.map(formatSailing));
@@ -186,29 +189,30 @@ app.post('/api/deals', async (c) => {
     bookingLabel?: string;
   }>();
 
-  // Ensure cruise_line exists
-  let cl = await c.env.DB.prepare('SELECT id FROM cruise_lines WHERE name = ?').bind(body.cruiseLine).first();
+  // Ensure cruise_line exists (D1 doesn't support RETURNING — use last_insert_rowid)
+  let cl = await c.env.DB.prepare('SELECT id FROM cruise_lines WHERE name = ?').bind(body.cruiseLine).first<{ id: number }>();
   if (!cl) {
-    const info = await c.env.DB.prepare('INSERT INTO cruise_lines (name) VALUES (?) RETURNING id').bind(body.cruiseLine).first();
-    cl = info;
+    await c.env.DB.prepare('INSERT INTO cruise_lines (name) VALUES (?)').bind(body.cruiseLine).run();
+    cl = await c.env.DB.prepare('SELECT last_insert_rowid() as id').first<{ id: number }>();
   }
 
   // Ensure ship exists
-  let ship = await c.env.DB.prepare('SELECT id FROM ships WHERE name = ? AND cruise_line_id = ?').bind(body.ship, cl.id).first();
+  let ship = await c.env.DB.prepare('SELECT id FROM ships WHERE name = ? AND cruise_line_id = ?').bind(body.ship, cl!.id).first<{ id: number }>();
   if (!ship) {
-    const info = await c.env.DB.prepare('INSERT INTO ships (name, cruise_line_id) VALUES (?, ?) RETURNING id').bind(body.ship, cl.id).first();
-    ship = info;
+    await c.env.DB.prepare('INSERT INTO ships (name, cruise_line_id) VALUES (?, ?)').bind(body.ship, cl!.id).run();
+    ship = await c.env.DB.prepare('SELECT last_insert_rowid() as id').first<{ id: number }>();
   }
 
   // Ensure destination exists
   let destId: number | null = null;
   if (body.destination) {
-    const d = await c.env.DB.prepare('SELECT id FROM destinations WHERE name = ?').bind(body.destination).first();
+    const d = await c.env.DB.prepare('SELECT id FROM destinations WHERE name = ?').bind(body.destination).first<{ id: number }>();
     if (d) {
       destId = d.id;
     } else {
-      const info = await c.env.DB.prepare('INSERT INTO destinations (name) VALUES (?) RETURNING id').bind(body.destination).first();
-      destId = info.id;
+      await c.env.DB.prepare('INSERT INTO destinations (name) VALUES (?)').bind(body.destination).run();
+      const destRow = await c.env.DB.prepare('SELECT last_insert_rowid() as id').first<{ id: number }>();
+      destId = destRow!.id;
     }
   }
 
@@ -233,16 +237,16 @@ app.post('/api/deals', async (c) => {
     return c.json({ action: 'updated', sailingId: existing.id });
   }
 
-  // Insert new sailing — 13 columns matching schema (no generated columns)
+  // Insert new sailing — aligned with live DB schema (departure_port_id, not departure_port; includes source)
   const insertResult = await c.env.DB.prepare(
-    `INSERT INTO sailings (id, cruise_line_id, ship_id, destination_id, departure_port, sail_date, nights, duration,
-      price, original_price, badge_text, fingerprint, history)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO sailings (id, cruise_line_id, ship_id, destination_id, departure_port_id, departure_region,
+      sail_date, nights, duration, price, original_price, badge_text, fingerprint, history, source)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
-    body.id, cl.id, ship.id, destId, body.departurePort || null,
+    body.id, cl!.id, ship!.id, destId, null, null,
     body.sailDate, body.nights, body.duration || `${body.nights} nights`,
     body.price, body.originalPrice, body.badgeText || '⭐ Popular',
-    body.fingerprint, JSON.stringify([body.price])
+    body.fingerprint, JSON.stringify([body.price]), 'scraper'
   ).run();
 
   return c.json({ action: 'inserted', sailingId: body.id });

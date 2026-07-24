@@ -8,6 +8,19 @@ interface SparklineProps {
 }
 
 export default function Sparkline({ data, positive = true, width = 140, height = 44 }: SparklineProps) {
+  // Guard: single-element or empty data — render a flat baseline instead of NaN
+  if (!data || data.length < 2) {
+    const val = data?.[0] ?? 0;
+    const y = height / 2;
+    const color = positive ? "#0B6B57" : "#2A44E7";
+    return (
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+        <line x1="0" y1={y} x2={width} y2={y} stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.4" />
+        <circle cx={width - 4} cy={y} r="3" fill={color} />
+      </svg>
+    );
+  }
+
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;

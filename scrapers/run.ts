@@ -2,6 +2,8 @@ import { CarnivalAdapter, PrincessAdapter, HollandAmericaAdapter, CunardAdapter 
 import { RCIGroupAdapter } from './royal-caribbean';
 import { SourceAdapter, SailingRecord } from './base';
 import { makeFingerprint } from './dedup';
+import dotenv from 'dotenv';
+dotenv.config({ path: '../.env' });
 
 interface InsertResult {
  inserted: number;
