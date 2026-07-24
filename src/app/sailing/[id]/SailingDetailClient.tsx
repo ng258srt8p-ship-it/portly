@@ -132,7 +132,11 @@ export default function SailingDetailPage() {
                 />
               </div>
               {/* Enhanced Deal Analysis (Phase 2) */}
-              <EnhancedDealAnalysis sailingId={data.sailing.id} />
+              <EnhancedDealAnalysis
+                sailingId={data.sailing.id}
+                bookingUrl={data.sailing.bookingUrl}
+                bookingLabel={data.sailing.line}
+              />
 
               {/* Cabin Pricing */}
               <div id="cabin-pricing" className="rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float">
@@ -150,6 +154,7 @@ export default function SailingDetailPage() {
                     href={data.sailing.bookingUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    data-testid="booking-link-bottom"
                     className="rounded-full bg-indigo px-12 py-4 text-base font-bold text-white shadow-[0_12px_24px_-8px_rgba(42,68,231,0.55)] hover:bg-indigo-dark active:scale-[0.98]"
                   >
                     Book This Cruise

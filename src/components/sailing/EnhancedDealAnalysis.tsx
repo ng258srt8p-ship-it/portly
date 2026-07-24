@@ -20,6 +20,8 @@ import { cleanText } from '@/utils/text';
 
 interface EnhancedDealAnalysisProps {
   sailingId: string | number;
+  bookingUrl?: string;
+  bookingLabel?: string;
 }
 
 interface Section {
@@ -74,7 +76,7 @@ function verdictColor(t: string): string {
   return 'indigo';
 }
 
-export default function EnhancedDealAnalysis({ sailingId }: EnhancedDealAnalysisProps) {
+export default function EnhancedDealAnalysis({ sailingId, bookingUrl, bookingLabel }: EnhancedDealAnalysisProps) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -462,18 +464,19 @@ export default function EnhancedDealAnalysis({ sailingId }: EnhancedDealAnalysis
 
       {/* ===== CTA — single Book This Cruise button ===== */}
       {(() => {
-        const bookingUrl = data?.bookingUrl;
+        const effectiveBookingUrl = data?.bookingUrl || bookingUrl;
         return (
           <div className="flex justify-center pt-2" data-testid="deal-cta">
-            {bookingUrl ? (
+            {effectiveBookingUrl ? (
               <a
-                href={bookingUrl}
+                href={effectiveBookingUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                data-testid="booking-link-cta"
                 className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-8 py-3 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700"
               >
                 <MaterialIcon name="book_online" size="sm" />
-                Book This Cruise
+                {bookingLabel || 'Book This Cruise'}
               </a>
             ) : (
               <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-8 py-3 text-sm font-semibold text-slate-700">
