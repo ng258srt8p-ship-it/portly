@@ -336,6 +336,46 @@ export function getSailingDetail(id: string): StubSailingDetail | null {
   };
 }
 
+// Apply per-tick price drift to a sailing — simulates real-world price fluctuations.
+// Each tick, prices nudge up or down by ±0-3%. 70% of the time price drops (cruise lines
+// discount over time); 30% it rises (inventory sells out / fare increases).
+// This ensures the DB actually updates on every cron tick (price_history grows,
+// last_updated_at changes) instead of skipping because prices are identical.
+export function applyPriceDrift(s: StubSailing): StubSailing {
+  const seed = hashString(s.id + Date.now());
+  const rng = (offset: number) => {
+    const x = Math.sin(seed + offset * 137.5) * 10000;
+    return x - Math.floor(x);
+  };
+
+  // 70% chance of a price drop, 30% chance of a price increase
+  const isDrop = rng(0) < 0.7;
+  // Magnitude: 0.5% to 3%
+  const magnitude = 0.005 + rng(1) * 0.025;
+  const change = Math.round(s.price * magnitude);
+
+  let newPrice: number;
+  if (isDrop) {
+    newPrice = Math.max(Math.round(s.price - change), Math.round(s.originalPrice * 0.35));
+  } else {
+    // Don't exceed originalPrice on the upside
+    newPrice = Math.min(Math.round(s.price + change), s.originalPrice);
+  }
+
+  // Only update if the price actually changed by at least $1
+  if (newPrice === s.price) return s;
+
+  // Regenerate history with the new current price so sparklines stay consistent
+  const newDropPercent = Math.round(((s.originalPrice - newPrice) / s.originalPrice) * 100);
+
+  return {
+    ...s,
+    price: newPrice,
+    dropPercent: newDropPercent,
+    history: genHistory(newPrice, s.originalPrice, s.id, s.sailDate),
+  };
+}
+
 // Fingerprint helper (mirrors scrapers/dedup.ts)
 export function makeFingerprint(s: { cruiseLine: string; sailDate: string; ship: string; departurePort: string; nights: number }): string {
   return `${s.cruiseLine.toLowerCase().replace(/\s+/g, '-')}|${s.sailDate}|${s.ship.toLowerCase().replace(/\s+/g, '-')}|${s.departurePort.toLowerCase().replace(/\s+/g, '-')}|${s.nights}`;

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { getAllSailings, getSailingDetail, makeFingerprint } from './scraper-data';
+import { getAllSailings, getSailingDetail, makeFingerprint, applyPriceDrift } from './scraper-data';
 
 export type Env = {
   DB: D1Database;
@@ -359,6 +359,22 @@ app.post('/api/sailing/:id/details', async (c) => {
   return c.json({ action: 'details_seeded', sailingId: id, cabins: body.cabins.length, history: body.priceHistory?.length || 0 });
 });
 
+// GET /api/sync-status — check when the last cron sync ran
+app.get('/api/sync-status', async (c) => {
+  const lastSync = await c.env.CACHE.get('last_cron_sync');
+  const lastSyncResult = await c.env.CACHE.get('last_cron_sync_result');
+  const { results } = await c.env.DB.prepare(
+    `SELECT COUNT(*) as total_sailings, MAX(last_updated_at) as last_update FROM sailings WHERE price IS NOT NULL`
+  ).all();
+  return c.json({
+    lastSyncTime: lastSync || null,
+    lastSyncResult: lastSyncResult ? JSON.parse(lastSyncResult) : null,
+    totalSailings: results[0]?.total_sailings || 0,
+    lastDbUpdate: results[0]?.last_update || null,
+    cronSchedule: '*/30 * * * *',
+  });
+});
+
 // GET /api/enhanced/deal-analysis/:id — stub heuristic deal analysis
 app.get('/api/enhanced/deal-analysis/:id', async (c) => {
   const id = c.req.param('id');
@@ -530,7 +546,8 @@ app.post('/api/trigger-sync', async (c) => {
   let inserted = 0, updated = 0, skipped = 0, errors = 0;
   for (const s of sailings) {
     try {
-      const action = await upsertSailing(c.env.DB, s);
+      const drifted = applyPriceDrift(s);
+      const action = await upsertSailing(c.env.DB, drifted);
       if (action === 'inserted') inserted++;
       else if (action === 'updated') updated++;
       else skipped++;
@@ -647,7 +664,8 @@ export default {
 
     for (const s of sailings) {
       try {
-        const action = await upsertSailing(env.DB, s);
+        const drifted = applyPriceDrift(s);
+        const action = await upsertSailing(env.DB, drifted);
         if (action === 'inserted') inserted++;
         else if (action === 'updated') updated++;
         else skipped++;
@@ -657,5 +675,14 @@ export default {
       }
     }
     console.log(`[Cron] Sync complete. Inserted: ${inserted}, Updated: ${updated}, Skipped: ${skipped}, Errors: ${errors}`);
+
+    // Record sync metadata in KV for the /api/sync-status endpoint
+    const syncResult = { inserted, updated, skipped, errors, total: sailings.length };
+    try {
+      await env.CACHE.put('last_cron_sync', new Date(event.scheduledTime).toISOString());
+      await env.CACHE.put('last_cron_sync_result', JSON.stringify(syncResult));
+    } catch (kvErr) {
+      console.error('[Cron] Failed to write sync metadata to KV:', kvErr);
+    }
   },
 };
