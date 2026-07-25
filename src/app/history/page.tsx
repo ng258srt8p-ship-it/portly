@@ -11,7 +11,7 @@ import { useLiveData } from '@/hooks/useLiveData';
 import type { HistoryLine } from '@/types/cruise';
 
 function formatPrice(amount: number): string {
-  return '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 0 });
+  return '$' + amount.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
 function LineCardSkeleton() {
@@ -162,10 +162,13 @@ function LineCard({ line, expanded, onToggle }: { line: HistoryLine; expanded: b
 
   return (
     <div className="flex flex-col rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float transition-all duration-200">
-      {/* Card header */}
-      <a
-        href={`/deals?cruiseLine=${encodeURIComponent(line.line)}`}
-        className="flex items-start justify-between gap-3 text-left"
+      {/* Card header — clicking toggles expand */}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        aria-controls={`line-${line.line}-content`}
+        className="flex w-full items-start justify-between gap-3 text-left"
       >
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -183,7 +186,7 @@ function LineCard({ line, expanded, onToggle }: { line: HistoryLine; expanded: b
           size="md"
           className="mt-1 shrink-0 text-ink-faint"
         />
-      </a>
+      </button>
 
       {/* Mini sparkline */}
       {allPrices.length > 0 && (
@@ -194,7 +197,15 @@ function LineCard({ line, expanded, onToggle }: { line: HistoryLine; expanded: b
 
       {/* Expanded sailing detail */}
       {expanded && (
-        <div className="mt-4 space-y-2 border-t border-black/[0.06] pt-4">
+        <div id={`line-${line.line}-content`} className="mt-4 space-y-2 border-t border-black/[0.06] pt-4">
+          {/* Quick link to filtered deals */}
+          <a
+            href={`/deals?cruiseLine=${encodeURIComponent(line.line)}`}
+            className="mb-2 flex items-center gap-1 text-xs font-medium text-indigo hover:underline"
+          >
+            View all {line.line} deals
+            <MaterialIcon name="arrow_forward" size="sm" />
+          </a>
           {line.sailings.map((s) => (
             <div
               key={`${s.sailingId}-${s.cabinType}`}

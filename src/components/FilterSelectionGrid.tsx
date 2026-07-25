@@ -117,12 +117,15 @@ function MultiSelectDropdown({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
+      // Use requestAnimationFrame to allow click events to process before closing
+      requestAnimationFrame(() => {
+        if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+          setOpen(false);
+        }
+      });
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
   }, []);
 
   const toggleOption = (value: string) => {
@@ -143,22 +146,21 @@ function MultiSelectDropdown({
   if (!options.length) return null;
 
   return (
-    <div ref={rootRef} className="relative min-w-0 flex-1" data-testid={testId}>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => !disabled && setOpen((prev) => !prev)}
-        className={`
-          flex w-full h-11 min-w-0 items-center gap-2 px-2.5 text-left
-          disabled:opacity-40 disabled:cursor-not-allowed
-          rounded-lg border border-black/[0.06] bg-white
-          transition-colors
-          hover:border-black/[0.12] hover:bg-black/[0.02]
-          focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 focus-visible:border-indigo
-        `}
-        aria-expanded={open}
-        aria-haspopup="listbox"
-      >
+      <div ref={rootRef} className="relative min-w-0 flex-1" data-testid={testId}>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => !disabled && setOpen((prev) => !prev)}
+          className={`flex w-full min-w-[44px] min-h-[44px] items-center gap-2 px-3 text-left
+            disabled:opacity-40 disabled:cursor-not-allowed
+            rounded-lg border border-black/[0.06] bg-white
+            transition-colors
+            hover:border-black/[0.12] hover:bg-black/[0.02]
+            focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 focus-visible:border-indigo
+          `}
+          aria-expanded={open}
+          aria-haspopup="listbox"
+        >
         <span className="shrink-0 text-ink-faint text-[11px] font-semibold uppercase tracking-wider">
           {label}
         </span>
@@ -190,7 +192,7 @@ function MultiSelectDropdown({
                 aria-selected={isSelected}
                 onClick={() => toggleOption(option.value)}
                 className={`
-                  block w-full truncate rounded-lg px-3 py-2 text-left text-sm font-medium
+                  block w-full truncate rounded-lg px-3 py-3 text-left text-sm font-medium
                   transition-colors
                   ${isSelected
                     ? 'bg-indigo-mist text-indigo'
@@ -243,12 +245,15 @@ function SingleSelectDropdown({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
+      // Use requestAnimationFrame to allow click events to process before closing
+      requestAnimationFrame(() => {
+        if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+          setOpen(false);
+        }
+      });
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
   }, []);
 
   const selectedOption = options.find((o) => o.value === value);
@@ -301,7 +306,7 @@ function SingleSelectDropdown({
                 aria-selected={isSelected}
                 onClick={() => onChange(option.value)}
                 className={`
-                  block w-full truncate rounded-lg px-3 py-2 text-left text-sm font-medium
+                  block w-full truncate rounded-lg px-3 py-3 text-left text-sm font-medium
                   transition-colors
                   ${isSelected
                     ? 'bg-indigo-mist text-indigo'
@@ -411,14 +416,12 @@ function TypePillGroup({
             type="button"
             disabled={disabled}
             onClick={() => toggleType(option.value)}
-            className={`
-              inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium
+            className={`inline-flex min-h-[44px] min-w-[44px] items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium
               transition-all duration-150
               ${disabled ? 'opacity-40 cursor-not-allowed' : ''}
               ${isActive
                 ? 'bg-indigo text-white shadow-sm'
-                : 'bg-white text-ink-soft border border-black/[0.06] hover:border-black/[0.12] hover:bg-black/[0.02] hover:text-ink'
-              }
+                : 'bg-white text-ink-soft border border-black/[0.06] hover:border-black/[0.12] hover:bg-black/[0.02] hover:text-ink'}
               focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 focus-visible:ring-offset-2
             `}
             aria-pressed={isActive}
@@ -525,24 +528,23 @@ interface ClearFiltersButtonProps {
 }
 
 function ClearFiltersButton({ onClick, disabled }: ClearFiltersButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`
-        inline-flex items-center gap-1.5 rounded-lg border border-coral-ink/15 bg-coral-soft px-2 py-1.5 text-xs font-bold text-coral-ink
-        transition-all duration-150
-        ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-coral-ink hover:text-white hover:border-coral-ink'}
-        focus:outline-none focus-visible:ring-2 focus-visible:ring-coral/50 focus-visible:ring-offset-2
-      `}
-      data-testid="filter-clear"
-    >
-      <MaterialIcon name="close" size="xs" />
-      <span>Clear</span>
-    </button>
-  );
-}
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-coral-ink/15 bg-coral-soft px-3 py-2 text-xs font-bold text-coral-ink
+          transition-all duration-150
+          ${disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-coral-ink hover:text-white hover:border-coral-ink'}
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-coral/50 focus-visible:ring-offset-2
+        `}
+        data-testid="filter-clear"
+      >
+        <MaterialIcon name="close" size="xs" />
+        <span>Clear</span>
+      </button>
+    );
+  }
 
 // ============================================================================
 // Main FilterSelectionGrid Component

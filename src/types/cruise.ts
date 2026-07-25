@@ -51,7 +51,7 @@ export interface SoloPrice {
 }
 
 export interface SoloSailing {
-  id: number;
+  id: number | string;
   cruiseLine: string;
   shipName: string;
   departureDate: string;
@@ -74,7 +74,7 @@ export interface HistoryPricePoint {
 }
 
 export interface HistorySailing {
-  sailingId: number;
+  sailingId: number | string;
   ship: string;
   cabinType: string;
   durationDays: number;
