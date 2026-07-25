@@ -147,6 +147,10 @@ app.get('/api/sailing/:id', async (c) => {
       region: s.destination || s.departure_region || '',
       departureDate: s.sail_date,
       bookingUrl: s.booking_url || undefined,
+      price: s.price || 0,
+      originalPrice: s.original_price || 0,
+      dropPercent: s.drop_percent || 0,
+      history: s.history ? JSON.parse(s.history) : [],
     },
     cabinBreakdown: cabins.results.map((c: any) => {
       const total = Math.round((c.base_fare_per_person || 0) + (c.port_tax_per_person || 0) + ((c.gratuity_per_person_per_night || 0) * (s.nights || 0)));

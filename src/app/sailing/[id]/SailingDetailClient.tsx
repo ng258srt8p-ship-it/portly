@@ -24,6 +24,10 @@ interface SailingData {
     region: string;
     departureDate: string;
     bookingUrl?: string;
+    price: number;
+    originalPrice: number;
+    dropPercent: number;
+    history: number[];
   };
   cabinBreakdown: any[];
   priceHistory: any[];
@@ -96,7 +100,9 @@ export default function SailingDetailPage() {
                 port={data.sailing.port}
                 days={data.sailing.days}
                 departureDate={data.sailing.departureDate}
-                price={data?.cabinBreakdown?.[0]?.raw?.totalOutTheDoor || 0}
+                price={data.sailing.price || 0}
+                originalPrice={data.sailing.originalPrice || 0}
+                dropPercent={data.sailing.dropPercent || 0}
                 cabinType={data?.cabinBreakdown?.[0]?.cabinType || ''}
               />
 
@@ -127,7 +133,7 @@ export default function SailingDetailPage() {
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <PriceHistoryPanel
                   priceHistory={data.priceHistory}
-                  currentPrice={data?.cabinBreakdown?.[0]?.raw?.totalOutTheDoor || 0}
+                  currentPrice={data.sailing.price || 0}
                   cabinBreakdown={data.cabinBreakdown}
                 />
               </div>
