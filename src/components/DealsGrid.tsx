@@ -31,10 +31,10 @@ const LIMIT_LABELS: Record<number, string> = {
 };
 
 function getStorageLimit(): number {
-  if (typeof window === 'undefined') return 20;
+  if (typeof window === 'undefined') return 0; // 0 = All
   const stored = localStorage.getItem('dealsLimit');
-  const parsed = stored ? parseInt(stored, 10) : 20;
-  return LIMIT_OPTIONS.includes(parsed as any) ? parsed : 20;
+  const parsed = stored ? parseInt(stored, 10) : 0;
+  return LIMIT_OPTIONS.includes(parsed as any) ? parsed : 0;
 }
 
 export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
