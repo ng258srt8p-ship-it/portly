@@ -1,2 +1,1 @@
 /api/*  https://portly-api.vqh9mnrdbp.workers.dev/api/:splat  200
-/sailing/*  /sailing/[id]/index.html  200
