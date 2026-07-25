@@ -16,3 +16,7 @@ id = "4ddbcf807f444e62855dc3ff4216a30d"
 # Environment variables
 [vars]
 API_VERSION = "1.0"
+
+# Cron Trigger — every 30 minutes the scheduled handler populates D1
+[triggers]
+crons = ["*/30 * * * *"]

@@ -49,3 +49,4 @@ output/
 e2e/
 scripts/
 nim-monitor*.html
+tsconfig.tsbuildinfo

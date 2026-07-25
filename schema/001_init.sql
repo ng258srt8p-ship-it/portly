@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS sailings (
   booking_url TEXT,
   booking_label TEXT,
   history TEXT DEFAULT '[]', -- JSON array of prices
+  itinerary TEXT, -- JSON array of port names
   source TEXT NOT NULL DEFAULT 'scraper',
   fingerprint TEXT NOT NULL UNIQUE, -- ship_id|sail_date|departure_port_id|nights
   first_seen_at TEXT DEFAULT (datetime('now')),

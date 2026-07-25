@@ -323,7 +323,7 @@ function genCabinHistory(baseFare: number, behavior: CabinPriceBehavior, seed: n
 // Each cabin gets its own independent trajectory with realistic pricing behavior.
 // Uses per-cabin seeded variance so no two sailings have identical curves.
 function genMultiCabinPriceHistory(currentInsidePrice: number, _originalPrice: number, sailDate: string, sailingId: string) {
-  const dates = genPriceHistoryDates(sailDate);
+  const dates = genPriceHistoryDates(sailDate); // Use today as base date (last 90 days)
   const entries: Array<{ price: number; date: string; cabinClass: string }> = [];
 
   for (const [cabinClass, behavior] of Object.entries(CABIN_BEHAVIORS)) {

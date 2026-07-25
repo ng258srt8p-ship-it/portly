@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { getAllSailings, getSailingDetail, makeFingerprint } from './scraper-data';
 
 export type Env = {
   DB: D1Database;
@@ -516,4 +517,139 @@ app.get('/api/enhanced/price-forecast/:id', async (c) => {
   });
 });
 
-export default app;
+// POST /api/trigger-sync — manually trigger the scheduled sync (same as cron)
+app.post('/api/trigger-sync', async (c) => {
+  const auth = c.req.header('Authorization');
+  if (auth !== `Bearer ${c.env.SCRAPER_SECRET}`) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const sailings = getAllSailings();
+  let inserted = 0, updated = 0, skipped = 0, errors = 0;
+  for (const s of sailings) {
+    try {
+      const action = await upsertSailing(c.env.DB, s);
+      if (action === 'inserted') inserted++;
+      else if (action === 'updated') updated++;
+      else skipped++;
+    } catch (err) {
+      console.error(`[Manual Sync] Error upserting ${s.id}:`, err);
+      errors++;
+    }
+  }
+  return c.json({ action: 'sync_complete', inserted, updated, skipped, errors, total: sailings.length });
+});
+
+// ── Scheduled handler (Cron Trigger — every 30 minutes) ──
+// Upserts all 22 stub sailings + seeds cabin prices/price history into D1.
+// This replaces the manual `scrapers/run.ts` execution — the Worker self-populates.
+
+async function upsertSailing(db: D1Database, s: ReturnType<typeof getAllSailings>[0]): Promise<'inserted' | 'updated' | 'skipped'> {
+  const fp = makeFingerprint({ cruiseLine: s.cruiseLine, sailDate: s.sailDate, ship: s.ship, departurePort: s.departurePort, nights: s.nights });
+  const fingerprint = fp;
+
+  // Ensure cruise_line exists
+  let cl = await db.prepare('SELECT id FROM cruise_lines WHERE name = ?').bind(s.cruiseLine).first<{ id: number }>();
+  if (!cl) {
+    await db.prepare('INSERT INTO cruise_lines (name) VALUES (?)').bind(s.cruiseLine).run();
+    cl = await db.prepare('SELECT last_insert_rowid() as id').first<{ id: number }>();
+  }
+
+  // Ensure ship exists
+  let ship = await db.prepare('SELECT id FROM ships WHERE name = ? AND cruise_line_id = ?').bind(s.ship, cl!.id).first<{ id: number }>();
+  if (!ship) {
+    await db.prepare('INSERT INTO ships (name, cruise_line_id) VALUES (?, ?)').bind(s.ship, cl!.id).run();
+    ship = await db.prepare('SELECT last_insert_rowid() as id').first<{ id: number }>();
+  }
+
+  // Ensure destination exists
+  let destId: number | null = null;
+  if (s.destination) {
+    const d = await db.prepare('SELECT id FROM destinations WHERE name = ?').bind(s.destination).first<{ id: number }>();
+    if (d) {
+      destId = d.id;
+    } else {
+      await db.prepare('INSERT INTO destinations (name) VALUES (?)').bind(s.destination).run();
+      const destRow = await db.prepare('SELECT last_insert_rowid() as id').first<{ id: number }>();
+      destId = destRow!.id;
+    }
+  }
+
+  // Check fingerprint for dedup
+  const existing = await db.prepare('SELECT id, price FROM sailings WHERE fingerprint = ?').bind(fingerprint).first<any>();
+
+  if (existing) {
+    if (existing.price === s.price) {
+      return 'skipped';
+    }
+    // Update price + history
+    const prevHistory = await db.prepare('SELECT history FROM sailings WHERE id = ?').bind(existing.id).first<any>();
+    const history: number[] = prevHistory?.history ? JSON.parse(prevHistory.history) : [];
+    history.push(s.price);
+    await db.prepare(
+      `UPDATE sailings SET price = ?, original_price = ?, last_updated_at = datetime('now'), history = ? WHERE id = ?`
+    ).bind(s.price, s.originalPrice, JSON.stringify(history.slice(-90)), existing.id).run();
+    await db.prepare('INSERT INTO price_history (sailing_id, cabin_category_id, price) VALUES (?, 1, ?)').bind(existing.id, s.price).run();
+    return 'updated';
+  }
+
+  // Insert new sailing
+  await db.prepare(
+    `INSERT INTO sailings (id, cruise_line_id, ship_id, destination_id, departure_port_id, departure_region,
+      departure_port, sail_date, nights, duration, price, original_price, badge_text, booking_url, booking_label,
+      fingerprint, history, source, itinerary)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    s.id, cl!.id, ship!.id, destId, null, s.departureRegion ?? null, s.departurePort,
+    s.sailDate, s.nights, s.duration, s.price, s.originalPrice, s.badgeText,
+    s.bookingUrl ?? null, s.bookingLabel ?? null,
+    fingerprint, JSON.stringify(s.history?.length >= 2 ? s.history : [s.price]), 'scraper',
+    s.itinerary ? JSON.stringify(s.itinerary) : null
+  ).run();
+
+  // Seed cabin prices + price history
+  const detail = getSailingDetail(s.id);
+  if (detail) {
+    const cabinCatMap: Record<string, number> = {};
+    for (const cab of detail.cabins) {
+      let cat = await db.prepare('SELECT id FROM cabin_categories WHERE name = ?').bind(cab.cabinClass).first<{ id: number }>();
+      if (!cat) {
+        await db.prepare('INSERT INTO cabin_categories (name) VALUES (?)').bind(cab.cabinClass).run();
+        cat = await db.prepare('SELECT last_insert_rowid() as id').first<{ id: number }>();
+      }
+      cabinCatMap[cab.cabinClass] = cat!.id;
+      await db.prepare(
+        `INSERT INTO cabin_prices (sailing_id, cabin_category_id, base_fare_per_person, port_tax_per_person, gratuity_per_person_per_night) VALUES (?, ?, ?, ?, ?)`
+      ).bind(s.id, cat!.id, cab.baseFarePerPerson, cab.portTaxPerPerson, cab.gratuityPerPersonPerNight).run();
+    }
+    for (const ph of detail.priceHistory) {
+      const catId = ph.cabinClass ? (cabinCatMap[ph.cabinClass] || 1) : 1;
+      await db.prepare(
+        `INSERT INTO price_history (sailing_id, cabin_category_id, price, recorded_at) VALUES (?, ?, ?, ?)`
+      ).bind(s.id, catId, ph.price, ph.date).run();
+    }
+  }
+
+  return 'inserted';
+}
+
+export default {
+  fetch: app.fetch,
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    console.log('[Cron] Starting scheduled sync...', new Date(event.scheduledTime).toISOString());
+    const sailings = getAllSailings();
+    let inserted = 0, updated = 0, skipped = 0, errors = 0;
+
+    for (const s of sailings) {
+      try {
+        const action = await upsertSailing(env.DB, s);
+        if (action === 'inserted') inserted++;
+        else if (action === 'updated') updated++;
+        else skipped++;
+      } catch (err) {
+        console.error(`[Cron] Error upserting ${s.id}:`, err);
+        errors++;
+      }
+    }
+    console.log(`[Cron] Sync complete. Inserted: ${inserted}, Updated: ${updated}, Skipped: ${skipped}, Errors: ${errors}`);
+  },
+};
