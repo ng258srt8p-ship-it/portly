@@ -34,14 +34,14 @@ export default function ItineraryTimeline({
   const daysPerSegment = segments > 0 ? Math.max(1, Math.floor(days / segments)) : days;
 
   return (
-    <div className="rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float">
-      <h2 className="mb-6 font-display text-2xl font-bold text-ink">Itinerary</h2>
+    <div className="rounded-3xl border border-black/[0.05] bg-white p-5 shadow-float">
+      <h2 className="mb-4 font-display text-2xl font-bold text-ink">Itinerary</h2>
 
       <div className="relative">
         {/* Vertical connecting line */}
         <div className="absolute left-6 top-0 h-full w-0.5 bg-black/[0.06]" />
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           {ports.map((port, i) => (
             <div key={i} className="relative flex items-start gap-4">
               {/* Day marker dot */}

@@ -91,7 +91,7 @@ export default function SailingDetailPage() {
           )}
 
           {data && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {/* Hero */}
               <SailingHero
                 ship={data.sailing.ship}
@@ -107,7 +107,7 @@ export default function SailingDetailPage() {
               />
 
               {/* Itinerary + Info 2-col on desktop */}
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
                 <div className="lg:col-span-2">
                   <ItineraryTimeline
                     ports={data.sailing.route}
@@ -129,8 +129,8 @@ export default function SailingDetailPage() {
                 </div>
               </div>
 
-              {/* Price History + NIM Analysis 2-col */}
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* Price History + Analysis 2-col */}
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <PriceHistoryPanel
                   priceHistory={data.priceHistory}
                   currentPrice={data.sailing.price || 0}
@@ -142,6 +142,17 @@ export default function SailingDetailPage() {
                 sailingId={data.sailing.id}
                 bookingUrl={data.sailing.bookingUrl}
                 bookingLabel={data.sailing.line}
+                context={{
+                  line: data.sailing.line,
+                  ship: data.sailing.ship,
+                  days: data.sailing.days,
+                  region: data.sailing.region,
+                  port: data.sailing.port,
+                  route: data.sailing.route,
+                  price: data.sailing.price || 0,
+                  originalPrice: data.sailing.originalPrice || 0,
+                  dropPercent: data.sailing.dropPercent || 0
+                }}
               />
 
               {/* Cabin Pricing */}
@@ -155,7 +166,7 @@ export default function SailingDetailPage() {
 
               {/* Book CTA */}
               {data.sailing.bookingUrl && (
-                <div className="flex justify-center pb-12">
+                <div className="flex justify-center pb-8">
                   <a
                     href={data.sailing.bookingUrl}
                     target="_blank"
