@@ -144,7 +144,7 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
                     <button
                       key={n}
                       onClick={() => setLimitAndPersist(n)}
-                      className={`min-h-[44px] flex items-center justify-center rounded-full px-4 py-2.5 text-xs font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 ${
+                      className={`min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full px-4 py-2.5 text-xs font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 ${
                         limit === n
                           ? 'bg-ink text-white shadow-sm'
                           : 'text-ink-soft hover:text-ink hover:bg-black/[0.04]'
@@ -223,7 +223,7 @@ function renderGridContent(
 
         {/* Itinerary route strip */}
         {deal.itinerary && deal.itinerary.length > 1 && (
-          <div className="mb-5 overflow-x-auto">
+          <div className="mb-5 overflow-x-auto" tabIndex={0} role="region" aria-label="Itinerary route">
             <div className="flex items-center gap-1 whitespace-nowrap text-xs text-ink-soft">
               {deal.itinerary.map((port, idx) => (
                 <span key={idx} className="flex items-center gap-1">

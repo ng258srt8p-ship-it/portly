@@ -353,7 +353,7 @@ function NightsSegmentedGroup({
             disabled={disabled}
             onClick={() => onChange(isActive ? null : option.value)}
             className={`
-              relative flex min-h-[44px] items-center gap-1 rounded-md px-3 py-2 text-xs font-medium
+              relative flex min-h-[44px] min-w-[44px] items-center justify-center gap-1 rounded-md px-3 py-2 text-xs font-medium
               transition-all duration-150
               ${disabled ? 'opacity-40 cursor-not-allowed' : ''}
               ${isActive

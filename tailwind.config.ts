@@ -65,7 +65,7 @@ const config: Config = {
         canvas: '#f8f9fa',
         ink: '#12131a',
         'ink-soft': '#4a4c59',
-        'ink-faint': '#8b8d9a',
+        'ink-faint': '#646673',
 
         indigo: '#2a44e7',
         'indigo-dark': '#1c2fa8',
@@ -179,7 +179,7 @@ const config: Config = {
       textColor: {
         primary: '#12131a',
         secondary: '#4a4c59',
-        tertiary: '#8b8d9a',
+        tertiary: '#646673',
         inverse: '#f8f9fa',
         link: '#2a44e7',
         'link-hover': '#1c2fa8',
