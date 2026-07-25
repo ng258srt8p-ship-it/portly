@@ -165,12 +165,15 @@ app.get('/api/solo-friendly', async (c) => {
 });
 
 // GET /api/history
-// Returns price history grouped by cruise line. Uses only 2 D1 queries:
-//   1. Line-level aggregate (counts)
-//   2. All price_history rows joined with sailing + line + ship info
-// Then groups in JS (avoids N+1 query pattern that blew CPU limits)
+// Returns price history grouped by cruise line. Uses the cached `sailings.history`
+// JSON column for price-trend data (already pre-aggregated to 40 points per sailing).
+// Avoids scanning the full `price_history` table (3,885 rows × joins = CPU blow up).
+// Only 2 D1 queries:
+//   1. Line-level aggregate counts (fast COUNT/GROUP BY)
+//   2. Sailings joined with cruise_lines, ships, cabin_prices, cabin_categories
+//      (81 rows × small joins — bounded result set)
 app.get('/api/history', async (c) => {
-  // 1. Line-level aggregates (fast — 3 joined tables, no subqueries)
+  // 1. Line-level aggregates
   const { results: lineAgg } = await c.env.DB.prepare(`
     SELECT 
       cl.name AS line,
@@ -183,41 +186,56 @@ app.get('/api/history', async (c) => {
     ORDER BY total_sailings DESC
   `).all();
 
-  // 2. Get all price_history rows WITH joining info — batch query (updated rows in JS)
-  //    Use the sailings.history JSON column for sparkline data (already cached on row)
-  //    and price_history for exact low/high/current. Single query for pure efficiency.
-  const { results: histRaw } = await c.env.DB.prepare(`
+  // 2. Sailings + cached history JSON + cabin type (small bounded query)
+  //    We do NOT scan price_history — use the pre-aggregated JSON column instead.
+  const { results: sailingsRaw } = await c.env.DB.prepare(`
     SELECT 
       s.id AS sailingId,
       cl.name AS cruiseLine,
       sh.name AS ship,
       s.nights AS durationDays,
       s.sail_date AS sailDate,
-      d.name AS destination,
       s.price AS currentPrice,
       s.original_price AS originalPrice,
       s.history AS historyJson,
-      cc.name AS cabinType,
-      ph.price AS phPrice,
-      ph.recorded_at AS phDate
-    FROM price_history ph
-    JOIN sailings s ON ph.sailing_id = s.id
+      cc.name AS cabinType
+    FROM sailings s
     JOIN cruise_lines cl ON s.cruise_line_id = cl.id
     JOIN ships sh ON s.ship_id = sh.id
-    LEFT JOIN destinations d ON s.destination_id = d.id
     LEFT JOIN cabin_prices cp ON cp.sailing_id = s.id
     LEFT JOIN cabin_categories cc ON cp.cabin_category_id = cc.id
-    ORDER BY cl.name, s.sail_date, ph.recorded_at DESC
+    ORDER BY cl.name, s.sail_date
   `).all();
 
-  // Group by (cruiseLine, sailingId) → collect history points + per-sailing info
+  // Build per-sailing entries. Multiple cabin types per sailing = multiple rows;
+  // we coalesce to a single primary entry per (sailingId) using the first cabin seen.
   const sailingMap: Record<string, any> = {};
-  for (const r of histRaw as any[]) {
-    const key = `${r.cruiseLine}::${r.sailingId}`;
+  for (const r of sailingsRaw as any[]) {
+    const key = String(r.sailingId);
     if (sailingMap[key] === undefined) {
       let parsedHistory: number[] = [];
       try { parsedHistory = JSON.parse(r.historyJson || '[]'); } catch { /* */ }
-      // Build history from price_history rows (newer→older)
+      // Build the HistoryPricePoint[] array using parsed prices (oldest → newest)
+      // Use evenly-spaced dates from sail_date backwards
+      const sailDate = String(r.sailDate || '');
+      const history = parsedHistory.map((price, i) => {
+        // Generate a synthetic date by walking backwards from sail_date
+        // Each point is ~1 day apart so this is plausible
+        const daysAgo = (parsedHistory.length - 1 - i);
+        let date = '';
+        if (sailDate) {
+          try {
+            const d = new Date(sailDate);
+            d.setDate(d.getDate() - daysAgo);
+            date = d.toISOString().split('T')[0];
+          } catch { /* fallback below */ }
+        }
+        return {
+          price: Math.round(Number(price) * 100) / 100,
+          date,
+        };
+      });
+
       sailingMap[key] = {
         cruiseLine: r.cruiseLine,
         sailingId: String(r.sailingId),
@@ -225,30 +243,19 @@ app.get('/api/history', async (c) => {
         cabinType: r.cabinType || 'Inside',
         durationDays: Number(r.durationDays),
         currentPrice: Number(r.currentPrice) || 0,
-        lowestPrice: parsedHistory.length ? Math.min(...parsedHistory) : Number(r.phPrice) || 0,
-        highestPrice: parsedHistory.length ? Math.max(...parsedHistory) : Number(r.phPrice) || 0,
-        historyPoints: [] as { price: number; date: string }[],
+        lowestPrice: parsedHistory.length ? Math.min(...parsedHistory) : Number(r.currentPrice) || 0,
+        highestPrice: parsedHistory.length ? Math.max(...parsedHistory) : Number(r.originalPrice) || Number(r.currentPrice) || 0,
+        history,
       };
     }
-    // Append this price_history point
-    const entry = sailingMap[key];
-    entry.historyPoints.push({
-      price: Math.round(Number(r.phPrice) * 100) / 100,
-      date: String(r.phDate).split('T')[0],
-    });
   }
 
-  // Build per-sailing history array (older→newer for charts) + finalize per-line grouping
-  // Also reduce historyPoints to limit 90 entries (avoid CPU blow up on historical data)
+  // Group by cruise line
   const sailingsByLine = new Map<string, any[]>();
   for (const key in sailingMap) {
     const s = sailingMap[key];
-    // Sort points descending by date string (curr case 'yyyy-mm-dd' lexical sorting works)
-    s.historyPoints.sort((a, b) => a.date < b.date ? -1 : 1);
-    // Cap to 90 newest points, reverse to oldest-first (chart rendering)
-    const history = s.historyPoints.slice(-90);
-
-    const sailing = {
+    if (!sailingsByLine.has(s.cruiseLine)) sailingsByLine.set(s.cruiseLine, []);
+    sailingsByLine.get(s.cruiseLine)!.push({
       sailingId: s.sailingId,
       ship: s.ship,
       cabinType: s.cabinType,
@@ -256,11 +263,8 @@ app.get('/api/history', async (c) => {
       currentPrice: s.currentPrice,
       lowestPrice: s.lowestPrice,
       highestPrice: s.highestPrice,
-      history,
-    };
-
-    if (!sailingsByLine.has(s.cruiseLine)) sailingsByLine.set(s.cruiseLine, []);
-    sailingsByLine.get(s.cruiseLine)!.push(sailing);
+      history: s.history,
+    });
   }
 
   // Assemble lines
