@@ -414,6 +414,107 @@ app.post('/api/deals', async (c) => {
   return c.json({ action: 'inserted', sailingId: body.id });
 });
 
+// GET /api/sailing/:id — fetch one sailing + cabin prices + price history
+// Shaped for the SailingDetailClient SailingData interface.
+app.get('/api/sailing/:id', async (c) => {
+  const id = c.req.param('id');
+  const row = await c.env.DB.prepare(`
+    SELECT s.id, s.sail_date AS departure_date, s.nights,
+           s.price, s.original_price, s.duration,
+           s.departure_port, s.departure_region,
+           s.history,
+           sh.name AS ship, cl.name AS cruise_line,
+           d.name AS destination
+    FROM sailings s
+    JOIN ships sh ON s.ship_id = sh.id
+    JOIN cruise_lines cl ON s.cruise_line_id = cl.id
+    LEFT JOIN destinations d ON s.destination_id = d.id
+    WHERE s.id = ?
+  `).bind(id).first<any>();
+
+  if (!row) return c.json({ error: 'not found' }, 404);
+
+  // Cabin breakdown (left join handles missing cabin prices)
+  const { results: cabinRows } = await c.env.DB.prepare(`
+    SELECT cc.name AS cabinType,
+           cp.base_fare_per_person, cp.port_tax_per_person,
+           cp.gratuity_per_person_per_night, cp.total_per_person
+    FROM cabin_prices cp
+    JOIN cabin_categories cc ON cp.cabin_category_id = cc.id
+    WHERE cp.sailing_id = ?
+    ORDER BY cc.id
+  `).bind(id).all();
+
+  // History datapoints from cached JSON
+  let prices: number[] = [];
+  try { prices = JSON.parse(row.history || '[]'); } catch { /* swallow */ }
+  const priceHistory = prices.map((price, i) => {
+    // Synthesize a date sequence ending at sail_date (1 day apart)
+    const daysAgo = prices.length - 1 - i;
+    let date = '';
+    try {
+      const d = new Date(row.departure_date);
+      d.setDate(d.getDate() - daysAgo);
+      date = d.toISOString().split('T')[0];
+    } catch { /* blank date */ }
+    return { price, date, cabinType: cabinRows[0]?.cabinType || 'Inside' };
+  });
+
+  // Compute dropPercent
+  const dropPercent = row.original_price > 0
+    ? Math.round(((row.original_price - row.price) / row.original_price) * 100)
+    : 0;
+
+  // No `itinerary` table exists — synthesize a route from what we know
+  const destination = row.destination || 'Caribbean';
+  const route = row.departure_port
+    ? [row.departure_port, destination, row.departure_port]
+    : [destination];
+
+  return c.json({
+    sailing: {
+      id: Number(row.id) || 0,            // legacy type was number; coerced
+      sailing_id: row.id,                  // string ID for any newer consumers
+      line: row.cruise_line,
+      ship: row.ship,
+      days: Number(row.nights),
+      port: row.departure_port || '',
+      route,
+      region: row.departure_region || destination,
+      departureDate: row.departure_date,
+      bookingUrl: undefined,
+      price: Number(row.price) || 0,
+      originalPrice: Number(row.original_price) || 0,
+      dropPercent,
+      history: prices,
+    },
+    cabinBreakdown: (cabinRows as any[]).map((c) => {
+      const baseFare = Number(c.base_fare_per_person) || 0;
+      const portTax = Number(c.port_tax_per_person) || 0;
+      const gratuity = Number(c.gratuity_per_person_per_night) || 0;
+      const totalPerPerson = Number(c.total_per_person) || 0;
+      // Many UI components want the precomputed "out-the-door" total
+      // (base + port tax + gratuity*7 nights default). Prefer column if present;
+      // fall back to derivation.
+      const totalOutTheDoor = totalPerPerson || (baseFare + portTax + gratuity * 7);
+      return {
+        cabinType: c.cabinType,
+        baseFare,
+        portTax,
+        gratuity,
+        totalPerPerson,
+        totalOutTheDoor,
+        // Also expose the alternate-field naming some panels expect
+        base: baseFare,
+        portFees: portTax,
+        mandatoryGratuities: gratuity,
+        nights: 7,
+      };
+    }),
+    priceHistory,
+  });
+});
+
 // POST /api/sailing/:id/details — seed cabin prices + price history for a sailing
 app.post('/api/sailing/:id/details', async (c) => {
   const auth = c.req.header('Authorization');
