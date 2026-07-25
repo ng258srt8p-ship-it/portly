@@ -2,7 +2,7 @@
 
 import Header from '@/components/layout/Header';
 import Footer from '@/components/Footer';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -13,6 +13,20 @@ export default function AlertsPage() {
   const [urlError, setUrlError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Auto-fill sailing URL from query parameter ?sailing=/sailing/... on client side
+  useEffect(() => {
+    setMounted(true);
+    const params = new URLSearchParams(window.location.search);
+    const sailingParam = params.get('sailing');
+    if (sailingParam && !sailingUrl) {
+      setSailingUrl(sailingParam);
+    }
+  }, [sailingUrl]);
+
+  // Don't render until client-side hydration
+  if (!mounted) return null;
 
   const isEmailValid = email.length > 0 ? EMAIL_REGEX.test(email) : true;
   const isUrlValid = sailingUrl.length === 0 || sailingUrl.trim().length > 0;

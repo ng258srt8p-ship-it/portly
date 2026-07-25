@@ -16,6 +16,7 @@ import SailingInfoPanel from '@/components/sailing/SailingInfoPanel';
 interface SailingData {
   sailing: {
     id: number;
+    sailing_id: string;  // string ID from API (e.g., "carnival_conquest_2026-03-12_miami_4")
     line: string;
     ship: string;
     days: number;
@@ -52,7 +53,7 @@ export default function SailingDetailPage() {
     return (
       <>
         <Header />
-        <main className="min-h-screen pt-28 px-4 sm:px-6">
+        <main className="min-h-screen pt-20 px-4 sm:px-6">
           <div className="mx-auto max-w-7xl">
             <div className="rounded-3xl border border-coral-ink/15 bg-coral-soft p-8">
               <p className="text-coral-ink">No sailing ID provided.</p>
@@ -67,7 +68,7 @@ export default function SailingDetailPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen pt-28 px-4 sm:px-6">
+      <main className="min-h-screen pt-20 px-4 sm:px-6">
         <div className="mx-auto max-w-7xl">
           {loading && (
             <div className="space-y-6">
@@ -91,7 +92,7 @@ export default function SailingDetailPage() {
           )}
 
           {data && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* Hero */}
               <SailingHero
                 ship={data.sailing.ship}
@@ -139,7 +140,7 @@ export default function SailingDetailPage() {
               </div>
               {/* Enhanced Deal Analysis (Phase 2) */}
               <EnhancedDealAnalysis
-                sailingId={data.sailing.id}
+                sailingId={data.sailing.sailing_id}
                 bookingUrl={data.sailing.bookingUrl}
                 bookingLabel={data.sailing.line}
                 context={{
@@ -156,17 +157,17 @@ export default function SailingDetailPage() {
               />
 
               {/* Cabin Pricing */}
-              <div id="cabin-pricing" className="rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float">
+              <div id="cabin-pricing" className="rounded-2xl border border-black/[0.04] bg-white p-4 shadow-float">
                 <h2 className="mb-6 font-display text-2xl font-bold text-ink">Cabin Pricing</h2>
-                <PriceComparisonTable sailingId={data.sailing.id} />
+                <PriceComparisonTable sailingId={data.sailing.sailing_id} />
               </div>
 
               {/* Enhanced Price Forecast (Phase 2) */}
-              <EnhancedPriceForecast sailingId={data.sailing.id} />
+              <EnhancedPriceForecast sailingId={data.sailing.sailing_id} />
 
-              {/* Book CTA */}
-              {data.sailing.bookingUrl && (
-                <div className="flex justify-center pb-8">
+              {/* Book CTA + Track Price Alert */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center pb-8">
+                {data.sailing.bookingUrl && (
                   <a
                     href={data.sailing.bookingUrl}
                     target="_blank"
@@ -176,8 +177,15 @@ export default function SailingDetailPage() {
                   >
                     Book This Cruise
                   </a>
-                </div>
-              )}
+                )}
+                <a
+                  href={`/alerts?sailing=/sailing/${data.sailing.sailing_id}`}
+                  data-testid="track-price-alert-link"
+                  className="rounded-full border-2 border-indigo px-12 py-4 text-base font-bold text-indigo hover:bg-indigo/5 active:scale-[0.98] transition-colors"
+                >
+                  Track Price Alert
+                </a>
+              </div>
             </div>
           )}
         </div>

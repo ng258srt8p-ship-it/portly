@@ -44,7 +44,7 @@ export default function SailingHero({
   const priceLabel = cabinType ? `Starting at $${roundedPrice.toLocaleString()} from ${cabinType}` : `Starting at $${roundedPrice.toLocaleString()}`;
 
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink via-[#1a1b24] to-ink p-8 text-white shadow-float sm:p-12">
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink via-[#1a1b24] to-ink p-6 text-white shadow-float sm:p-8">
       {/* Glow accent */}
       <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-indigo/10 blur-3xl" />
 
@@ -77,10 +77,10 @@ export default function SailingHero({
           <span className="font-mono-tab text-5xl font-black tracking-tight sm:text-6xl">
             ${roundedPrice.toLocaleString()}
           </span>
-          {hasDrop && (
+          {hasDrop && originalPrice && (
             <>
               <span className="font-mono-tab text-2xl text-white/60 line-through sm:text-3xl">
-                ${Math.round(originalPrice!).toLocaleString()}
+                ${Math.round(originalPrice).toLocaleString()}
               </span>
               <span className="rounded-full bg-coral-ink px-4 py-1.5 text-sm font-bold text-white">
                 -{dropPercent}% Drop
@@ -89,8 +89,15 @@ export default function SailingHero({
           )}
         </div>
 
+        {/* Compact cruise meta */}
+        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm text-white/70">
+          <span>{days} {days === 1 ? 'Night' : 'Nights'} · {cabinType || 'All Cabins'}</span>
+          <span>Departs {port} · {region}</span>
+          {formattedDate && <span>{formattedDate}</span>}
+        </div>
+
         {/* Price label — identifies cabin type context when available */}
-        <p className="mt-4 text-sm text-white/70">{priceLabel}</p>
+        <p className="mt-3 text-sm text-white/70">{priceLabel}</p>
       </div>
     </div>
   );

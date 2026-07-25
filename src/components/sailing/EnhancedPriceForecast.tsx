@@ -390,7 +390,11 @@ export default function EnhancedPriceForecast({ sailingId }: EnhancedPriceForeca
             <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">Competing Sailings</h3>
           </div>
           <div className="space-y-2">
-            {data.competingSailings.map((s, i) => (
+            {data.competingSailings.map((s, i) => {
+              const balconyHere = data.cabinForecasts?.find((cf: any) => cf.cabinType === 'Balcony')?.currentPrice ?? 0;
+              const delta = s.balconyPrice - balconyHere;
+              const cheaper = delta < 0;
+              return (
               <div key={i} className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
                 <div>
                   <p className="text-sm font-medium text-ink">{s.cruiseLine} - {s.shipName}</p>
@@ -404,13 +408,14 @@ export default function EnhancedPriceForecast({ sailingId }: EnhancedPriceForeca
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className={`text-sm font-bold tabular-nums ${s.balconyPrice > 0 ? 'text-coral' : 'text-emerald-600'}`}>
-                    {cleanText(s.balconyPrice > 0 ? '+' : '')}${s.balconyPrice.toLocaleString()}
+                  <p className={`text-sm font-bold tabular-nums ${cheaper ? 'text-emerald-600' : 'text-coral'}`}>
+                    {cheaper ? '−' : '+'}${Math.abs(delta).toLocaleString()}
                   </p>
-                  <p className="text-xs text-ink-faint">vs current balcony price</p>
+                  <p className="text-xs text-ink-faint">{cheaper ? 'cheaper than balcony here' : 'pricier than balcony here'}</p>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

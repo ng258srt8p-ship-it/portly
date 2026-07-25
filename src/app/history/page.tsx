@@ -323,7 +323,7 @@ function DetailPanel({
               {/* Footer CTAs */}
               <div className="mt-4 flex items-center justify-between gap-2 border-t border-black/[0.06] pt-4">
                 <Link
-                  href="/alerts"
+                  href={`/alerts?sailing=/sailing/${encodeURIComponent(line.sailings[0]?.sailingId || '')}`}
                   className="flex items-center gap-1 text-xs font-medium text-ink-soft hover:text-indigo"
                 >
                   <MaterialIcon name="notifications_active" size="sm" />

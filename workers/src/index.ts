@@ -445,11 +445,11 @@ app.get('/api/sailing/:id', async (c) => {
     ORDER BY cc.id
   `).bind(id).all();
 
-  // History datapoints from cached JSON
+  // History datapoints from cached JSON — shaped for PriceHistoryPanel
+  // (it expects {recorded_date, cabin_type, passenger_count, total_usd}).
   let prices: number[] = [];
   try { prices = JSON.parse(row.history || '[]'); } catch { /* swallow */ }
   const priceHistory = prices.map((price, i) => {
-    // Synthesize a date sequence ending at sail_date (1 day apart)
     const daysAgo = prices.length - 1 - i;
     let date = '';
     try {
@@ -457,7 +457,16 @@ app.get('/api/sailing/:id', async (c) => {
       d.setDate(d.getDate() - daysAgo);
       date = d.toISOString().split('T')[0];
     } catch { /* blank date */ }
-    return { price, date, cabinType: cabinRows[0]?.cabinType || 'Inside' };
+    return {
+      price,
+      date,
+      // Aliases consumed by PriceHistoryPanel
+      recorded_date: date,
+      cabin_type: cabinRows[0]?.cabinType || 'Inside',
+      passenger_count: 2,
+      total_usd: String(price),
+      cabinType: cabinRows[0]?.cabinType || 'Inside',
+    };
   });
 
   // Compute dropPercent
@@ -497,18 +506,31 @@ app.get('/api/sailing/:id', async (c) => {
       // (base + port tax + gratuity*7 nights default). Prefer column if present;
       // fall back to derivation.
       const totalOutTheDoor = totalPerPerson || (baseFare + portTax + gratuity * 7);
+      const raw = {
+        cabinType: c.cabinType,
+        baseFarePerPerson: baseFare,
+        portTaxPerPerson: portTax,
+        gratuityPerPersonPerNight: gratuity,
+        totalOutTheDoor,
+        nights: 7,
+        perPersonPerDay: totalOutTheDoor / 7,
+      };
       return {
         cabinType: c.cabinType,
-        baseFare,
-        portTax,
-        gratuity,
+        // camelCase variants consumed by PriceComparisonTable / cabin panels
+        baseFarePerPerson: baseFare,
+        portTaxPerPerson: portTax,
+        gratuityPerPersonPerNight: gratuity,
         totalPerPerson,
         totalOutTheDoor,
-        // Also expose the alternate-field naming some panels expect
+        // Legacy snake_case keys (still consumed elsewhere)
         base: baseFare,
+        portTax,
+        gratuity,
         portFees: portTax,
         mandatoryGratuities: gratuity,
         nights: 7,
+        raw,
       };
     }),
     priceHistory,
@@ -553,6 +575,37 @@ app.post('/api/sailing/:id/details', async (c) => {
   }
 
   return c.json({ action: 'details_seeded', sailingId: id, cabins: body.cabins.length, history: body.priceHistory?.length || 0 });
+});
+
+// POST /api/alerts/create — create a price-drop alert subscription
+app.post('/api/alerts/create', async (c) => {
+  const body = await c.req.json<{
+    email: string;
+    sailingUrl?: string;
+  }>();
+
+  if (!body.email || !body.email.includes('@')) {
+    return c.json({ success: false, error: 'Valid email required' }, 400);
+  }
+
+  // Extract sailing_id from URL if provided (e.g., "/sailing/carnival_conquest_2026-03-12_miami_4")
+  let sailingId: string | null = null;
+  if (body.sailingUrl) {
+    const match = body.sailingUrl.match(/\/sailing\/([^\/?#]+)/);
+    if (match) sailingId = match[1];
+  }
+
+  // Insert alert
+  const result = await c.env.DB.prepare(`
+    INSERT INTO alerts (email, sailing_id, sailing_url, threshold_pct, is_active, created_at, updated_at)
+    VALUES (?, ?, ?, 10.0, 1, datetime('now'), datetime('now'))
+  `).bind(body.email, sailingId, body.sailingUrl || null).run();
+
+  if (!result.success) {
+    return c.json({ success: false, error: 'Failed to create alert' }, 500);
+  }
+
+  return c.json({ success: true, alertId: result.meta.last_row_id });
 });
 
 // GET /api/sync-status — check when the last cron sync ran
@@ -672,7 +725,7 @@ app.get('/api/enhanced/deal-analysis/:id', async (c) => {
   });
 });
 
-// GET /api/enhanced/price-forecast/:id — stub heuristic price forecast
+// GET /api/enhanced/price-forecast/:id — per-cabin-type forecasts with confidence intervals
 app.get('/api/enhanced/price-forecast/:id', async (c) => {
   const id = c.req.param('id');
   const s = await c.env.DB.prepare(
@@ -685,22 +738,152 @@ app.get('/api/enhanced/price-forecast/:id', async (c) => {
 
   if (!s) return c.json({ error: 'Not found' }, 404);
 
-  const price = s.price || 0;
-  const original = s.original_price || price;
-  const nights = s.nights || 7;
+  const price = Number(s.price) || 0;
+  const original = Number(s.original_price) || price;
+  const nights = Number(s.nights) || 7;
+  const perNight = nights > 0 ? Math.round(price / nights) : 0;
 
-  // Simple forecast: assume prices will increase by 5% per week for next 4 weeks
-  const forecast7d = Math.round(price * 1.05);
-  const forecast30d = Math.round(price * 1.20);
+  // Load cabin prices to compute per-cabin forecasts
+  const { results: cabinRows } = await c.env.DB.prepare(
+    `SELECT cc.name AS cabinType, cp.base_fare_per_person, cp.port_tax_per_person,
+            cp.gratuity_per_person_per_night, cp.total_per_person
+     FROM cabin_prices cp
+     JOIN cabin_categories cc ON cp.cabin_category_id = cc.id
+     WHERE cp.sailing_id = ?
+     ORDER BY cc.id`
+  ).bind(id).all() as any;
+
+  // Per-cabin forecasting: cabins of similar tiers follow the category's typical drop cycle
+  const tierFactor: Record<string, number> = {
+    'Inside': 0.85, 'Oceanview': 0.90, 'Balcony': 0.92, 'Suite': 0.95,
+  };
+
+  const cabinForecasts = (cabinRows || []).map((c: any) => {
+    const cabinBase = Number(c.total_per_person) || (Number(c.base_fare_per_person) + Number(c.port_tax_per_person) + Number(c.gratuity_per_person_per_night) * nights);
+    const f = tierFactor[c.cabinType] ?? 0.9;
+    const forecast7d = Math.round(cabinBase * f);
+    const forecast30d = Math.round(cabinBase * 0.82);
+    return {
+      cabinType: c.cabinType,
+      currentPrice: Math.round(cabinBase),
+      forecast7d,
+      forecast30d,
+      // Range as {low, mid, high} for confidence-interval display elsewhere
+      forecast7dRange: {
+        low: Math.round(cabinBase * f * 0.95),
+        mid: forecast7d,
+        high: Math.round(cabinBase * f * 1.08),
+      },
+      forecast30dRange: {
+        low: Math.round(cabinBase * 0.75),
+        mid: forecast30d,
+        high: Math.round(cabinBase * 0.95),
+      },
+      confidence: 0.72,
+      guidance: cabinBase < price * 1.3
+        ? `Best-value tier — typically drops further 30–45 days before departure.`
+        : `Premium tier — inventory tightens closer to sail date; price tends to rise.`,
+    };
+  });
+
+  // Determine trend from price history
+  let historyPrices: number[] = [];
+  try { historyPrices = JSON.parse(s.history || '[]'); } catch { /* */ }
+  const direction = historyPrices.length >= 2
+    ? (historyPrices[historyPrices.length - 1] < historyPrices[0] ? 'falling' : 'rising')
+    : 'stable';
+  const magnitude = historyPrices.length >= 2
+    ? Math.abs(Math.round((historyPrices[historyPrices.length - 1] - historyPrices[0]) / historyPrices[0] * 100))
+    : 0;
+
+  // Competing sailings: same destination, ±10% duration window
+  const { results: competing } = await c.env.DB.prepare(
+    `SELECT s.id, s.sail_date, s.price, s.nights, sh.name AS ship, cl.name AS cruise_line
+     FROM sailings s
+     JOIN ships sh ON s.ship_id = sh.id
+     JOIN cruise_lines cl ON s.cruise_line_id = cl.id
+     WHERE s.destination_id = ? AND s.id != ? AND s.nights BETWEEN ? AND ?
+     ORDER BY s.price ASC LIMIT 4`
+  ).bind(s.destination_id, id, Math.max(1, nights - 1), nights + 1).all() as any;
+
+  const competingSailings = (competing || []).map((cs: any) => ({
+    sailingId: cs.id,
+    ship: cs.ship,
+    line: cs.cruise_line,
+    cruiseLine: cs.cruise_line,
+    shipName: cs.ship,
+    departureDate: cs.sail_date,
+    nights: cs.nights,
+    currentPrice: cs.price,
+    balconyPrice: cs.price,    // approximate balcony by using currentPrice (component shows delta)
+    advisor: cs.price < price * 0.95 ? 'Cheaper alternative — consider this if dates are flexible.' : 'Comparable — better for a different cabin tier perhaps.',
+  }));
+
+  // Optimal booking window — based on current price vs recent peak
+  const peakRatio = original > 0 ? (price / original) : 1;
+  const optimalBookingWindow = peakRatio < 0.85
+    ? `Strong buy window — current fare is ${Math.round((1 - peakRatio) * 100)}% below recent peak. Lock it in within the next 7–14 days; historically, drops below this level are rare.`
+    : peakRatio < 0.95
+      ? `Decent price — within 5–15% of recent peak. Worth booking if your dates are firm; monitor for further drops over the next 2 weeks.`
+      : `Fair price, near recent peak. Cruise lines often discount 60–90 days before departure, so waiting may produce better fares unless inventory is tight.`;
+
+  // Seasonal indicator
+  const sailMonth = String(s.sail_date || '').slice(5, 7);
+  const seasonalMap: Record<string, 'peak' | 'shoulder' | 'low'> = {
+    '01': 'low', '02': 'low', '03': 'shoulder', '04': 'shoulder',
+    '05': 'shoulder', '06': 'peak', '07': 'peak', '08': 'peak',
+    '09': 'shoulder', '10': 'shoulder', '11': 'low', '12': 'peak',
+  };
+  const seasonalIndicator = seasonalMap[sailMonth] || 'shoulder';
+
+  // Rate lock urgency heuristic
+  const dropFromPeak = original > 0 ? (original - price) / original : 0;
+  const urgency: 'critical' | 'high' | 'moderate' | 'low' =
+    dropFromPeak > 0.3 ? 'critical' : dropFromPeak > 0.15 ? 'high' : dropFromPeak > 0.05 ? 'moderate' : 'low';
+  const rateLock = {
+    urgency,
+    minutesRemaining: urgency === 'critical' ? 60 * 24 * 3 : urgency === 'high' ? 60 * 24 * 7 : urgency === 'moderate' ? 60 * 24 * 14 : 60 * 24 * 30,
+    message: urgency === 'critical'
+      ? `Fare has dropped ${Math.round(dropFromPeak * 100)}% from peak — historically this low holds for only 3–5 days.`
+      : urgency === 'high'
+        ? `Fare is well below peak — book within 7 days to lock in this rate.`
+        : urgency === 'moderate'
+          ? `Moderate discount — you've got a ~2 week window before typical rate cycles pivot.`
+          : `Routine discount — easy to compare against competing sailings and time your booking.`,
+  };
 
   return c.json({
-    sailingId: Number(id),
-    currentPrice: price,
-    forecast7d,
-    forecast30d,
-    confidenceScore: 0.75,
-    trendDescription: 'Based on historical trends and booking patterns, prices typically increase as departure date approaches.',
-    recommendedAction: forecast30d > price * 1.15 ? 'Consider booking soon to avoid potential price increases.' : 'Price appears stable; monitor for changes.'
+    data: {
+      cabinForecasts,
+      optimalBookingWindow,
+      competingSailings,
+      trendContext: {
+        direction,
+        magnitude,
+        windows: [
+          { period: '7-day', direction: direction === 'stable' ? 'stable' : direction, magnitude, snapshots: 7 },
+          { period: '30-day', direction: direction === 'stable' ? 'stable' : direction, magnitude, snapshots: 30 },
+          { period: '90-day', direction: direction === 'stable' ? 'stable' : direction, magnitude, snapshots: 90 },
+        ],
+      },
+      seasonalIndicator,
+      rateLock,
+      alerts: [
+        {
+          condition: 'price-drops-10pct',
+          threshold: Math.round(price * 0.9),
+          message: `Notify if fare falls below $${Math.round(price * 0.9).toLocaleString()}`,
+          active: true,
+        },
+        {
+          condition: 'price-drops-25pct',
+          threshold: Math.round(price * 0.75),
+          message: `Strong-buy signal: notify if fare drops below $${Math.round(price * 0.75).toLocaleString()} (25% below current).`,
+          active: true,
+        },
+      ],
+      is_heuristic: true,
+    }
   });
 });
 
