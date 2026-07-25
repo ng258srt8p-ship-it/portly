@@ -4,8 +4,9 @@ import Header from '@/components/layout/Header';
 import ExploreDealsHero from './ExploreDealsHero';
 import DealsGrid from '@/components/DealsGrid';
 import Footer from '@/components/Footer';
+import MobileFilterBar from '@/components/MobileFilterBar';
 import type { DealFilters } from '@/types/cruise';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 
 function parseFiltersFromURL(): DealFilters {
@@ -43,9 +44,31 @@ function parseFiltersFromURL(): DealFilters {
   return f;
 }
 
+const SORT_OPTIONS = [
+  { value: '', label: 'Featured / Best Value' },
+  { value: 'price-asc', label: 'Price: Low to High' },
+  { value: 'price-desc', label: 'Price: High to Low' },
+  { value: 'date-asc', label: 'Departure: Earliest First' },
+  { value: 'drop-desc', label: 'Highest Savings %' },
+];
+
 export default function DealsPage() {
   const router = useRouter();
   const [filters, setFilters] = useState<DealFilters>(parseFiltersFromURL);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.cruiseLine?.length) count += filters.cruiseLine.length;
+    if (filters.destination?.length) count += filters.destination.length;
+    if (filters.departurePort?.length) count += filters.departurePort.length;
+    if (filters.departureRegion?.length) count += filters.departureRegion.length;
+    if (filters.ship?.length) count += filters.ship.length;
+    if (filters.minNights !== undefined || filters.maxNights !== undefined) count += 1;
+    if (filters.minPrice !== undefined || filters.maxPrice !== undefined) count += 1;
+    if (filters.badgeType?.length) count += filters.badgeType.length;
+    if (filters.sort) count += 1;
+    return count;
+  }, [filters]);
 
   // Sync filters to URL
   useEffect(() => {
@@ -71,10 +94,20 @@ export default function DealsPage() {
   return (
     <>
       <Header />
-      <main className="pt-24">
+      <main className="pt-24 pb-20 lg:pb-0">
         <ExploreDealsHero filters={filters} onFilterChange={setFilters} />
-        <DealsGrid filters={filters} onFilterChange={setFilters} />
+        <div id="deals-filters" className="scroll-mt-24">
+          <DealsGrid filters={filters} onFilterChange={setFilters} />
+        </div>
       </main>
+      <MobileFilterBar
+        filters={filters}
+        onFilterChange={setFilters}
+        activeFilterCount={activeFilterCount}
+        sortOptions={SORT_OPTIONS}
+        onSort={(val) => setFilters((prev) => ({ ...prev, sort: val as DealFilters['sort'] }))}
+        onReset={() => setFilters({})}
+      />
       <Footer />
     </>
   );

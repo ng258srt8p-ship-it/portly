@@ -149,7 +149,7 @@ function MultiSelectDropdown({
         disabled={disabled}
         onClick={() => !disabled && setOpen((prev) => !prev)}
         className={`
-          flex w-full min-w-0 items-center gap-2 px-2.5 py-2 text-left
+          flex w-full h-11 min-w-0 items-center gap-2 px-2.5 text-left
           disabled:opacity-40 disabled:cursor-not-allowed
           rounded-lg border border-black/[0.06] bg-white
           transition-colors
@@ -260,7 +260,7 @@ function SingleSelectDropdown({
         disabled={disabled}
         onClick={() => !disabled && setOpen((prev) => !prev)}
         className={`
-          flex w-full min-w-0 items-center gap-2 px-2.5 py-2 text-left
+          flex w-full h-11 min-w-0 items-center gap-2 px-2.5 text-left
           disabled:opacity-40 disabled:cursor-not-allowed
           rounded-lg border border-black/[0.06] bg-white
           transition-colors
@@ -353,7 +353,7 @@ function NightsSegmentedGroup({
             disabled={disabled}
             onClick={() => onChange(isActive ? null : option.value)}
             className={`
-              relative flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium
+              relative flex min-h-[44px] items-center gap-1 rounded-md px-3 py-2 text-xs font-medium
               transition-all duration-150
               ${disabled ? 'opacity-40 cursor-not-allowed' : ''}
               ${isActive
@@ -412,7 +412,7 @@ function TypePillGroup({
             disabled={disabled}
             onClick={() => toggleType(option.value)}
             className={`
-              inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium
+              inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium
               transition-all duration-150
               ${disabled ? 'opacity-40 cursor-not-allowed' : ''}
               ${isActive
@@ -477,7 +477,7 @@ function PriceInputs({
         onChange={handleMinChange}
         disabled={disabled}
         className={`
-          w-16 rounded-lg border border-black/[0.06] bg-white px-2 py-1.5 text-xs font-medium text-ink
+          w-16 min-h-[44px] rounded-lg border border-black/[0.06] bg-white px-2 py-2 text-xs font-medium text-ink
           placeholder:text-ink-faint
           transition-colors
           hover:border-black/[0.12]
@@ -499,7 +499,7 @@ function PriceInputs({
         onChange={handleMaxChange}
         disabled={disabled}
         className={`
-          w-16 rounded-lg border border-black/[0.06] bg-white px-2 py-1.5 text-xs font-medium text-ink
+          w-16 min-h-[44px] rounded-lg border border-black/[0.06] bg-white px-2 py-2 text-xs font-medium text-ink
           placeholder:text-ink-faint
           transition-colors
           hover:border-black/[0.12]
@@ -742,7 +742,7 @@ export default function FilterSelectionGrid({
       <div className="block lg:hidden">
         <button
           onClick={() => setExpanded((prev) => !prev)}
-          className="flex w-full items-center justify-between gap-2 rounded-lg border border-black/[0.06] bg-white px-3 py-2 text-sm font-medium text-ink transition-colors hover:border-black/[0.12] hover:bg-black/[0.02]"
+          className="flex w-full h-11 items-center justify-between gap-2 rounded-lg border border-black/[0.06] bg-white px-3 text-sm font-medium text-ink transition-colors hover:border-black/[0.12] hover:bg-black/[0.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
           aria-expanded={expanded}
           aria-haspopup="listbox"
         >

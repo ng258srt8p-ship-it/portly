@@ -43,7 +43,20 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
   const [limit, setLimit] = useState(getStorageLimit);
 
   const fetcher = useCallback(() => fetchDeals(limit, filters), [limit, filters]);
-  const { data: deals, loading, error, lastSyncedAt, refresh } = useLiveData(fetcher, { pollIntervalMs: 30000 });
+  const { data: rawDeals, loading, error, lastSyncedAt, refresh } = useLiveData(fetcher, { pollIntervalMs: 30000 });
+
+  // Apply client-side filters that the API doesn't support (price range)
+  const deals = useMemo(() => {
+    if (!rawDeals) return rawDeals;
+    let filtered = rawDeals;
+    if (filters.minPrice !== undefined) {
+      filtered = filtered.filter((d) => d.price >= filters.minPrice!);
+    }
+    if (filters.maxPrice !== undefined) {
+      filtered = filtered.filter((d) => d.price <= filters.maxPrice!);
+    }
+    return filtered;
+  }, [rawDeals, filters.minPrice, filters.maxPrice]);
 
   const setLimitAndPersist = (n: number) => {
     setLimit(n);
@@ -85,7 +98,7 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
          </p>
          <button
            onClick={refresh}
-           className="shrink-0 rounded-full bg-ink px-4 py-2 text-xs font-bold text-white hover:opacity-90"
+           className="shrink-0 rounded-full bg-ink min-h-[44px] px-4 py-2 text-xs font-bold text-white hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
          >
            Retry
          </button>
@@ -126,25 +139,25 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
             : 'Loading...'}
         </p>
         <div className="flex items-center gap-1.5 rounded-full border border-black/[0.06] bg-white px-2 py-1 shadow-float">
-          <span className="mr-1 pl-1 text-[11px] font-semibold text-ink-faint">Show</span>
-          {LIMIT_OPTIONS.map((n) => (
-            <button
-              key={n}
-              onClick={() => setLimitAndPersist(n)}
-              className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
-                limit === n
-                  ? 'bg-ink text-white shadow-sm'
-                  : 'text-ink-soft hover:text-ink hover:bg-black/[0.04]'
-              }`}
-            >
-              {LIMIT_LABELS[n]}
-            </button>
-          ))}
-        </div>
+                  <span className="mr-1 pl-1 text-[11px] font-semibold text-ink-soft">Show</span>
+                  {LIMIT_OPTIONS.map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setLimitAndPersist(n)}
+                      className={`min-h-[44px] flex items-center justify-center rounded-full px-4 py-2.5 text-xs font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 ${
+                        limit === n
+                          ? 'bg-ink text-white shadow-sm'
+                          : 'text-ink-soft hover:text-ink hover:bg-black/[0.04]'
+                      }`}
+                    >
+                      {LIMIT_LABELS[n]}
+                    </button>
+                  ))}
+                </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {renderGridContent(loading, deals, refresh, router)}
+        {renderGridContent(loading, deals, refresh, router, onFilterChange)}
       </div>
     </section>
   );
@@ -154,8 +167,10 @@ function renderGridContent(
   loading: boolean,
   deals: Deal[] | null | undefined,
   refresh: () => void,
-  router: ReturnType<typeof useRouter>
+  router: ReturnType<typeof useRouter>,
+  onFilterChange: (filters: Filters) => void,
 ) {
+  const onClearFilters = () => onFilterChange({});
   if (loading && !deals) {
     return Array.from({ length: 6 }).map((_, i) => <DealCardSkeleton key={i} />);
   }
@@ -164,15 +179,15 @@ function renderGridContent(
     return (
       <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
         <MaterialIcon name="search" size="3xl" className="text-ink-faint/40" />
-        <p className="font-display text-xl font-bold text-ink">No deals found right now</p>
+        <p className="font-display text-xl font-bold text-ink">No cruise deals match your selected filters</p>
         <p className="mt-1 max-w-xs text-sm text-ink-soft">
-          Check back soon &mdash; we&apos;re polling live fares to surface the best opportunities.
+          Try adjusting your search criteria to see more sailings.
         </p>
         <button
-          onClick={refresh}
-          className="mt-6 rounded-full bg-ink px-6 py-2.5 text-xs font-bold text-white transition-colors hover:bg-indigo"
+          onClick={onClearFilters}
+          className="mt-6 min-h-[44px] rounded-full bg-ink px-6 py-2.5 text-xs font-bold text-white transition-colors hover:bg-indigo focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
         >
-          Refresh
+          Reset All Filters
         </button>
       </div>
     );
@@ -206,6 +221,22 @@ function renderGridContent(
           <Tag>{deal.duration}</Tag>
         </div>
 
+        {/* Itinerary route strip */}
+        {deal.itinerary && deal.itinerary.length > 1 && (
+          <div className="mb-5 overflow-x-auto">
+            <div className="flex items-center gap-1 whitespace-nowrap text-xs text-ink-soft">
+              {deal.itinerary.map((port, idx) => (
+                <span key={idx} className="flex items-center gap-1">
+                  {idx > 0 && <span className="text-ink-faint/40">→</span>}
+                  <span className={idx === 0 || idx === deal.itinerary!.length - 1 ? 'font-semibold text-ink' : ''}>
+                    {port}
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="mb-5 flex items-end justify-between gap-3 rounded-2xl bg-canvas p-4">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-faint">90-day trend</p>
@@ -217,6 +248,9 @@ function renderGridContent(
                 </span>
               )}
             </div>
+            <p className="mt-1 text-xs text-ink-faint">
+              per person · ${Math.round(deal.price / Math.max(deal.nights, 1))}/night
+            </p>
           </div>
           <Sparkline data={deal.history} positive={deal.dropPercent > 0} />
         </div>
@@ -229,14 +263,14 @@ function renderGridContent(
             href={deal.bookingUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={`w-[128px] h-[48px] flex items-center justify-center gap-1.5 rounded-full bg-mint-ink px-4 py-2 text-xs font-bold text-white hover:bg-mint hover:text-mint-ink transition ${!deal.bookingUrl ? 'hidden' : ''}`}
+            className={`w-[128px] min-h-[44px] flex items-center justify-center gap-1.5 rounded-full bg-mint-ink px-4 py-2 text-xs font-bold text-white hover:bg-mint hover:text-mint-ink transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 ${!deal.bookingUrl ? 'hidden' : ''}`}
           >
             <span className="material-symbols-outlined leading-none select-none text-[18px] text-white">link</span>
             <span className="truncate">{deal.bookingLabel || 'Book Now'}</span>
           </a>
           <button
             onClick={() => router.push(`/sailing/${deal.id}`)}
-            className="w-[128px] h-[48px] flex items-center justify-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs font-bold text-white hover:bg-indigo active:scale-[0.97]"
+            className="w-[128px] min-h-[44px] flex items-center justify-center gap-1.5 rounded-full bg-ink px-4 py-2 text-xs font-bold text-white hover:bg-indigo active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
           >
             <span className="material-symbols-outlined leading-none select-none text-[18px] text-white">arrow_forward</span>
             <span className="truncate">View Deal</span>

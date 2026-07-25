@@ -18,6 +18,7 @@ export interface Deal {
   history: number[];
   bookingUrl?: string;        // NEW — deep link to cruise line booking page
   bookingLabel?: string;      // NEW — cruise line name for button label
+  itinerary?: string[];       // JSON array of ports from DB
 }
 
 export interface CabinRate {

@@ -54,7 +54,21 @@ export async function fetchDeals(limit: number = 0, filters?: DealFilters): Prom
     if (filters.children !== undefined && filters.children > 0) params.set('children', String(filters.children));
     if (filters.ship?.length) params.set('ship', filters.ship.join(','));
   }
-  return getJSON<Deal[]>(`${API_BASE}/api/deals?${params}`);
+  return getJSON<Deal[]>(`${API_BASE}/api/deals?${params}`).then(deals =>
+    deals.map(d => ({
+      ...d,
+      itinerary: typeof d.itinerary === 'string' ? safeParseItinerary(d.itinerary) : d.itinerary,
+    }))
+  );
+}
+
+function safeParseItinerary(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 /**

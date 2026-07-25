@@ -126,12 +126,13 @@ function FilterChip({
       data-testid={testId}
       onClick={onClick}
       className={`
-        inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold
+        inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-semibold
         shadow-float transition-all duration-150
         ${active
           ? 'bg-indigo text-white border-indigo shadow-sm'
           : 'border border-black/[0.06] bg-white text-ink-soft hover:border-indigo/30 hover:text-indigo'
         }
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 focus-visible:ring-offset-2
       `}
     >
       <MaterialIcon name={icon} size="xs" />

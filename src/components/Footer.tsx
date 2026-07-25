@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="flex flex-col justify-between gap-10 md:flex-row">
           <div className="max-w-sm">
             <Link href="/" className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo text-white">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-indigo text-white">
                 <MaterialIcon name="directions_boat_filled" size="sm" className="text-white" />
               </span>
               <span className="font-display text-xl font-bold text-ink">TripTide</span>
@@ -19,7 +19,7 @@ export default function Footer() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-10 sm:grid-cols-3">
+          <div className="grid gap-10 sm:grid-cols-3">
             <FooterCol title="Product" links={[
               { label: "Explore Deals", href: "/deals" },
               { label: "Price History Maps", href: "/history" },
@@ -41,8 +41,12 @@ export default function Footer() {
         </div>
 
         <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-black/[0.06] pt-8 text-xs text-ink-faint sm:flex-row">
-          <span>© {new Date().getFullYear()} TripTide, Inc. All rights reserved.</span>
-          <span className="font-mono-tab">triptide.net</span>
+          <span className="inline-block h-11 w-auto items-center justify-center">
+            © {new Date().getFullYear()} TripTide, Inc. All rights reserved.
+          </span>
+          <span className="inline-block h-11 w-auto items-center justify-center font-mono-tab">
+            triptide.net
+          </span>
         </div>
       </div>
     </footer>
@@ -56,7 +60,10 @@ function FooterCol({ title, links }: { title: string; links: { label: string; hr
       <ul className="mt-4 space-y-3">
         {links.map((link) => (
           <li key={link.href}>
-            <Link href={link.href} className="text-sm text-ink-soft hover:text-indigo">
+            <Link
+              href={link.href}
+              className="block min-h-[44px] px-3 py-2 text-sm text-ink-soft hover:text-indigo hover:bg-black/[0.04] rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 focus-visible:ring-offset-2"
+            >
               {link.label}
             </Link>
           </li>

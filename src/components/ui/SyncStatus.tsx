@@ -33,7 +33,7 @@ export default function SyncStatus({ loading, lastSyncedAt, onRefresh }: SyncSta
         onClick={onRefresh}
         disabled={loading}
         aria-label="Refresh live fares"
-        className="flex h-5 w-5 items-center justify-center rounded-full text-ink-faint hover:bg-black/[0.05] hover:text-indigo disabled:opacity-40"
+        className="flex h-11 w-11 items-center justify-center rounded-full text-ink-faint hover:bg-black/[0.05] hover:text-indigo disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
       >
         <svg
           width="11"
