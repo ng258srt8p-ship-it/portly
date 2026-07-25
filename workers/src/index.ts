@@ -290,9 +290,12 @@ app.post('/api/deals', async (c) => {
       `UPDATE sailings SET price = ?, original_price = ?, last_updated_at = datetime('now'), history = ?
        WHERE id = ?`
     ).bind(body.price, body.originalPrice, JSON.stringify(history.slice(-90)), existing.id).run();
+    // Look up the Inside cabin category ID (don't hardcode 1 — it may not exist after a DB reset)
+    const insideCat = await c.env.DB.prepare('SELECT id FROM cabin_categories WHERE name = ?').bind('Inside').first<{ id: number }>();
+    const insideCatId = insideCat?.id ?? 1;
     await c.env.DB.prepare(
-      'INSERT INTO price_history (sailing_id, cabin_category_id, price) VALUES (?, 1, ?)'
-    ).bind(existing.id, body.price).run();
+      'INSERT INTO price_history (sailing_id, cabin_category_id, price) VALUES (?, ?, ?)'
+    ).bind(existing.id, insideCatId, body.price).run();
     return c.json({ action: 'updated', sailingId: existing.id });
   }
 
@@ -588,7 +591,10 @@ async function upsertSailing(db: D1Database, s: ReturnType<typeof getAllSailings
     await db.prepare(
       `UPDATE sailings SET price = ?, original_price = ?, last_updated_at = datetime('now'), history = ? WHERE id = ?`
     ).bind(s.price, s.originalPrice, JSON.stringify(history.slice(-90)), existing.id).run();
-    await db.prepare('INSERT INTO price_history (sailing_id, cabin_category_id, price) VALUES (?, 1, ?)').bind(existing.id, s.price).run();
+    // Look up the Inside cabin category ID (don't hardcode 1 — it may not exist after a DB reset)
+    const insideCat = await db.prepare('SELECT id FROM cabin_categories WHERE name = ?').bind('Inside').first<{ id: number }>();
+    const insideCatId = insideCat?.id ?? 1;
+    await db.prepare('INSERT INTO price_history (sailing_id, cabin_category_id, price) VALUES (?, ?, ?)').bind(existing.id, insideCatId, s.price).run();
     return 'updated';
   }
 
