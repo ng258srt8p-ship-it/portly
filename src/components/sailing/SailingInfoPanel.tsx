@@ -53,7 +53,7 @@ export default function SailingInfoPanel({
   ];
 
   return (
-    <div className="rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float">
+    <div className="rounded-3xl border border-black/[0.05] bg-white p-4 shadow-float">
       <h2 className="mb-6 font-display text-2xl font-bold text-ink">Sailing Details</h2>
 
       <div className="divide-y divide-black/[0.04]">

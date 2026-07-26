@@ -19,7 +19,7 @@ export default function ItineraryTimeline({
 }: ItineraryTimelineProps) {
   if (!ports || ports.length === 0) {
     return (
-      <div className="rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float">
+      <div className="rounded-3xl border border-black/[0.05] bg-white p-4 shadow-float">
         <h2 className="mb-4 font-display text-2xl font-bold text-ink">Itinerary</h2>
         <p className="text-ink-soft">No itinerary details available for this sailing.</p>
       </div>
@@ -34,7 +34,7 @@ export default function ItineraryTimeline({
   const daysPerSegment = segments > 0 ? Math.max(1, Math.floor(days / segments)) : days;
 
   return (
-    <div className="rounded-3xl border border-black/[0.05] bg-white p-5 shadow-float">
+    <div className="rounded-3xl border border-black/[0.05] bg-white p-4 shadow-float">
       <h2 className="mb-4 font-display text-2xl font-bold text-ink">Itinerary</h2>
 
       <div className="relative">

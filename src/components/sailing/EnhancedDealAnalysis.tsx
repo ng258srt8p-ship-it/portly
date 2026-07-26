@@ -313,7 +313,7 @@ export default function EnhancedDealAnalysis({
     return (
       <div
         data-testid="enhanced-deal-analysis"
-        className="rounded-3xl border border-black/[0.05] dark:border-neutral-700 bg-white dark:bg-surface p-6 shadow-float"
+        className="rounded-3xl border border-black/[0.05] dark:border-neutral-700 dark:bg-surface p-4 shadow-float"
       >
         <div className="mb-5 flex items-center gap-2">
           <MaterialIcon name="analytics" size="lg" />
@@ -348,7 +348,7 @@ export default function EnhancedDealAnalysis({
     return (
       <div
         data-testid="enhanced-deal-analysis"
-        className="rounded-3xl border border-black/[0.05] dark:border-neutral-700 bg-white dark:bg-surface p-6 shadow-float"
+        className="rounded-3xl border border-black/[0.05] dark:border-neutral-700 dark:bg-surface p-4 shadow-float"
       >
         <div className="mb-4 flex items-center gap-2">
           <MaterialIcon name="analytics" size="lg" />
@@ -382,7 +382,7 @@ export default function EnhancedDealAnalysis({
     return (
       <div
         data-testid="enhanced-deal-analysis"
-        className="rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float"
+        className="rounded-3xl border border-black/[0.05] bg-white p-4 shadow-float"
       >
         <div className="mb-4 flex items-center gap-2">
           <MaterialIcon name="analytics" size="lg" />
@@ -410,7 +410,7 @@ export default function EnhancedDealAnalysis({
   return (
     <div
       data-testid="enhanced-deal-analysis"
-      className="rounded-3xl border border-black/[0.05] dark:border-neutral-700 bg-white dark:bg-surface p-6 shadow-float space-y-6"
+      className="rounded-3xl border border-black/[0.05] dark:border-neutral-700 dark:bg-surface p-4 shadow-float space-y-4"
     >
       {/* ===== Header ===== */}
       <div className="flex items-center justify-between">

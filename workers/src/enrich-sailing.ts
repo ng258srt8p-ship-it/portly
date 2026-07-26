@@ -2,7 +2,7 @@
  * Enrichment orchestrator — pulls a sailing, calls Workers AI,
  * validates, writes the columns back. Idempotent on retries.
  */
-import { buildEnrichmentPrompt, isValidEnrichmentOutput, MODEL as DEFAULT_MODEL, parseJsonFence, type SailingContext } from './ai-prompts';
+import { buildEnrichmentPrompt, isValidEnrichmentOutput, MODEL as DEFAULT_MODEL, parseJsonFence, type CabinTier, type SailingContext } from './ai-prompts';
 
 export interface EnrichmentEnv {
   AI: Ai;
@@ -14,11 +14,15 @@ export interface EnrichmentRow {
   id: string;                              // sailing slug
   ship_name: string;
   cruise_line_name: string;
+  cruise_line_id: number;
+  ship_class?: string;
+  ship_launched_year?: number;
   destination_name?: string;
   sail_date: string;
   nights: number;
   departure_port?: string;
   departure_region?: string;
+  itinerary?: string | null;             // JSON array of port names
   price: number;
   original_price: number;
   port_fees?: number;
@@ -26,6 +30,25 @@ export interface EnrichmentRow {
   cabin_count?: number;
   history_len?: number;
   ai_generated_at?: string | null;
+}
+
+export interface CabinPriceRow {
+  name: string;
+  base_fare_per_person: number;
+  port_tax_per_person: number;
+  gratuity_per_person_per_night: number;
+}
+
+export interface LineGuideRow {
+  cruise_line_name: string;
+  personality: string;
+  fleet_position: string;
+  cabin_strategy: string;
+  excursion_strategy: string;
+  what_avoid: string;
+  best_for: string;
+  onboard_concessions: string;
+  fleet_avg_age_years?: number;
 }
 
 export interface EnrichmentResult {
@@ -40,8 +63,11 @@ interface AiRunResponse<T = unknown> {
   response: T;
 }
 
-/** Build SailingContext from a joined DB row. */
-function toContext(r: EnrichmentRow): SailingContext {
+/** Build SailingContext from a joined DB row + optional cabin/guide rows. */
+function toContext(
+  r: EnrichmentRow,
+  opts: { cabins?: CabinPriceRow[]; lineGuide?: LineGuideRow | null } = {}
+): SailingContext {
   const current = Number(r.price) || 0;
   const original = Number(r.original_price) || current;
   const drop = original > current ? Math.round(((original - current) / original) * 100) : 0;
@@ -50,13 +76,31 @@ function toContext(r: EnrichmentRow): SailingContext {
   const gratNight = Number(r.gratuities_per_night ?? 18.5);
   const realTotal = current + portFees + gratNight * r.nights;
 
+  // Parse itinerary JSON → ports list
+  let ports: string[] = [];
+  try {
+    const parsed = JSON.parse(r.itinerary || '[]');
+    if (Array.isArray(parsed)) ports = parsed.filter((p: unknown) => typeof p === 'string');
+  } catch { /* fall through */ }
+
+  // Build cabin tiers from pricing rows
+  const cabins: CabinTier[] = (opts.cabins || []).map((c) => {
+    const bf = Number(c.base_fare_per_person) || 0;
+    const pt = Number(c.port_tax_per_person) || 180;
+    const gpr = Number(c.gratuity_per_person_per_night) || 18.5;
+    const total = bf + pt + gpr * r.nights;
+    const pn = r.nights > 0 ? Math.round(total / r.nights) : total;
+    return { name: c.name, baseFare: bf, portTax: pt, gratuityPerNight: gpr, totalPerPerson: total, perNight: pn };
+  });
+
   return {
     shipLine: { ship: r.ship_name, line: r.cruise_line_name },
     route: {
       region: r.departure_region || 'Caribbean',
       departure_port: r.departure_port || 'Miami',
-      ports_of_call: 3,
+      ports_of_call: ports.length || 3,
       destination: r.destination_name || 'Caribbean',
+      ports,
     },
     dates: { sail_date: r.sail_date, nights: r.nights },
     pricing: {
@@ -68,8 +112,24 @@ function toContext(r: EnrichmentRow): SailingContext {
       gratuities_per_night: gratNight,
       real_total: realTotal,
     },
-    cabinCount: r.cabin_count ?? 4,
+    cabinCount: r.cabin_count ?? cabins.length ?? 4,
+    cabins,
     historyPoints: r.history_len ?? 0,
+    shipClass: r.ship_class,
+    shipLaunchedYear: r.ship_launched_year,
+    lineGuide: opts.lineGuide
+      ? {
+          name: opts.lineGuide.cruise_line_name,
+          personality: opts.lineGuide.personality,
+          fleetPosition: opts.lineGuide.fleet_position,
+          cabinStrategy: opts.lineGuide.cabin_strategy,
+          excursionStrategy: opts.lineGuide.excursion_strategy,
+          whatAvoid: opts.lineGuide.what_avoid,
+          bestFor: opts.lineGuide.best_for,
+          onboardConcessions: opts.lineGuide.onboard_concessions,
+          fleetAvgAgeYears: opts.lineGuide.fleet_avg_age_years ?? undefined,
+        }
+      : undefined,
   };
 }
 
@@ -77,7 +137,9 @@ function toContext(r: EnrichmentRow): SailingContext {
 export async function enrichSailing(env: EnrichmentEnv, sailingId: string, opts?: { model?: string; force?: boolean }): Promise<EnrichmentResult> {
   const row = (await env.DB.prepare(
     `SELECT s.id, s.sail_date, s.nights, s.price, s.original_price, s.departure_port, s.departure_region,
-            s.history, cl.name AS cruise_line_name, sh.name AS ship_name,
+            s.itinerary, s.cruise_line_id, s.history,
+            cl.name AS cruise_line_name, sh.name AS ship_name,
+            sh.year_built AS ship_launched_year,
             d.name AS destination_name, s.ai_generated_at
        FROM sailings s
        JOIN cruise_lines cl ON s.cruise_line_id = cl.id
@@ -101,7 +163,25 @@ export async function enrichSailing(env: EnrichmentEnv, sailingId: string, opts?
   // Compute context then call AI
   let historyLen = 0;
   try { historyLen = JSON.parse(row.history || '[]').length; } catch { /* */ }
-  const ctx = toContext({ ...row, history_len: historyLen });
+
+  // Fetch cabin tiers + line guide in parallel
+  const [cabinRes, guideRow] = await Promise.all([
+    env.DB.prepare(
+      `SELECT cc.name, cp.base_fare_per_person, cp.port_tax_per_person, cp.gratuity_per_person_per_night
+         FROM cabin_prices cp
+         JOIN cabin_categories cc ON cp.cabin_category_id = cc.id
+        WHERE cp.sailing_id = ?`
+    ).bind(sailingId).all(),
+    env.DB.prepare(
+      `SELECT cruise_line_name, personality, fleet_position, cabin_strategy, excursion_strategy,
+              what_avoid, best_for, onboard_concessions, fleet_avg_age_years
+         FROM line_guides
+        WHERE cruise_line_id = ?`
+    ).bind(row.cruise_line_id).first<LineGuideRow>(),
+  ]);
+
+  const cabins = (cabinRes.results || []) as unknown as CabinPriceRow[];
+  const ctx = toContext({ ...row, history_len: historyLen }, { cabins, lineGuide: guideRow });
 
   let parsed: Record<string, string> | null = null;
   try {

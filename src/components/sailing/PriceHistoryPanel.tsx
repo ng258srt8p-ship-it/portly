@@ -258,7 +258,7 @@ export default function PriceHistoryPanel({
 
   if (!priceHistory || priceHistory.length === 0) {
     return (
-      <div className="rounded-3xl border border-black/[0.05] bg-white p-5 shadow-float">
+      <div className="rounded-3xl border border-black/[0.05] bg-white p-4 shadow-float">
         <h2 className="mb-4 font-display text-2xl font-bold text-ink">Price History</h2>
         <p className="text-ink-soft">No price history recorded yet. Each sync adds data points.</p>
       </div>
@@ -302,7 +302,7 @@ export default function PriceHistoryPanel({
   }
 
   return (
-    <div className="rounded-3xl border border-black/[0.05] bg-white p-5 shadow-float">
+    <div className="rounded-3xl border border-black/[0.05] bg-white p-4 shadow-float">
       <h2 className="mb-2 font-display text-2xl font-bold text-ink">Price History</h2>
       <p className="mb-4 text-sm text-ink-soft">
         90-day trend for <strong>{selectedCabinType}</strong>

@@ -175,7 +175,7 @@ export default function EnhancedPriceForecast({ sailingId }: EnhancedPriceForeca
   /* --- Loading skeleton (matches final dimensions) --- */
   if (loading) {
     return (
-      <div data-testid="enhanced-price-forecast" className="rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float">
+      <div data-testid="enhanced-price-forecast" className="rounded-3xl border border-black/[0.05] bg-white p-4 shadow-float">
         <div className="mb-5 flex items-center gap-2">
           <MaterialIcon name="trending_up" size="lg" />
           <h2 className="font-display text-2xl font-bold text-ink">Price Forecast</h2>
@@ -197,7 +197,7 @@ export default function EnhancedPriceForecast({ sailingId }: EnhancedPriceForeca
   /* --- Error state --- */
   if (error) {
     return (
-      <div data-testid="enhanced-price-forecast" className="rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float">
+      <div data-testid="enhanced-price-forecast" className="rounded-3xl border border-black/[0.05] bg-white p-4 shadow-float">
         <div className="mb-4 flex items-center gap-2">
           <MaterialIcon name="trending_up" size="lg" />
           <h2 className="font-display text-2xl font-bold text-ink">Price Forecast</h2>
@@ -221,7 +221,7 @@ export default function EnhancedPriceForecast({ sailingId }: EnhancedPriceForeca
   /* --- No data --- */
   if (!data) {
     return (
-      <div data-testid="enhanced-price-forecast" className="rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float">
+      <div data-testid="enhanced-price-forecast" className="rounded-3xl border border-black/[0.05] bg-white p-4 shadow-float">
         <div className="mb-4 flex items-center gap-2">
           <MaterialIcon name="trending_up" size="lg" />
           <h2 className="font-display text-2xl font-bold text-ink">Price Forecast</h2>
@@ -243,7 +243,7 @@ export default function EnhancedPriceForecast({ sailingId }: EnhancedPriceForeca
 
   /* --- Main render — all dimensions --- */
   return (
-    <div data-testid="enhanced-price-forecast" className="rounded-3xl border border-black/[0.05] bg-white p-6 shadow-float space-y-5">
+    <div data-testid="enhanced-price-forecast" className="rounded-3xl border border-black/[0.05] bg-white p-4 shadow-float space-y-3">
       {/* Header */}
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">

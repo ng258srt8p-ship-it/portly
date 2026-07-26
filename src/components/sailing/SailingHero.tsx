@@ -44,7 +44,7 @@ export default function SailingHero({
   const priceLabel = cabinType ? `Starting at $${roundedPrice.toLocaleString()} from ${cabinType}` : `Starting at $${roundedPrice.toLocaleString()}`;
 
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink via-[#1a1b24] to-ink p-6 text-white shadow-float sm:p-8">
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink via-[#1a1b24] to-ink p-6 text-white shadow-float sm:p-7">
       {/* Glow accent */}
       <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-indigo/10 blur-3xl" />
 
