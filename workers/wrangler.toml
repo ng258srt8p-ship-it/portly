@@ -20,3 +20,7 @@ API_VERSION = "1.0"
 # Cron Trigger — every 30 minutes the scheduled handler populates D1
 [triggers]
 crons = ["*/30 * * * *"]
+
+# Cloudflare Workers AI binding — for cruise-insight enrichment (free tier 10k neurons/day)
+[ai]
+binding = "AI"

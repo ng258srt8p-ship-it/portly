@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0e1a3a"/>
+      <stop offset="100%" stop-color="#1a1b24"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2A44E7"/>
+      <stop offset="100%" stop-color="#7B5BFF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Decorative waves (cruise reference) -->
+  <g opacity="0.12" fill="none" stroke="#7B5BFF" stroke-width="2">
+    <path d="M 0,420 Q 200,360 400,420 T 800,420 T 1200,420" />
+    <path d="M 0,470 Q 200,410 400,470 T 800,470 T 1200,470" />
+    <path d="M 0,520 Q 200,460 400,520 T 800,520 T 1200,520" />
+  </g>
+
+  <!-- Logo dot -->
+  <circle cx="80" cy="80" r="14" fill="url(#accent)"/>
+
+  <!-- Brand wordmark -->
+  <text x="110" y="92" fill="white" font-family="Inter, system-ui, sans-serif" font-size="40" font-weight="800" letter-spacing="-1">
+    TripTide
+  </text>
+
+  <!-- Tag line -->
+  <text x="80" y="250" fill="white" font-family="Inter, system-ui, sans-serif" font-size="64" font-weight="900" letter-spacing="-2">
+    Out-the-door cruise
+  </text>
+  <text x="80" y="325" fill="white" font-family="Inter, system-ui, sans-serif" font-size="64" font-weight="900" letter-spacing="-2">
+    pricing, no fine print.
+  </text>
+
+  <!-- Sub -->
+  <text x="80" y="385" fill="#9ea4d1" font-family="Inter, system-ui, sans-serif" font-size="28" font-weight="500">
+    14+ lines · 80+ ships · refreshed every 30 minutes
+  </text>
+
+  <!-- Hero card mock (right) -->
+  <g transform="translate(720,140)">
+    <rect width="400" height="350" rx="24" fill="white" opacity="0.05" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+    <text x="24" y="44" fill="#9ea4d1" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600" letter-spacing="1">
+      CARNIVAL · CONQUEST
+    </text>
+    <text x="24" y="90" fill="white" font-family="Inter, system-ui, sans-serif" font-size="34" font-weight="800">
+      4-Night Bahamas
+    </text>
+    <text x="24" y="120" fill="#9ea4d1" font-family="Inter, system-ui, sans-serif" font-size="18">
+      from Miami · March 12 2026
+    </text>
+
+    <line x1="24" y1="146" x2="376" y2="146" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+
+    <!-- Cabin rows -->
+    <g font-family="Inter, system-ui, sans-serif">
+      <text x="24" y="180" fill="white" font-size="16" font-weight="700">Inside</text>
+      <text x="376" y="180" fill="white" font-size="22" font-weight="800" text-anchor="end">$427*</text>
+
+      <text x="24" y="216" fill="white" font-size="16" font-weight="700">Oceanview</text>
+      <text x="376" y="216" fill="white" font-size="22" font-weight="800" text-anchor="end">$509*</text>
+
+      <text x="24" y="252" fill="white" font-size="16" font-weight="700">Balcony</text>
+      <text x="376" y="252" fill="white" font-size="22" font-weight="800" text-anchor="end">$723*</text>
+
+      <text x="24" y="288" fill="white" font-size="16" font-weight="700">Suite</text>
+      <text x="376" y="288" fill="white" font-size="22" font-weight="800" text-anchor="end">$1,369*</text>
+    </g>
+
+    <text x="24" y="330" fill="#9ea4d1" font-family="Inter, system-ui, sans-serif" font-size="12">
+      *per person, total out-the-door
+    </text>
+  </g>
+
+  <!-- Bottom CTA strip -->
+  <rect x="0" y="540" width="1200" height="90" fill="rgba(42,68,231,0.10)"/>
+  <text x="80" y="588" fill="white" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="700">
+    Catch the deal before the tide rolls out →
+  </text>
+  <text x="1120" y="588" fill="white" font-family="Inter, system-ui, sans-serif" font-size="22" font-weight="700" text-anchor="end">
+    triptide
+  </text>
+</svg>

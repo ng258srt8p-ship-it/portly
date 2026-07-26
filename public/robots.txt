@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Don't index API or future admin paths
+Disallow: /api/
+Disallow: /admin/
+Disallow: /_next/
+
+Sitemap: https://portly-1i0.pages.dev/sitemap.xml

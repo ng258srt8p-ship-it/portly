@@ -1,10 +1,12 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getAllSailings, getSailingDetail, makeFingerprint, applyPriceDrift } from './scraper-data';
+import { enrichSailing, runEnrichmentTick, findCandidatesForEnrichment } from './enrich-sailing';
 
 export type Env = {
   DB: D1Database;
   CACHE: KVNamespace;
+  AI: Ai;
   SCRAPER_SECRET: string;
 };
 
@@ -694,31 +696,43 @@ app.get('/api/enhanced/deal-analysis/:id', async (c) => {
     { title: 'Value Assessment', content: `At $${totalCost.toLocaleString()} total per person out-the-door, you're paying $${Math.round(totalCost / nights)}/night including all taxes and gratuities. The ${s.ship} offers ${shipInfo.highlights.length} notable amenities, translating to $${Math.round(totalCost / (nights * shipInfo.highlights.length))}/night per major feature — strong value for a ship of this caliber.` }
   ];
 
-  // Check for AI-generated content
-  let aiContent: any = null;
-  try {
-    const ai = await c.env.DB.prepare('SELECT content_json FROM ai_content WHERE sailing_id = ?').bind(id).first<{ content_json: string }>();
-    if (ai?.content_json) aiContent = JSON.parse(ai.content_json);
-  } catch { /* table may not exist yet */ }
+  // Pull AI-enriched content from the sailings row when present, then map
+  // onto the structured fields the frontend expects.
+  const aiScore = typeof s.ai_score === 'number' ? s.ai_score : null;
+  const aiSummary = s.ai_insider_summary || null;
+  const aiDealScoreNarrative = s.ai_deal_score_narrative || null;
+  const aiCabinStrategy = s.ai_cabin_strategy || null;
+  const aiExcursionStrategy = s.ai_excursion_strategy || null;
+  const aiHasContent = Boolean(s.ai_generated_at && (aiSummary || aiDealScoreNarrative || aiCabinStrategy));
+
+  const isHeuristic = !aiHasContent;
 
   return c.json({
     data: {
-      is_heuristic: !aiContent,
-      is_ai_enhanced: !!aiContent,
-      dealScore: Math.min(95, 40 + dropPct * 2),
+      is_heuristic: isHeuristic,
+      is_ai_enhanced: aiHasContent,
+      ai_generated_at: s.ai_generated_at || null,
+      ai_score: aiScore,
+      ai_model: s.ai_model || null,
+      dealScore: aiScore ?? Math.min(95, 40 + dropPct * 2),
       dealScoreJustification,
-      verdict: aiContent?.verdict || (dropPct >= 25 ? 'Exceptional value — price has dropped significantly below recent highs. Strong buy opportunity.' : dropPct >= 15 ? 'Good deal — below recent average. Worth booking soon.' : 'Fair price — in line with recent trends. Monitor for further drops.'),
+      verdict: aiSummary || (dropPct >= 25 ? 'Exceptional value — price has dropped significantly below recent highs. Strong buy opportunity.' : dropPct >= 15 ? 'Good deal — below recent average. Worth booking soon.' : 'Fair price — in line with recent trends. Monitor for further drops.'),
       priceTrend,
-      pricingDeepDive: aiContent?.pricingDeepDive || `The current fare of $${price.toLocaleString()} represents a ${dropPct}% discount from the recent high of $${original.toLocaleString()}. On a per-night basis, you're paying $${perNight}/night, which ${dropPct >= 20 ? 'is well below the typical range for this route' : 'is competitive for this category'}.`,
+      pricingDeepDive: aiDealScoreNarrative || `The current fare of $${price.toLocaleString()} represents a ${dropPct}% discount from the recent high of $${original.toLocaleString()}. On a per-night basis, you're paying $${perNight}/night, which ${dropPct >= 20 ? 'is well below the typical range for this route' : 'is competitive for this category'}.`,
       hiddenCosts: {
         portFees: '$180 per person',
         gratuities: `$${(nights * 18.5).toFixed(2)} per person ($18.50/night)`,
         totalOutTheDoor: `$${totalCost.toLocaleString()} per person`
       },
-      itineraryValue: aiContent?.itineraryValue || `${s.destination || 'This route'} offers ${nights} nights of diverse port calls. The itinerary balances sea days with port-intensive exploration.`,
-      pricingStrategy: aiContent?.pricingStrategy || 'Cruise lines typically raise prices in the final 60 days before departure. Booking now locks in the current rate before the next fare increase cycle.',
-      inventoryIntelligence: aiContent?.inventoryIntelligence || 'Interior and ocean view cabins tend to sell out first on this route. Balcony cabins remain available but may not last past the early-bird window.',
-      insiderTips: aiContent?.insiderTips || [],
+      itineraryValue: `${s.destination || 'This route'} offers ${nights} nights of diverse port calls. The itinerary balances sea days with port-intensive exploration.`,
+      pricingStrategy: aiDealScoreNarrative || 'Cruise lines typically raise prices in the final 60 days before departure. Booking now locks in the current rate before the next fare increase cycle.',
+      inventoryIntelligence: 'Interior and ocean view cabins tend to sell out first on this route. Balcony cabins remain available but may not last past the early-bird window.',
+      insiderTips: aiCabinStrategy ? [
+        { title: 'Cabin Selection Strategy', content: aiCabinStrategy },
+        { title: 'Shore Excursion Economics', content: aiExcursionStrategy },
+        { title: 'Gratuities & Hidden Costs', content: `Pre-pay gratuities of $${(nights * 18.5).toFixed(0)}/person before sailing — locks in current rate and avoids shipboard surprises. ${isHeuristic ? 'When AI enrichment lands, this will reflect your specific ship and route.' : ''}`.trim() },
+        { title: 'Onboard Credit Hack', content: isHeuristic ? 'Watch for $50-100 onboard credits that lines bundle with cabin upgrades 60-90 days out — they effectively drop your per-night cost.' : 'Loyalty members often see priority dining reservations and complimentary wine packages on sailing packages of 7+ nights.' },
+      ] : [],
       shipValueScore: Math.min(92, 60 + Math.floor(dropPct / 3)),
       shipValueScoreJustification
     }
@@ -887,4 +901,72 @@ app.get('/api/enhanced/price-forecast/:id', async (c) => {
   });
 });
 
-export default app;
+/* ------------------------------------------------------------------ */
+/*  AI Enrichment — admin endpoints + scheduled handler                */
+/* ------------------------------------------------------------------ */
+
+const ADMIN_GATE = (auth: string | undefined, scraperSecret: string) =>
+  auth === `Bearer ${scraperSecret}`;
+
+// POST /api/admin/enrich/:id — enrich one sailing on demand
+app.post('/api/admin/enrich/:id', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const id = c.req.param('id');
+  const force = c.req.query('force') === '1';
+  const result = await enrichSailing(c.env, id, { force });
+  return c.json(result, result.ok ? 200 : 500);
+});
+
+// GET /api/admin/enrich/candidates — list candidates
+app.get('/api/admin/enrich/candidates', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const max = Number(c.req.query('max') || 10);
+  const candidates = await findCandidatesForEnrichment(c.env, max);
+  return c.json({ count: candidates.length, ids: candidates });
+});
+
+// POST /api/admin/enrich-tick — process a batch (max 5)
+app.post('/api/admin/enrich-tick', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const body = await c.req.json<{ max?: number }>().catch(() => ({} as any));
+  const result = await runEnrichmentTick(c.env, { maxPerTick: body?.max ?? 5 });
+  return c.json(result);
+});
+
+// GET /api/admin/enrichment-status — telemetry
+app.get('/api/admin/enrichment-status', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const lastTick = await c.env.CACHE.get('enrichment:last_tick');
+  const tickCount = await c.env.CACHE.get('enrichment:tick_count');
+  const aiTotal = await c.env.DB.prepare(
+    `SELECT
+       COUNT(*) AS total, COUNT(ai_generated_at) AS enriched,
+       MAX(ai_generated_at) AS last_generated_at,
+       AVG(ai_score) AS avg_score
+     FROM sailings WHERE price IS NOT NULL`
+  ).first();
+  return c.json({
+    lastTick: lastTick ? JSON.parse(lastTick) : null,
+    tickCount: Number(tickCount || '0'),
+    db: aiTotal,
+  });
+});
+
+// Scheduled handler — every 30 min, enrich top candidates
+const scheduledHandler = async (ev: ScheduledController, env: Env, ctx: ExecutionContext) => {
+  const s = await runEnrichmentTick(env);
+  await env.CACHE.put('scheduled:enrichment_last_run', JSON.stringify({ ts: new Date().toISOString(), ...s }), { expirationTtl: 86400 * 7 });
+};
+
+export default {
+  fetch: app.fetch,
+  scheduled: scheduledHandler,
+};

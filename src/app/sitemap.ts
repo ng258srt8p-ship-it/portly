@@ -1,80 +1,32 @@
 import type { MetadataRoute } from 'next';
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://triptide.net';
+const SITE_URL = 'https://portly-1i0.pages.dev';
 
-  return [
-    {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 1.0,
-    },
-    {
-      url: `${baseUrl}/deals`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/history`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/solo`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/alerts`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/about`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/press`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.4,
-    },
-    {
-      url: `${baseUrl}/careers`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.4,
-    },
-    {
-      url: `${baseUrl}/contact`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/privacy`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/terms`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/disclosure`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-  ];
+/** Stable URLs — also referenced by public/robots.txt */
+const STATIC_ROUTES: Array<{
+  path: string;
+  changeFrequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  priority: number;
+}> = [
+  { path: '', changeFrequency: 'daily', priority: 1.0 },
+  { path: '/deals', changeFrequency: 'daily', priority: 0.9 },
+  { path: '/history', changeFrequency: 'weekly', priority: 0.7 },
+  { path: '/solo', changeFrequency: 'daily', priority: 0.8 },
+  { path: '/alerts', changeFrequency: 'weekly', priority: 0.6 },
+  { path: '/about', changeFrequency: 'monthly', priority: 0.5 },
+  { path: '/press', changeFrequency: 'monthly', priority: 0.4 },
+  { path: '/careers', changeFrequency: 'monthly', priority: 0.4 },
+  { path: '/contact', changeFrequency: 'monthly', priority: 0.5 },
+  { path: '/privacy', changeFrequency: 'yearly', priority: 0.3 },
+  { path: '/terms', changeFrequency: 'yearly', priority: 0.3 },
+  { path: '/disclosure', changeFrequency: 'yearly', priority: 0.3 },
+];
+
+export default function sitemap(): MetadataRoute.Sitemap {
+  return STATIC_ROUTES.map((r) => ({
+    url: `${SITE_URL}${r.path}`,
+    lastModified: new Date(),
+    changeFrequency: r.changeFrequency,
+    priority: r.priority,
+  }));
 }
