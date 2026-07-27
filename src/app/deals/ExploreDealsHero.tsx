@@ -44,10 +44,10 @@ export default function ExploreDealsHero({ filters, onFilterChange }: ExploreDea
       {/* Subtle background pattern */}
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,rgba(42,68,231,0.06)_0%,transparent_70%)]" />
 
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-2xl text-center">
           {/* Live badge */}
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-mint-ink/20 bg-mint-soft px-3 py-1.5">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-mint-ink/20 bg-mint-soft px-3 py-1.5">
             <span className="h-2 w-2 rounded-full bg-mint-ink animate-pulse" />
             <span className="text-xs font-semibold text-mint-ink">
               {stats
@@ -65,13 +65,13 @@ export default function ExploreDealsHero({ filters, onFilterChange }: ExploreDea
           </h1>
 
           {/* Subtitle */}
-          <p className="mt-5 text-lg text-ink-soft sm:text-xl">
+          <p className="mt-4 text-base text-ink-soft sm:text-lg">
             Compare out-the-door pricing across {stats ? stats.trackedSailings.toLocaleString() : 'hundreds of'} sailings.
             Base fare, port taxes, and mandatory gratuities — all in one transparent price.
           </p>
 
           {/* Quick action chips */}
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <div className="mt-6 flex flex-wrap justify-center gap-2.5">
             <FilterChip
               icon="trending_down"
               label="Price Drop"

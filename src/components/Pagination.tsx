@@ -50,7 +50,7 @@ export default function Pagination({
   return (
     <nav
       aria-label="Pagination"
-      className={`mt-10 flex flex-col items-center justify-between gap-3 sm:flex-row ${className}`}
+      className={`mt-10 flex flex-col items-center justify-between gap-3 border-t border-black/[0.06] pt-6 sm:flex-row ${className}`}
     >
       <p className="text-sm text-ink-soft" data-testid="pagination-summary">
         Showing <span className="font-semibold text-ink">{start}</span>–

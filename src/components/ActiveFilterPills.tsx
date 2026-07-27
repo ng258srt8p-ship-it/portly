@@ -132,7 +132,7 @@ export default function ActiveFilterPills({ filters, onChange, onReset }: Active
 
   return (
     <div
-      className="mb-4 flex flex-wrap items-center gap-2"
+      className="mt-3 flex flex-wrap items-center gap-2 border-t border-black/[0.06] pt-3"
       data-testid="active-filter-pills"
     >
       <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">
@@ -141,7 +141,7 @@ export default function ActiveFilterPills({ filters, onChange, onReset }: Active
       {pills.map((p, idx) => (
         <span
           key={`${p.label}-${idx}`}
-          className="inline-flex items-center gap-1.5 rounded-full border border-indigo/15 bg-indigo/[0.04] px-3 py-1 text-xs font-bold text-indigo"
+          className="inline-flex items-center gap-1.5 rounded-full border border-black/[0.08] bg-black/[0.035] px-2.5 py-1 text-xs font-medium text-ink-soft"
         >
           {p.label}
           <button
@@ -149,7 +149,7 @@ export default function ActiveFilterPills({ filters, onChange, onReset }: Active
             aria-label={`Remove filter ${p.label}`}
             data-testid={`remove-pill-${idx}`}
             onClick={p.remove}
-            className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-indigo/10 text-indigo transition-colors hover:bg-indigo hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
+            className="inline-flex h-4 w-4 items-center justify-center rounded-full text-ink-faint transition-colors hover:bg-ink hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
           >
             <MaterialIcon name="close" size="xs" />
           </button>
@@ -159,7 +159,7 @@ export default function ActiveFilterPills({ filters, onChange, onReset }: Active
         type="button"
         onClick={onReset}
         data-testid="clear-all-filters"
-        className="ml-1 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold text-ink-soft transition-colors hover:bg-black/[0.04] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
+        className="ml-1 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold text-coral-ink underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
       >
         <MaterialIcon name="backspace" size="xs" />
         Clear all

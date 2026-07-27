@@ -168,20 +168,37 @@ export default function MobileFilterBar({
             </div>
 
             <div className="shrink-0 border-t border-black/[0.06] bg-white px-4 py-3">
-              <button
-                type="button"
-                onClick={() => setFiltersOpen(false)}
-                data-testid="mobile-filter-apply"
-                className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full bg-ink text-sm font-bold text-white hover:bg-indigo focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
-              >
-                Apply Filters
+              <div className="flex gap-2">
                 {activeFilterCount > 0 && (
-                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-[10px] font-bold text-ink">
-                    {activeFilterCount}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onReset();
+                    }}
+                    data-testid="mobile-filter-reset"
+                    className="inline-flex min-h-[44px] w-1/3 items-center justify-center gap-2 rounded-full border border-black/[0.08] bg-white text-sm font-semibold text-ink-soft transition-colors hover:bg-black/[0.04] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
+                  >
+                    <MaterialIcon name="restart_alt" size="sm" />
+                    Reset
+                 </button>
                 )}
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen(false)}
+                  data-testid="mobile-filter-apply"
+                  className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-ink text-sm font-bold text-white hover:bg-indigo focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 ${
+                    activeFilterCount > 0 ? 'w-2/3' : 'w-full'
+                  }`}
+                >
+                  Show Results
+                  {activeFilterCount > 0 && (
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-[10px] font-bold text-ink">
+                      {activeFilterCount}
+                   </span>
+                  )}
+               </button>
+             </div>
+           </div>
           </div>
         </>
       )}

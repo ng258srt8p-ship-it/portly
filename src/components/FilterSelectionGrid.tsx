@@ -171,17 +171,17 @@ function MultiSelectDropdown({
           type="button"
           disabled={disabled}
           onClick={() => !disabled && setOpen((prev) => !prev)}
-          className={`flex w-full min-w-[44px] min-h-[44px] items-center gap-2 px-3 text-left
-            disabled:opacity-40 disabled:cursor-not-allowed
-            rounded-lg border border-black/[0.06] bg-white
+          className={`flex h-10 w-full items-center gap-2 rounded-lg border border-black/[0.06] bg-white
+            px-3 py-2 text-left text-sm font-medium text-ink shadow-xs
             transition-colors
             hover:border-black/[0.12] hover:bg-black/[0.02]
-            focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 focus-visible:border-indigo
+            focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/40 focus-visible:border-indigo/30
+            disabled:opacity-40 disabled:cursor-not-allowed
           `}
           aria-expanded={open}
           aria-haspopup="listbox"
         >
-        <span className="shrink-0 text-ink-faint text-[11px] font-semibold uppercase tracking-wider">
+        <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-ink-faint">
           {label}
         </span>
         <span className="flex-1 truncate text-sm font-medium text-ink">
@@ -290,12 +290,11 @@ function SingleSelectDropdown({
         disabled={disabled}
         onClick={() => !disabled && setOpen((prev) => !prev)}
         className={`
-          flex w-full h-11 min-w-0 items-center gap-2 px-2.5 text-left
-          disabled:opacity-40 disabled:cursor-not-allowed
-          rounded-lg border border-black/[0.06] bg-white
+          flex w-full h-10 min-w-0 items-center gap-2 rounded-lg border border-black/[0.06] bg-white px-3 py-2 text-left text-sm font-medium text-ink shadow-xs
           transition-colors
           hover:border-black/[0.12] hover:bg-black/[0.02]
-          focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 focus-visible:border-indigo
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/40 focus-visible:border-indigo/30
+          disabled:opacity-40 disabled:cursor-not-allowed
         `}
         aria-expanded={open}
         aria-haspopup="listbox"
@@ -774,7 +773,7 @@ export default function FilterSelectionGrid({
       <div className="block lg:hidden">
         <button
           onClick={() => setExpanded((prev) => !prev)}
-          className="flex w-full h-11 items-center justify-between gap-2 rounded-lg border border-black/[0.06] bg-white px-3 text-sm font-medium text-ink transition-colors hover:border-black/[0.12] hover:bg-black/[0.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
+          className="flex w-full h-10 items-center justify-between gap-2 rounded-lg border border-black/[0.06] bg-white px-3 py-2 text-sm font-medium text-ink shadow-xs transition-colors hover:border-black/[0.12] hover:bg-black/[0.02] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/40 focus-visible:border-indigo/30"
           aria-expanded={expanded}
           aria-haspopup="listbox"
         >
