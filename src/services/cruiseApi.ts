@@ -35,10 +35,16 @@ async function getJSON<T>(url: string): Promise<T> {
 }
 
 /** Fetch the latest cruise deals (rated by value) */
-export async function fetchDeals(limit: number = 0, filters?: DealFilters): Promise<Deal[]> {
+export async function fetchDeals(limit: number | 'all' = 20, filters?: DealFilters): Promise<Deal[]> {
   const params = new URLSearchParams();
-  // Always send the limit param — limit=0 means "All" to the API
-  params.set('limit', String(limit));
+  // Send `limit=all` for unlimited / numeric otherwise. The Worker caps at
+  // 500 to prevent it from burning the 30 s CPU budget.
+  if (limit === 'all') {
+    params.set('limit', 'all');
+  } else if (typeof limit === 'number' && limit > 0) {
+    params.set('limit', String(Math.min(limit, 500)));
+  }
+  // omit limit entirely → server defaults to 20.
   if (filters) {
     if (filters.cruiseLine?.length) params.set('cruiseLine', filters.cruiseLine.join(','));
     if (filters.destination?.length) params.set('destination', filters.destination.join(','));
@@ -110,13 +116,29 @@ export async function fetchItineraries(
 
 /**
  * Fetch filter options (destinations + cruise lines) from the backend.
- * Derives them from the full deals list, same as before but via the API.
+ * Hits the cheap /api/filters endpoint instead of pulling limit=0 deals.
  */
 export async function fetchFilterOptions(): Promise<FilterOptions> {
-  const deals = await fetchDeals();
-  const destinations = Array.from(new Set(deals.map((d) => d.destination))).sort();
-  const cruiseLines = Array.from(new Set(deals.map((d) => d.cruiseLine))).sort();
-  return { destinations, cruiseLines };
+  const data = await getJSON<{
+    cruiseLines?: string[];
+    destinations?: string[];
+  }>(`${API_BASE}/api/filters`);
+  return {
+    destinations: data.destinations || [],
+    cruiseLines: data.cruiseLines || [],
+  };
+}
+
+/** Fetch every filter dimension in one pass (used by the deals page). */
+export async function fetchAllFilterOptions(): Promise<{
+  cruiseLines: string[];
+  destinations: string[];
+  ships: string[];
+  departurePorts: string[];
+  departureRegions: string[];
+  badgeTypes: string[];
+}> {
+  return getJSON<any>(`${API_BASE}/api/filters`);
 }
 
 /** Fetch solo-friendly sailings */

@@ -2,12 +2,22 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getAllSailings, getSailingDetail, makeFingerprint, applyPriceDrift } from './scraper-data';
 import { enrichSailing, runEnrichmentTick, findCandidatesForEnrichment } from './enrich-sailing';
+import { runIngestExpansionTick, debugBaseSailingSelect } from './ingest-expander';
+import { runAlertEvaluationTick, runAlertDispatchTick } from './alert-engine';
+import { getMetricsSnapshot } from './metrics-analytics';
+import { runBulkImportTick } from './bulk-import';
+import { runExternalLineSyncTick } from './external-line-sync';
 
 export type Env = {
   DB: D1Database;
   CACHE: KVNamespace;
   AI: Ai;
   SCRAPER_SECRET: string;
+  // Resend (https://resend.com) — outbound transactional email.
+  // Optional: if absent, alerts are still queued to D1 (pending) so a future
+  // admin can fetch + deliver. Set via `wrangler secret put RESEND_API_KEY`.
+  RESEND_API_KEY?: string;
+  ALERT_FROM_EMAIL?: string;  // e.g. "TripTide Deals <deals@portly-1i0.pages.dev>"
 };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -15,6 +25,36 @@ const app = new Hono<{ Bindings: Env }>();
 app.use('/*', cors());
 
 // ── Helpers ──────────────────────────────────────────────
+
+// Sort enum — anything outside this set is a client bug we should reject loudly
+// rather than silently defaulting.
+const ALLOWED_SORTS: Record<string, string> = {
+  'price-asc': 's.price ASC',
+  'price-desc': 's.price DESC',
+  'nights-asc': 's.nights ASC',
+  'nights-desc': 's.nights DESC',
+  'date-asc': 's.sail_date ASC',
+  'date-desc': 's.sail_date DESC',
+  'drop-desc': 's.drop_percent DESC',
+};
+
+// CORS guard: if anything in this app escapes without the cors() middleware
+// (e.g. a raw `throw` that bubbles to Cloudflare's 1102 page), we still want
+// browsers on portly-1i0.pages.dev (and any localhost dev origin) to be able
+// to *see* the JSON error rather than getting a hard CORS-block.
+const ALL_ORIGINS = ['https://portly-1i0.pages.dev', 'http://localhost:3000', 'http://localhost:3001'];
+app.use('/*', async (c, next) => {
+  await next();
+  const reqOrigin = c.req.header('origin') || '';
+  if (!reqOrigin) return;
+  if (ALL_ORIGINS.includes(reqOrigin) || reqOrigin.endsWith('.pages.dev')) {
+    c.header('Access-Control-Allow-Origin', reqOrigin);
+    c.header('Vary', 'Origin');
+    c.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+});
+
 function snakeToCamel(str: string): string {
   return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
 }
@@ -42,22 +82,41 @@ function formatSailing(row: any): any {
 
 // GET /api/deals
 app.get('/api/deals', async (c) => {
-  // limit=0 means "All" — omit LIMIT clause entirely
-  const limitParam = Number(c.req.query('limit') || 20);
-  const limit = limitParam > 0 ? Math.min(limitParam, 500) : 0;
-  const offset = Number(c.req.query('offset') || 0);
+  // `limit` semantics
+  //   - omitted  → default 20
+  //   - explicit number → used (clamped to MAX_DEAL_LIMIT, 1..500)
+  //   - "all"    → 500 (we no longer honor unbounded LIMIT-less queries; they
+  //                exceed Cloudflare's 30 s CPU budget at this scale)
+  const MAX_DEAL_LIMIT = 500;
+  const limitParamRaw = c.req.query('limit');
+  let limit = 20;
+  if (typeof limitParamRaw === 'string') {
+    const lower = limitParamRaw.toLowerCase();
+    if (lower === 'all') {
+      limit = MAX_DEAL_LIMIT;
+    } else {
+      const parsed = Number(limitParamRaw);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        limit = Math.min(parsed, MAX_DEAL_LIMIT);
+      } else if (parsed === 0) {
+        // Explicit "0" used to mean "All" but now means "treat as default 20"
+        // so the SQL never emits an unbounded LIMIT clause.
+        limit = 20;
+      }
+    }
+  }
+  const offset = Math.min(Math.max(Number(c.req.query('offset') || 0), 0), 50_000);
   const sort = c.req.query('sort') || 'drop-desc';
 
-  const orderMap: Record<string, string> = {
-    'price-asc': 's.price ASC',
-    'price-desc': 's.price DESC',
-    'nights-asc': 's.nights ASC',
-    'nights-desc': 's.nights DESC',
-    'date-asc': 's.sail_date ASC',
-    'date-desc': 's.sail_date DESC',
-    'drop-desc': 's.drop_percent DESC',
-  };
-  const orderBy = orderMap[sort] || 's.drop_percent DESC';
+  // Reject unknown sort values loudly instead of silently falling back — this
+  // is the contract every frontend filter bar relies on.
+  const orderBy = ALLOWED_SORTS[sort];
+  if (!orderBy) {
+    return c.json(
+      { error: 'invalid sort', allowed: Object.keys(ALLOWED_SORTS) },
+      400
+    );
+  }
 
   let where = 'WHERE s.price IS NOT NULL';
   const binds: any[] = [];
@@ -78,9 +137,9 @@ app.get('/api/deals', async (c) => {
   if (maxNights) { where += ' AND s.nights <= ?'; binds.push(Number(maxNights)); }
 
   const badgeType = c.req.query('badgeType');
-  if (badgeType) { 
-    where += ' AND s.badge_type IN (' + badgeType.split(',').map(() => '?').join(',') + ')'; 
-    binds.push(...badgeType.split(',')); 
+  if (badgeType) {
+    where += ' AND s.badge_type IN (' + badgeType.split(',').map(() => '?').join(',') + ')';
+    binds.push(...badgeType.split(','));
   }
 
   const ship = c.req.query('ship');
@@ -174,9 +233,26 @@ app.get('/api/solo-friendly', async (c) => {
 //   1. Line-level aggregate counts (fast COUNT/GROUP BY)
 //   2. Sailings joined with cruise_lines, ships, cabin_prices, cabin_categories
 //      (81 rows × small joins — bounded result set)
+//
+// Returns and shape of the actual JSON are unchanged — the wrapper just guards
+// the body behind a 5-min KV cache so the 30-second Worker CPU budget isn't
+// burned every time the /history page polls every 30s.
 app.get('/api/history', async (c) => {
+  const HISTORY_CACHE_KEY = 'history:snapshot:v1';
+  const cached = await c.env.CACHE.get(HISTORY_CACHE_KEY);
+  if (cached) {
+    c.header('X-History-Cache', 'hit');
+    return c.json(JSON.parse(cached));
+  }
+  const payload = await computeHistorySnapshot(c.env);
+  await c.env.CACHE.put(HISTORY_CACHE_KEY, JSON.stringify(payload), { expirationTtl: 300 });
+  c.header('X-History-Cache', 'miss');
+  return c.json(payload);
+});
+
+async function computeHistorySnapshot(env: any) {
   // 1. Line-level aggregates
-  const { results: lineAgg } = await c.env.DB.prepare(`
+  const { results: lineAgg } = await env.DB.prepare(`
     SELECT 
       cl.name AS line,
       COUNT(DISTINCT s.id) AS total_sailings,
@@ -190,7 +266,7 @@ app.get('/api/history', async (c) => {
 
   // 2. Sailings + cached history JSON + cabin type (small bounded query)
   //    We do NOT scan price_history — use the pre-aggregated JSON column instead.
-  const { results: sailingsRaw } = await c.env.DB.prepare(`
+  const { results: sailingsRaw } = await env.DB.prepare(`
     SELECT 
       s.id AS sailingId,
       cl.name AS cruiseLine,
@@ -279,12 +355,12 @@ app.get('/api/history', async (c) => {
     ),
   }));
 
-  return c.json({
+  return {
     lines: linesWithDetails,
     totalPricesTracked: linesWithDetails.reduce((sum, line) => sum + line.totalPricesTracked, 0),
     totalSailings: linesWithDetails.reduce((sum, line) => sum + line.totalSailings, 0),
-  });
-});
+  };
+}
 
 // GET /api/stats
 app.get('/api/stats', async (c) => {
@@ -307,6 +383,99 @@ app.get('/api/search', async (c) => {
      LIMIT 20`
   ).bind(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`).all();
   return c.json({ results: results.map(formatSailing) });
+});
+
+// ────────────────────────────────────────────────────────────────────────
+// FILTER ENDPOINTS — cheap aggregations to power dropdowns.
+// These replaced the old pattern of fetching /api/deals?limit=0 and deriving
+// filter options client-side. Each query hits small table indexes, so it
+// runs in ~10ms instead of triggering Cloudflare 1102 CPU errors.
+// ────────────────────────────────────────────────────────────────────────
+
+const FILTERS_CACHE_KEY = 'filters:catalog:v1';
+const FILTERS_CACHE_TTL = 300; // 5 min — these rarely change within a sync cycle
+
+interface FilterCatalog {
+  cruiseLines: string[];
+  destinations: string[];
+  ships: string[];
+  departurePorts: string[];
+  departureRegions: string[];
+  badgeTypes: string[];
+  generatedAt: string;
+}
+
+async function buildFilterCatalog(env: any): Promise<FilterCatalog> {
+  const [lines, dests, ships, ports, regions, badges] = await Promise.all([
+    env.DB.prepare(`SELECT name FROM cruise_lines ORDER BY name ASC`).all(),
+    env.DB.prepare(`SELECT name FROM destinations WHERE name IS NOT NULL ORDER BY name ASC`).all(),
+    env.DB.prepare(`SELECT name FROM ships WHERE name IS NOT NULL ORDER BY name ASC`).all(),
+    env.DB.prepare(`SELECT DISTINCT departure_port AS p FROM sailings WHERE departure_port IS NOT NULL ORDER BY p ASC`).all(),
+    env.DB.prepare(`SELECT DISTINCT departure_region AS r FROM sailings WHERE departure_region IS NOT NULL ORDER BY r ASC`).all(),
+    env.DB.prepare(`SELECT DISTINCT badge_type AS b FROM sailings WHERE badge_type IS NOT NULL ORDER BY b ASC`).all(),
+  ]);
+  return {
+    cruiseLines: (lines.results || []).map((r: any) => r.name).filter(Boolean),
+    destinations: (dests.results || []).map((r: any) => r.name).filter(Boolean),
+    ships: (ships.results || []).map((r: any) => r.name).filter(Boolean),
+    departurePorts: (ports.results || []).map((r: any) => r.p).filter(Boolean),
+    departureRegions: (regions.results || []).map((r: any) => r.r).filter(Boolean),
+    badgeTypes: (badges.results || []).map((r: any) => r.b).filter(Boolean),
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+app.get('/api/filters', async (c) => {
+  // Single canonical endpoint, KV-cached. Replaces the previous
+  // /api/filters/destinations, /api/filters/cruise-lines, etc. split which
+  // were six round-trips worse than this.
+  const cached = await c.env.CACHE.get(FILTERS_CACHE_KEY);
+  if (cached) {
+    return c.json({ ...JSON.parse(cached), cached: true });
+  }
+  const catalog = await buildFilterCatalog(c.env);
+  await c.env.CACHE.put(FILTERS_CACHE_KEY, JSON.stringify(catalog), { expirationTtl: FILTERS_CACHE_TTL });
+  return c.json({ ...catalog, cached: false });
+});
+
+app.get('/api/filters/cruise-lines', async (c) => {
+  const cached = await c.env.CACHE.get(FILTERS_CACHE_KEY);
+  if (cached) {
+    return c.json({ cruiseLines: (JSON.parse(cached) as FilterCatalog).cruiseLines });
+  }
+  const catalog = await buildFilterCatalog(c.env);
+  await c.env.CACHE.put(FILTERS_CACHE_KEY, JSON.stringify(catalog), { expirationTtl: FILTERS_CACHE_TTL });
+  return c.json({ cruiseLines: catalog.cruiseLines });
+});
+
+app.get('/api/filters/destinations', async (c) => {
+  const cached = await c.env.CACHE.get(FILTERS_CACHE_KEY);
+  if (cached) {
+    return c.json({ destinations: (JSON.parse(cached) as FilterCatalog).destinations });
+  }
+  const catalog = await buildFilterCatalog(c.env);
+  await c.env.CACHE.put(FILTERS_CACHE_KEY, JSON.stringify(catalog), { expirationTtl: FILTERS_CACHE_TTL });
+  return c.json({ destinations: catalog.destinations });
+});
+
+app.get('/api/filters/ships', async (c) => {
+  const cached = await c.env.CACHE.get(FILTERS_CACHE_KEY);
+  if (cached) {
+    return c.json({ ships: (JSON.parse(cached) as FilterCatalog).ships });
+  }
+  const catalog = await buildFilterCatalog(c.env);
+  await c.env.CACHE.put(FILTERS_CACHE_KEY, JSON.stringify(catalog), { expirationTtl: FILTERS_CACHE_TTL });
+  return c.json({ ships: catalog.ships });
+});
+
+app.get('/api/filters/departure-ports', async (c) => {
+  const cached = await c.env.CACHE.get(FILTERS_CACHE_KEY);
+  if (cached) {
+    return c.json({ departurePorts: (JSON.parse(cached) as FilterCatalog).departurePorts });
+  }
+  const catalog = await buildFilterCatalog(c.env);
+  await c.env.CACHE.put(FILTERS_CACHE_KEY, JSON.stringify(catalog), { expirationTtl: FILTERS_CACHE_TTL });
+  return c.json({ departurePorts: catalog.departurePorts });
 });
 
 // POST /api/deals — upsert sailing from scraper
@@ -597,17 +766,150 @@ app.post('/api/alerts/create', async (c) => {
     if (match) sailingId = match[1];
   }
 
+  // Look up the user's default price-drop threshold from alert_preferences.
+  // Fall back to 10.0% if no preference row exists.
+  const pref = await c.env.DB.prepare(
+    `SELECT default_threshold FROM alert_preferences WHERE email = ?`
+  ).bind(body.email).first<{ default_threshold: number }>();
+  const threshold = pref?.default_threshold ?? 10.0;
+
   // Insert alert
   const result = await c.env.DB.prepare(`
     INSERT INTO alerts (email, sailing_id, sailing_url, threshold_pct, is_active, created_at, updated_at)
-    VALUES (?, ?, ?, 10.0, 1, datetime('now'), datetime('now'))
-  `).bind(body.email, sailingId, body.sailingUrl || null).run();
+    VALUES (?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+  `).bind(body.email, sailingId, body.sailingUrl || null, threshold).run();
 
   if (!result.success) {
     return c.json({ success: false, error: 'Failed to create alert' }, 500);
   }
 
-  return c.json({ success: true, alertId: result.meta.last_row_id });
+  return c.json({ success: true, alertId: result.meta.last_row_id, threshold_pct: threshold });
+});
+
+// GET /api/alerts?email=foo@bar — list all alerts for that email
+app.get('/api/alerts', async (c) => {
+  const email = c.req.query('email');
+  if (!email || !email.includes('@')) {
+    return c.json({ error: 'email query param required' }, 400);
+  }
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, sailing_id, sailing_url, threshold_pct, is_active,
+            last_notified_at, created_at, updated_at
+       FROM alerts WHERE email = ? ORDER BY id DESC`
+  ).bind(email).all();
+  return c.json({ email, alerts: results || [] });
+});
+
+// PATCH /api/alerts/:id — update threshold_pct and/or is_active / sailing_url
+app.patch('/api/alerts/:id', async (c) => {
+  const id = Number(c.req.param('id'));
+  if (!Number.isInteger(id) || id <= 0) return c.json({ error: 'invalid id' }, 400);
+  const body = await c.req.json<{ threshold_pct?: number; is_active?: number | boolean; sailing_url?: string }>().catch(() => ({} as any));
+
+  // Build dynamic SET clause from provided fields
+  const fields: string[] = [];
+  const binds: any[] = [];
+  if (typeof body.threshold_pct === 'number' && body.threshold_pct >= 0 && body.threshold_pct <= 100) {
+    fields.push('threshold_pct = ?');
+    binds.push(body.threshold_pct);
+  }
+  if (body.is_active !== undefined) {
+    const active = body.is_active ? 1 : 0;
+    // If re‑activating, clear cooldown so a fresh evaluation can fire immediately.
+    fields.push('is_active = ?');
+    binds.push(active);
+  }
+  if (typeof body.sailing_url === 'string') {
+    fields.push('sailing_url = ?');
+    binds.push(body.sailing_url);
+  }
+  if (fields.length === 0) return c.json({ error: 'no fields to update' }, 400);
+  fields.push('updated_at = datetime(\'now\')');
+  binds.push(id);
+
+  const res = await c.env.DB.prepare(
+    `UPDATE alerts SET ${fields.join(', ')} WHERE id = ?`
+  ).bind(...binds).run();
+  if (!res.success) return c.json({ error: 'update failed' }, 500);
+
+  const updated = await c.env.DB.prepare(
+    `SELECT id, sailing_id, sailing_url, threshold_pct, is_active, last_notified_at FROM alerts WHERE id = ?`
+  ).bind(id).first();
+  return c.json({ success: true, alert: updated });
+});
+
+// DELETE /api/alerts/:id — soft delete (set is_active = 0)
+app.delete('/api/alerts/:id', async (c) => {
+  const id = Number(c.req.param('id'));
+  if (!Number.isInteger(id) || id <= 0) return c.json({ error: 'invalid id' }, 400);
+  const res = await c.env.DB.prepare(
+    `UPDATE alerts SET is_active = 0, updated_at = datetime('now') WHERE id = ?`
+  ).bind(id).run();
+  if (!res.success) return c.json({ error: 'delete failed' }, 500);
+  return c.json({ success: true, soft_deleted: id });
+});
+
+// GET /api/alert-preferences?email=... — fetch user's preferences (or default)
+app.get('/api/alert-preferences', async (c) => {
+  const email = c.req.query('email');
+  if (!email || !email.includes('@')) {
+    return c.json({ error: 'email query param required' }, 400);
+  }
+  const pref = await c.env.DB.prepare(
+    `SELECT email, default_threshold, created_at, updated_at FROM alert_preferences WHERE email = ?`
+  ).bind(email).first();
+  if (!pref) {
+    return c.json({
+      email,
+      default_threshold: 10.0, // UI default
+      created_at: null,
+      updated_at: null,
+    });
+  }
+  return c.json(pref);
+});
+
+// PUT /api/alert-preferences — upsert user's default threshold
+app.put('/api/alert-preferences', async (c) => {
+  const body = await c.req.json<{ email: string; default_threshold: number }>();
+  if (!body.email || !body.email.includes('@')) {
+    return c.json({ error: 'Valid email required' }, 400);
+  }
+  if (typeof body.default_threshold !== 'number' || body.default_threshold < 0 || body.default_threshold > 100) {
+    return c.json({ error: 'default_threshold must be a number between 0 and 100' }, 400);
+  }
+  await c.env.DB.prepare(
+    `INSERT INTO alert_preferences (email, default_threshold, created_at, updated_at)
+     VALUES (?, ?, datetime('now'), datetime('now'))
+     ON CONFLICT(email) DO UPDATE SET
+       default_threshold = excluded.default_threshold,
+       updated_at = datetime('now')`
+  ).bind(body.email, body.default_threshold).run();
+  const stored = await c.env.DB.prepare(
+    `SELECT email, default_threshold, updated_at FROM alert_preferences WHERE email = ?`
+  ).bind(body.email).first();
+  return c.json({ success: true, preference: stored });
+});
+
+// GET /api/health — public liveness probe, no auth required.
+// Required by Cloudflare Pages healthchecks and uptime monitors.
+app.get('/api/health', async (c) => {
+  // Cheap "are we alive" probe. Intentionally avoids heavy queries so the
+  // health endpoint can never itself be the cause of a CPU 1102 error.
+  let dbOk = false;
+  try {
+    await c.env.DB.prepare('SELECT 1 AS one').first();
+    dbOk = true;
+  } catch {
+    dbOk = false;
+  }
+  return c.json({
+    status: dbOk ? 'ok' : 'degraded',
+    service: 'portly-api',
+    timestamp: new Date().toISOString(),
+    database: dbOk ? 'connected' : 'disconnected',
+    version: '1.1.0',
+  });
 });
 
 // GET /api/sync-status — check when the last cron sync ran
@@ -960,10 +1262,196 @@ app.get('/api/admin/enrichment-status', async (c) => {
   });
 });
 
-// Scheduled handler — every 30 min, enrich top candidates
+// POST /api/admin/ingest-tick — generate dated variants for N base sailings
+app.post('/api/admin/ingest-tick', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const body = await c.req.json<{ max?: number }>().catch(() => ({} as any));
+  const result = await runIngestExpansionTick(c.env, { maxPerTick: body?.max ?? 10 });
+  await c.env.CACHE.put('ingest:last_tick', JSON.stringify({ ts: new Date().toISOString(), ...result }), { expirationTtl: 86400 * 7 });
+  return c.json(result);
+});
+
+// GET /api/admin/ingest-status — telemetry for ingestion expander
+app.get('/api/admin/ingest-status', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const lastTick = await c.env.CACHE.get('ingest:last_tick');
+  const counts = await c.env.DB.prepare(
+    `SELECT
+       (SELECT COUNT(*) FROM sailings) AS total,
+       (SELECT COUNT(*) FROM sailings WHERE id LIKE '%__v%m') AS synthetic,
+       (SELECT COUNT(*) FROM sailings WHERE id NOT LIKE '%__v%m') AS base`
+  ).first();
+  return c.json({ lastTick: lastTick ? JSON.parse(lastTick) : null, db: counts });
+});
+
+// GET /api/admin/ingest-debug — debug the base sailing selector
+app.get('/api/admin/ingest-debug', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const debug = await debugBaseSailingSelect(c.env, 20);
+  return c.json(debug);
+});
+
+// POST /api/admin/alert-eval-tick — scan active alerts and queue triggered
+app.post('/api/admin/alert-eval-tick', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const body = await c.req.json<{ max?: number }>().catch(() => ({} as any));
+  const result = await runAlertEvaluationTick(c.env, { maxPerTick: body?.max ?? 25 });
+  await c.env.CACHE.put('alerts:last_eval_tick', JSON.stringify({ ts: new Date().toISOString(), ...result }), { expirationTtl: 86400 * 7 });
+  return c.json(result);
+});
+
+// POST /api/admin/alert-dispatch-tick — drain pending alert_emails
+app.post('/api/admin/alert-dispatch-tick', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const body = await c.req.json<{ max?: number }>().catch(() => ({} as any));
+  const result = await runAlertDispatchTick(c.env, { maxPerTick: body?.max ?? 10 });
+  await c.env.CACHE.put('alerts:last_dispatch_tick', JSON.stringify({ ts: new Date().toISOString(), ...result }), { expirationTtl: 86400 * 7 });
+  return c.json(result);
+});
+
+// GET /api/admin/alert-status — alert pipeline telemetry
+app.get('/api/admin/alert-status', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const lastEval = await c.env.CACHE.get('alerts:last_eval_tick');
+  const lastDispatch = await c.env.CACHE.get('alerts:last_dispatch_tick');
+  const counts = await c.env.DB.prepare(
+    `SELECT
+       (SELECT COUNT(*) FROM alerts WHERE is_active = 1) AS active_subs,
+       (SELECT COUNT(*) FROM alert_emails WHERE status = 'pending') AS pending_emails,
+       (SELECT COUNT(*) FROM alert_emails WHERE status = 'sent') AS sent_emails,
+       (SELECT COUNT(*) FROM alert_emails WHERE status = 'failed') AS failed_emails`
+  ).first();
+  return c.json({
+    lastEval: lastEval ? JSON.parse(lastEval) : null,
+    lastDispatch: lastDispatch ? JSON.parse(lastDispatch) : null,
+    db: counts,
+    provider: c.env.RESEND_API_KEY ? 'resend' : 'mock',
+  });
+});
+
+// GET /api/admin/alerts-pending — admin can read queued-but-unsent alerts
+// (useful if Resend isn't wired yet — retrieve with curl and forward manually)
+app.get('/api/admin/alerts-pending', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const max = Number(c.req.query('max') || 20);
+  const { results } = await c.env.DB.prepare(
+    `SELECT ae.id, ae.subject, ae.sailing_id, ae.queued_at, ae.fingerprint,
+            a.email AS to_email
+       FROM alert_emails ae
+  LEFT JOIN alerts a ON a.sailing_id = ae.sailing_id AND a.is_active = 1
+      WHERE ae.status = 'pending'
+      ORDER BY ae.queued_at ASC
+      LIMIT ?`
+  ).bind(max).all();
+  return c.json({ count: (results || []).length, alerts: results });
+});
+
+// GET /api/admin/alert-email/:id — fetch full HTML body of a queued alert
+// (so an admin operator can copy/paste it into a manual send before Resend)
+app.get('/api/admin/alert-email/:id', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const id = Number(c.req.param('id'));
+  const row = await c.env.DB.prepare(
+    `SELECT ae.id, ae.subject, ae.html_body, ae.sailing_snapshot, ae.status, ae.queued_at,
+            a.email AS to_email
+       FROM alert_emails ae
+  LEFT JOIN alerts a ON a.sailing_id = ae.sailing_id AND a.is_active = 1
+      WHERE ae.id = ?`
+  ).bind(id).first();
+  if (!row) return c.json({ error: 'not found' }, 404);
+  return c.json(row);
+});
+
+// GET /api/metrics — public analytics snapshot (no auth, aggregate data only)
+app.get('/api/metrics', async (c) => {
+  const snapshot = await getMetricsSnapshot(c.env);
+  return c.json(snapshot);
+});
+
+// GET /api/admin/metrics — full analytics snapshot (auth: SCRAPER_SECRET) — same payload as /api/metrics
+app.get('/api/admin/metrics', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const snapshot = await getMetricsSnapshot(c.env);
+  return c.json(snapshot);
+});
+
+// POST /api/admin/bulk-import-tick — generate many synthetic sailings
+// Note: Cloudflare Workers caps sub‑requests at 50/invocation, so the defaults
+// here are intentionally small (5 bases × 4 variants = 20 inserts).
+app.post('/api/admin/bulk-import-tick', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const body = await c.req.json<{ maxBases?: number; variantsPerBase?: number }>().catch(() => ({} as any));
+  // Hard cap to stay under the 50‑subrequest limit even on retries.
+  const maxBases = Math.min(body?.maxBases ?? 5, 8);
+  const variantsPerBase = Math.min(body?.variantsPerBase ?? 4, 5);
+  const result = await runBulkImportTick(c.env, { maxBases, variantsPerBase });
+  return c.json(result);
+});
+
+// POST /api/admin/external-line-sync — refresh external_line_info
+app.post('/api/admin/external-line-sync', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const result = await runExternalLineSyncTick(c.env);
+  return c.json(result);
+});
+
+// Scheduled handler — every 30 min:
+//   (1) bulk‑import a small slice of additional synthetic sailings
+//   (2) sync external line data (or skip if recently done)
+//   (3) expand sailings pool (until all bases covered, then idle)
+//   (4) enrich top 5 AI candidates
+//   (5) evaluate active alerts + queue triggered
+//   (6) dispatch pending alert_emails via Resend (or mock if no key)
 const scheduledHandler = async (ev: ScheduledController, env: Env, ctx: ExecutionContext) => {
-  const s = await runEnrichmentTick(env);
-  await env.CACHE.put('scheduled:enrichment_last_run', JSON.stringify({ ts: new Date().toISOString(), ...s }), { expirationTtl: 86400 * 7 });
+  // 1) Bulk import — generates up to ~20 sailings per tick (sub‑request safe)
+  const bulk = await runBulkImportTick(env, { maxBases: 4, variantsPerBase: 4 });
+  await env.CACHE.put('bulk:last_tick', JSON.stringify({ ts: new Date().toISOString(), ...bulk }), { expirationTtl: 86400 * 7 });
+
+  // 2) External line sync — only if it hasn't run in last 24h
+  const lastSync = await env.CACHE.get('external_lines:last_sync');
+  const stale = !lastSync || (Date.now() - Date.parse(JSON.parse(lastSync).ts) > 86400_000);
+  if (stale) {
+    const sync = await runExternalLineSyncTick(env);
+    await env.CACHE.put('external_lines:last_sync', JSON.stringify({ ts: new Date().toISOString(), ...sync }), { expirationTtl: 86400 * 7 });
+  }
+
+  // 3) Ingestion: expand 5 base sailings per tick
+  const ingest = await runIngestExpansionTick(env, { maxPerTick: 5 });
+  await env.CACHE.put('ingest:last_tick', JSON.stringify({ ts: new Date().toISOString(), ...ingest }), { expirationTtl: 86400 * 7 });
+
+  // 4) Enrichment: top 5 candidates (now includes newly-expanded sailings)
+  const enrich = await runEnrichmentTick(env);
+  await env.CACHE.put('scheduled:enrichment_last_run', JSON.stringify({ ts: new Date().toISOString(), ...enrich }), { expirationTtl: 86400 * 7 });
+
+  // 5) Alert evaluation — scan 25 subscriptions per tick
+  const alertEval = await runAlertEvaluationTick(env, { maxPerTick: 25 });
+  await env.CACHE.put('alerts:last_eval_tick', JSON.stringify({ ts: new Date().toISOString(), ...alertEval }), { expirationTtl: 86400 * 7 });
+
+  // 6) Alert dispatch — drain 10 pending emails per tick
+  const alertDispatch = await runAlertDispatchTick(env, { maxPerTick: 10 });
+  await env.CACHE.put('alerts:last_dispatch_tick', JSON.stringify({ ts: new Date().toISOString(), ...alertDispatch }), { expirationTtl: 86400 * 7 });
 };
 
 export default {

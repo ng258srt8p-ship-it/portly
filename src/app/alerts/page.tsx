@@ -2,6 +2,7 @@
 
 import Header from '@/components/layout/Header';
 import Footer from '@/components/Footer';
+import MyAlertsPanel from '@/components/alerts/MyAlertsPanel';
 import { useState, useEffect } from 'react';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -165,6 +166,8 @@ export default function AlertsPage() {
                 </form>
               </div>
             </div>
+
+            <MyAlertsPanel />
           </div>
         </div>
       </main>

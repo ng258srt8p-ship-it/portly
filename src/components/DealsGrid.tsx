@@ -21,26 +21,28 @@ const badgeStyles: Record<BadgeType, string> = {
   gold: 'bg-coral-soft text-coral-ink border-coral-ink/15',
 };
 
-const LIMIT_OPTIONS = [5, 10, 20, 0] as const; // 0 = all
+const LIMIT_OPTIONS = [5, 10, 20, 'all'] as const; // 'all' = 500 — see fetchDeals
 
-const LIMIT_LABELS: Record<number, string> = {
+const LIMIT_LABELS: Record<number | 'all', string> = {
   5: '5',
   10: '10',
   20: '20',
-  0: 'All',
+  all: 'All',
 };
 
-function getStorageLimit(): number {
-  if (typeof window === 'undefined') return 0; // 0 = All
+function getStorageLimit(): number | 'all' {
+  if (typeof window === 'undefined') return 20; // sensible SSR default
   const stored = localStorage.getItem('dealsLimit');
-  const parsed = stored ? parseInt(stored, 10) : 0;
-  return LIMIT_OPTIONS.includes(parsed as any) ? parsed : 0;
+  if (!stored) return 20;
+  if (stored === 'all') return 'all';
+  const parsed = parseInt(stored, 10);
+  return LIMIT_OPTIONS.includes(parsed as any) && parsed > 0 ? parsed : 20;
 }
 
 export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
   const router = useRouter();
 
-  const [limit, setLimit] = useState(getStorageLimit);
+  const [limit, setLimit] = useState<number | 'all'>(getStorageLimit);
 
   const fetcher = useCallback(() => fetchDeals(limit, filters), [limit, filters]);
   const { data: rawDeals, loading, error, lastSyncedAt, refresh } = useLiveData(fetcher, { pollIntervalMs: 30000 });
@@ -58,7 +60,7 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
     return filtered;
   }, [rawDeals, filters.minPrice, filters.maxPrice]);
 
-  const setLimitAndPersist = (n: number) => {
+  const setLimitAndPersist = (n: number | 'all') => {
     setLimit(n);
     localStorage.setItem('dealsLimit', String(n));
   };

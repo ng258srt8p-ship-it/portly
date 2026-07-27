@@ -25,6 +25,7 @@ export default function Footer() {
               { label: "Price History Maps", href: "/history" },
               { label: "Solo Hub", href: "/solo" },
               { label: "Price Alerts", href: "/alerts" },
+              { label: "Settings", href: "/settings" },
             ]} />
             <FooterCol title="Company" links={[
               { label: "About", href: "/about" },

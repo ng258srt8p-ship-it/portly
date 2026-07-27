@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import Header from '@/components/layout/Header';
 import SearchHero from '@/components/search/SearchHero';
-import PriceComparisonTable from '@/components/PriceComparisonTable';
 import TrustStrip from '@/components/TrustStrip';
+import PriceComparisonTable from '@/components/PriceComparisonTable';
+import DealsGridLite from '@/components/DealsGridLite';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
 import MaterialIcon from '@/components/ui/MaterialIcon';
@@ -150,22 +151,36 @@ export default function HomePage() {
         {/* Trust Strip */}
         <TrustStrip />
 
-        {/* Explore Deals CTA — full deals page with filters & live data */}
-        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 text-center">
-          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo">Hot Deals on the Radar</span>
-          <h2 className="mt-3 font-display text-4xl font-extrabold text-ink sm:text-5xl">Find Your Perfect Voyage</h2>
-          <p className="mx-auto mt-4 max-w-sm text-ink-soft">
-            Every card is powered by live fare polling — we flag the sailings where the tide has genuinely turned in your favor.
-          </p>
-          <Link
-            href="/deals"
-            className="mt-8 inline-flex items-center gap-2 rounded-full bg-indigo px-6 py-3 text-sm font-bold text-white shadow-[0_8px_20px_-6px_rgba(42,68,231,0.55)] transition-all hover:bg-indigo-dark hover:shadow-[0_12px_28px_-8px_rgba(42,68,231,0.65)] active:scale-[0.97]"
-          >
-            <MaterialIcon name="explore" size="sm" />
-            Explore All Deals
-            <MaterialIcon name="arrow_forward" size="sm" />
-          </Link>
-        </div>
+        {/* Hot deals preview — show 6 actual cards on the homepage so the
+            page earns its keep rather than relying on a hero CTA only.            */}
+        <section
+          aria-labelledby="home-deals-heading"
+          className="mx-auto max-w-7xl px-4 pt-12 sm:px-6"
+          id="home-deals"
+        >
+          <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-[0.14em] text-indigo">Hot Deals on the Radar</span>
+              <h2
+                id="home-deals-heading"
+                className="mt-3 font-display text-4xl font-extrabold text-ink sm:text-5xl"
+              >
+                Find Your Perfect Voyage
+              </h2>
+            </div>
+            <Link
+              href="/deals"
+              className="inline-flex items-center gap-2 rounded-full bg-indigo px-6 py-3 text-sm font-bold text-white shadow-[0_8px_20px_-6px_rgba(42,68,231,0.55)] transition-all hover:bg-indigo-dark active:scale-[0.97]"
+            >
+              <MaterialIcon name="explore" size="sm" />
+              Explore All Deals
+              <MaterialIcon name="arrow_forward" size="sm" />
+            </Link>
+          </div>
+          <div className="mt-8" data-testid="home-deals-grid">
+            <DealsGridLite />
+          </div>
+        </section>
 
         {/* Sample fare preview — drives both SEO content and product UI */}
         <section className="mx-auto max-w-7xl px-4 pb-24 sm:px-6" id="sample-pricing">
