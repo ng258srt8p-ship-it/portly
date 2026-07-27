@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { BadgeType, Deal, DealFilters as Filters } from '@/types/cruise';
 import Sparkline from '@/components/ui/Sparkline';
 import SyncStatus from '@/components/ui/SyncStatus';
-import { fetchDeals } from '@/services/cruiseApi';
+import { fetchDeals, fetchAllFilterOptions } from '@/services/cruiseApi';
 import MaterialIcon from '@/components/ui/MaterialIcon';
 import { useLiveData } from '@/hooks/useLiveData';
 import FilterSelectionGrid from '@/components/FilterSelectionGrid';
@@ -47,6 +47,45 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
   const fetcher = useCallback(() => fetchDeals(limit, filters), [limit, filters]);
   const { data: rawDeals, loading, error, lastSyncedAt, refresh } = useLiveData(fetcher, { pollIntervalMs: 30000 });
 
+  // Pull the full filter catalog (all cruise lines, destinations, ships, ports,
+  // regions) from the cheap /api/filters endpoint. We use this for the filter
+  // dropdowns so they always reflect the entire data set, not just the current
+  // page of deals (which would otherwise disable filters when the page happens
+  // to contain a single line/ship/etc.).
+  const [catalog, setCatalog] = useState<{
+    cruiseLines: string[];
+    destinations: string[];
+    ships: string[];
+    departurePorts: string[];
+    departureRegions: string[];
+  }>({
+    cruiseLines: [],
+    destinations: [],
+    ships: [],
+    departurePorts: [],
+    departureRegions: [],
+  });
+  useEffect(() => {
+    let cancelled = false;
+    fetchAllFilterOptions()
+      .then((d) => {
+        if (cancelled) return;
+        setCatalog({
+          cruiseLines: (d.cruiseLines || []).slice().sort(),
+          destinations: (d.destinations || []).slice().sort(),
+          ships: (d.ships || []).slice().sort(),
+          departurePorts: (d.departurePorts || (d as any).ports || []).slice().sort(),
+          departureRegions: (d.departureRegions || (d as any).regions || []).slice().sort(),
+        });
+      })
+      .catch(() => {
+        // Non-fatal: filter dropdowns will fall back to current-page data
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Apply client-side filters that the API doesn't support (price range)
   const deals = useMemo(() => {
     if (!rawDeals) return rawDeals;
@@ -65,17 +104,33 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
     localStorage.setItem('dealsLimit', String(n));
   };
 
-  // Extract available filter options from full deals data
+  // Extract available filter options. We prefer the full /api/filters catalog
+  // (which lists every line/ship/region/destination across the entire data set)
+  // and only fall back to the current page of deals if the catalog hasn't
+  // loaded yet. This prevents filters from being wrongly disabled when the
+  // current 20-deal page happens to contain a single cruise line, etc.
   const availableOptions = useMemo(() => {
-    if (!deals) return { lines: [], destinations: [], ports: [], regions: [], ships: [] };
+    if (!deals && catalog.cruiseLines.length === 0) {
+      return { lines: [], destinations: [], ports: [], regions: [], ships: [] };
+    }
     return {
-      lines: [...new Set(deals.map((d) => d.cruiseLine))].sort(),
-      destinations: [...new Set(deals.map((d) => d.destination))].sort(),
-      ports: [...new Set(deals.map((d) => d.departurePort))].sort(),
-      regions: [...new Set(deals.map((d) => d.departureRegion).filter(Boolean))].sort() as string[],
-      ships: [...new Set(deals.map((d) => d.ship))].sort(),
+      lines: catalog.cruiseLines.length > 0
+        ? catalog.cruiseLines
+        : [...new Set((deals || []).map((d) => d.cruiseLine))].sort(),
+      destinations: catalog.destinations.length > 0
+        ? catalog.destinations
+        : [...new Set((deals || []).map((d) => d.destination))].sort(),
+      ports: catalog.departurePorts.length > 0
+        ? catalog.departurePorts
+        : [...new Set((deals || []).map((d) => d.departurePort))].sort(),
+      regions: catalog.departureRegions.length > 0
+        ? catalog.departureRegions
+        : [...new Set((deals || []).map((d) => d.departureRegion).filter(Boolean))].sort() as string[],
+      ships: catalog.ships.length > 0
+        ? catalog.ships
+        : [...new Set((deals || []).map((d) => d.ship))].sort(),
     };
-  }, [deals]);
+  }, [deals, catalog]);
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6" id="deals">

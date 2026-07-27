@@ -39,7 +39,7 @@ export default function MyAlertsPanel() {
         return;
       }
       const j = await res.json();
-      setAlerts(Array.isArray(j.alerts) ? j.alerts : []);
+      setAlerts((Array.isArray(j.alerts) ? j.alerts : []).filter((a: AlertRow) => a.is_active === 1));
     } catch (e: any) {
       setError(e.message || 'Network error');
       setAlerts([]);

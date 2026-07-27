@@ -90,10 +90,12 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [tickResult, setTickResult] = useState<string | null>(null);
 
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+
   const fetchMetrics = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/metrics');
+      const res = await fetch(`${API_BASE}/api/metrics`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setMetrics(data);
@@ -114,9 +116,9 @@ export default function DashboardPage() {
       // we route through the CF Worker which validates auth. Since these are admin
       // operations on a local dev setup with no customers, we can call them.
       // In production these would be gated.
-      const evalRes = await fetch('/api/admin/alert-eval-tick', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ max: 10 }) });
+      const evalRes = await fetch(`${API_BASE}/api/admin/alert-eval-tick`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ max: 10 }) });
       const evalBody = await evalRes.json();
-      const dispatchRes = await fetch('/api/admin/alert-dispatch-tick', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ max: 10 }) });
+      const dispatchRes = await fetch(`${API_BASE}/api/admin/alert-dispatch-tick`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ max: 10 }) });
       const dispatchBody = await dispatchRes.json();
       setTickResult(`Eval: ${JSON.stringify(evalBody)}\nDispatch: ${JSON.stringify(dispatchBody)}`);
       await fetchMetrics();
