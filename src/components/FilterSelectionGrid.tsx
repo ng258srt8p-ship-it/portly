@@ -28,6 +28,12 @@ export interface FilterSelectionGridProps {
   hasActiveFilters?: boolean;
   onClear?: () => void;
   disabled?: boolean;
+  /** Optional per-option result counts (e.g. "Royal Caribbean (42)"). */
+  lineCounts?: Record<string, number>;
+  destinationCounts?: Record<string, number>;
+  shipCounts?: Record<string, number>;
+  portCounts?: Record<string, number>;
+  regionCounts?: Record<string, number>;
 }
 
 export type NightOption = '0-3' | '4-7' | '8-14';
@@ -67,14 +73,28 @@ function normalizeLineName(line: string): string {
     .trim();
 }
 
-function buildLineOptions(lines: string[]): FilterOption[] {
-  const seen = new Set<string>();
-  return lines.filter((line) => {
+function buildLineOptions(
+  lines: string[],
+  counts?: Record<string, number>
+): FilterOption[] {
+  const seen = new Map<string, { value: string; label: string; count?: number }>();
+  lines.forEach((line) => {
     const normalized = normalizeLineName(line);
-    if (seen.has(normalized)) return false;
-    seen.add(normalized);
-    return true;
-  }).map((line) => ({ value: line, label: normalizeLineName(line) }));
+    if (seen.has(normalized)) {
+      // Aggregate counts when the same line appears under two raw names
+      const existing = seen.get(normalized)!;
+      const c1 = existing.count || 0;
+      const c2 = counts?.[line] || 0;
+      existing.count = c1 + c2;
+      return;
+    }
+    seen.set(normalized, {
+      value: line,
+      label: normalized,
+      count: counts?.[line],
+    });
+  });
+  return Array.from(seen.values());
 }
 
 // ============================================================================
@@ -201,11 +221,16 @@ function MultiSelectDropdown({
                   focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50
                 `}
               >
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-2 w-full">
                   {isSelected && (
                     <MaterialIcon name="check" size="xs" className="text-indigo flex-shrink-0" />
                   )}
                   <span className="truncate">{option.label}</span>
+                  {typeof option.count === 'number' && (
+                    <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-black/[0.04] px-1.5 text-[10px] font-bold text-ink-soft">
+                      {option.count}
+                    </span>
+                  )}
                 </span>
               </button>
             );
@@ -561,6 +586,11 @@ export default function FilterSelectionGrid({
   hasActiveFilters = false,
   onClear,
   disabled = false,
+  lineCounts,
+  destinationCounts,
+  shipCounts,
+  portCounts,
+  regionCounts,
 }: FilterSelectionGridProps) {
   // Mobile collapse state
   const [expanded, setExpanded] = useState(false);
@@ -582,16 +612,16 @@ export default function FilterSelectionGrid({
   ].filter(Boolean).length;
 
   // Prepare line options
-  const lineOptions = buildLineOptions(availableLines);
+  const lineOptions = buildLineOptions(availableLines, lineCounts);
   const regionOptions: FilterOption[] = availableRegions
     .sort()
-    .map((region) => ({ value: region, label: region }));
+    .map((region) => ({ value: region, label: region, count: regionCounts?.[region] }));
   const destinationOptions: FilterOption[] = availableDestinations
     .sort()
-    .map((dest) => ({ value: dest, label: dest }));
+    .map((dest) => ({ value: dest, label: dest, count: destinationCounts?.[dest] }));
   const shipOptions: FilterOption[] = [...new Set(availableShips)]
     .sort()
-    .map((ship) => ({ value: ship, label: ship }));
+    .map((ship) => ({ value: ship, label: ship, count: shipCounts?.[ship] }));
 
   // Get current nights option
   const currentNights = getNightsOption(filters.minNights, filters.maxNights);

@@ -9,10 +9,18 @@ import { fetchDeals, fetchAllFilterOptions } from '@/services/cruiseApi';
 import MaterialIcon from '@/components/ui/MaterialIcon';
 import { useLiveData } from '@/hooks/useLiveData';
 import FilterSelectionGrid from '@/components/FilterSelectionGrid';
+import Pagination from '@/components/Pagination';
+import ActiveFilterPills from '@/components/ActiveFilterPills';
+import { useFilterCatalog } from '@/hooks/useFilterCatalog';
 
 interface DealsGridProps {
   filters: Filters;
   onFilterChange: (filters: Filters) => void;
+  page: number;
+  onPageChange: (page: number) => void;
+  limit: number | 'all';
+  onLimitChange: (limit: number | 'all') => void;
+  onReset: () => void;
 }
 
 const badgeStyles: Record<BadgeType, string> = {
@@ -21,30 +29,53 @@ const badgeStyles: Record<BadgeType, string> = {
   gold: 'bg-coral-soft text-coral-ink border-coral-ink/15',
 };
 
-const LIMIT_OPTIONS = [5, 10, 20, 'all'] as const; // 'all' = 500 — see fetchDeals
-
+// Pagination: 24 per page is the default. We fetch up to limit rows from the
+// worker (which caps at 500), so for "all" mode we still have a hard ceiling.
+const LIMIT_OPTIONS = [12, 24, 48, 96, 'all'] as const;
 const LIMIT_LABELS: Record<number | 'all', string> = {
-  5: '5',
-  10: '10',
-  20: '20',
+  12: '12',
+  24: '24',
+  48: '48',
+  96: '96',
   all: 'All',
 };
 
 function getStorageLimit(): number | 'all' {
-  if (typeof window === 'undefined') return 20; // sensible SSR default
+  if (typeof window === 'undefined') return 24;
   const stored = localStorage.getItem('dealsLimit');
-  if (!stored) return 20;
+  if (!stored) return 24;
   if (stored === 'all') return 'all';
   const parsed = parseInt(stored, 10);
-  return LIMIT_OPTIONS.includes(parsed as any) && parsed > 0 ? parsed : 20;
+  return LIMIT_OPTIONS.includes(parsed as any) && parsed > 0 ? (parsed as number) : 24;
 }
 
-export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
+export default function DealsGrid({
+  filters,
+  onFilterChange,
+  page,
+  onPageChange,
+  limit,
+  onLimitChange,
+  onReset,
+}: DealsGridProps) {
   const router = useRouter();
 
-  const [limit, setLimit] = useState<number | 'all'>(getStorageLimit);
+  // If parent didn't supply a limit (legacy prop drilling), fall back to localStorage.
+  // We only use the local one if the prop is undefined.
+  const [localLimit, setLocalLimit] = useState<number | 'all'>(getStorageLimit);
+  const effectiveLimit: number | 'all' = limit ?? localLimit;
+  const setLimitAndPersist = (n: number | 'all') => {
+    setLocalLimit(n);
+    localStorage.setItem('dealsLimit', String(n));
+    if (onLimitChange) onLimitChange(n);
+  };
 
-  const fetcher = useCallback(() => fetchDeals(limit, filters), [limit, filters]);
+  // Fetch enough rows to power pagination. 'all' = 500 (worker cap).
+  const fetchLimit: number = effectiveLimit === 'all' ? 500 : Math.max(effectiveLimit * page, 96);
+  const fetcher = useCallback(
+    () => fetchDeals(fetchLimit, filters),
+    [fetchLimit, filters]
+  );
   const { data: rawDeals, loading, error, lastSyncedAt, refresh } = useLiveData(fetcher, { pollIntervalMs: 30000 });
 
   // Pull the full filter catalog (all cruise lines, destinations, ships, ports,
@@ -52,39 +83,7 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
   // dropdowns so they always reflect the entire data set, not just the current
   // page of deals (which would otherwise disable filters when the page happens
   // to contain a single line/ship/etc.).
-  const [catalog, setCatalog] = useState<{
-    cruiseLines: string[];
-    destinations: string[];
-    ships: string[];
-    departurePorts: string[];
-    departureRegions: string[];
-  }>({
-    cruiseLines: [],
-    destinations: [],
-    ships: [],
-    departurePorts: [],
-    departureRegions: [],
-  });
-  useEffect(() => {
-    let cancelled = false;
-    fetchAllFilterOptions()
-      .then((d) => {
-        if (cancelled) return;
-        setCatalog({
-          cruiseLines: (d.cruiseLines || []).slice().sort(),
-          destinations: (d.destinations || []).slice().sort(),
-          ships: (d.ships || []).slice().sort(),
-          departurePorts: (d.departurePorts || (d as any).ports || []).slice().sort(),
-          departureRegions: (d.departureRegions || (d as any).regions || []).slice().sort(),
-        });
-      })
-      .catch(() => {
-        // Non-fatal: filter dropdowns will fall back to current-page data
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const catalog = useFilterCatalog();
 
   // Apply client-side filters that the API doesn't support (price range)
   const deals = useMemo(() => {
@@ -99,10 +98,58 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
     return filtered;
   }, [rawDeals, filters.minPrice, filters.maxPrice]);
 
-  const setLimitAndPersist = (n: number | 'all') => {
-    setLimit(n);
-    localStorage.setItem('dealsLimit', String(n));
-  };
+  // CASCADING: when cruiseLine is selected, only show ships that appear with
+  // that line in the current deals data. This is the source of truth for the
+  // "Ship" dropdown so changing the Line filter narrows the Ship list.
+  // We also auto-clear any selected ship that doesn't belong to the new line.
+  const cascadingShips = useMemo(() => {
+    const allShips = catalog.ships.length > 0
+      ? catalog.ships
+      : [...new Set((deals || []).map((d) => d.ship))].sort();
+    const selectedLines = filters.cruiseLine || [];
+    if (selectedLines.length === 0 || !deals) return allShips;
+    return [...new Set(
+      deals
+        .filter((d) => selectedLines.includes(d.cruiseLine))
+        .map((d) => d.ship)
+    )].sort();
+  }, [deals, catalog.ships, filters.cruiseLine]);
+
+  useEffect(() => {
+    const selectedLines = filters.cruiseLine || [];
+    const selectedShips = filters.ship || [];
+    if (selectedLines.length === 0 || selectedShips.length === 0 || !deals) return;
+    // Drop any ship that doesn't exist for at least one selected line.
+    const validShips = new Set(
+      deals
+        .filter((d) => selectedLines.includes(d.cruiseLine))
+        .map((d) => d.ship)
+    );
+    const pruned = selectedShips.filter((s) => validShips.has(s));
+    if (pruned.length !== selectedShips.length) {
+      onFilterChange({ ...filters, ship: pruned.length ? pruned : undefined });
+    }
+  }, [filters, deals, onFilterChange]);
+
+  // Per-option result counts (e.g. "Royal Caribbean (42)"). Computed from the
+  // current deal set so badges always reflect post-filter totals.
+  const dealCounts = useMemo(() => {
+    const counts = {
+      lines: new Map<string, number>(),
+      destinations: new Map<string, number>(),
+      ports: new Map<string, number>(),
+      regions: new Map<string, number>(),
+      ships: new Map<string, number>(),
+    };
+    (deals || []).forEach((d) => {
+      counts.lines.set(d.cruiseLine, (counts.lines.get(d.cruiseLine) || 0) + 1);
+      counts.destinations.set(d.destination, (counts.destinations.get(d.destination) || 0) + 1);
+      counts.ports.set(d.departurePort, (counts.ports.get(d.departurePort) || 0) + 1);
+      if (d.departureRegion) counts.regions.set(d.departureRegion, (counts.regions.get(d.departureRegion) || 0) + 1);
+      counts.ships.set(d.ship, (counts.ships.get(d.ship) || 0) + 1);
+    });
+    return counts;
+  }, [deals]);
 
   // Extract available filter options. We prefer the full /api/filters catalog
   // (which lists every line/ship/region/destination across the entire data set)
@@ -126,11 +173,9 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
       regions: catalog.departureRegions.length > 0
         ? catalog.departureRegions
         : [...new Set((deals || []).map((d) => d.departureRegion).filter(Boolean))].sort() as string[],
-      ships: catalog.ships.length > 0
-        ? catalog.ships
-        : [...new Set((deals || []).map((d) => d.ship))].sort(),
+      ships: cascadingShips,
     };
-  }, [deals, catalog]);
+  }, [deals, catalog, cascadingShips]);
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6" id="deals">
@@ -162,6 +207,11 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
         </div>
        )}
 
+      {/* Active filter pills — quick-remove tags + clear-all */}
+      {deals && !loading && (
+        <ActiveFilterPills filters={filters} onChange={onFilterChange} onReset={onReset} />
+      )}
+
       {/* Filter bar */}
       {deals && !loading && (
         <div className="mb-5">
@@ -172,6 +222,11 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
           availableRegions={availableOptions.regions}
           availableDestinations={availableOptions.destinations}
           availableShips={availableOptions.ships}
+          lineCounts={Object.fromEntries(dealCounts.lines)}
+          destinationCounts={Object.fromEntries(dealCounts.destinations)}
+          shipCounts={Object.fromEntries(dealCounts.ships)}
+          portCounts={Object.fromEntries(dealCounts.ports)}
+          regionCounts={Object.fromEntries(dealCounts.regions)}
           hasActiveFilters={Boolean(
             filters.cruiseLine?.length ||
             filters.destination?.length ||
@@ -188,34 +243,69 @@ export default function DealsGrid({ filters, onFilterChange }: DealsGridProps) {
         </div>
       )}
 
-      {/* Deal size selector + count */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm font-medium text-ink-soft">
-          {deals && !loading
-            ? `${deals.length} deal${deals.length !== 1 ? 's' : ''} available`
-            : 'Loading...'}
-        </p>
-        <div className="flex items-center gap-1.5 rounded-full border border-black/[0.06] bg-white px-2 py-1 shadow-float">
-                  <span className="mr-1 pl-1 text-[11px] font-semibold text-ink-soft">Show</span>
-                  {LIMIT_OPTIONS.map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setLimitAndPersist(n)}
-                      className={`min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full px-4 py-2.5 text-xs font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 ${
-                        limit === n
-                          ? 'bg-ink text-white shadow-sm'
-                          : 'text-ink-soft hover:text-ink hover:bg-black/[0.04]'
-                      }`}
-                    >
-                      {LIMIT_LABELS[n]}
-                    </button>
-                  ))}
-                </div>
-      </div>
+      {/* Pagination math: slice the current page out of the deals array */}
+      {(() => {
+        const totalDeals = deals?.length ?? 0;
+        const pageSize: number = effectiveLimit === 'all' ? Math.max(totalDeals, 1) : effectiveLimit;
+        const totalPages: number = pageSize > 0 ? Math.max(1, Math.ceil(totalDeals / pageSize)) : 1;
+        const safePage = Math.min(Math.max(1, page || 1), totalPages);
+        const startIdx = (safePage - 1) * pageSize;
+        const pageDeals: Deal[] | null | undefined =
+          deals == null ? deals : deals.slice(startIdx, startIdx + pageSize);
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {renderGridContent(loading, deals, refresh, router, onFilterChange)}
-      </div>
+        return (
+          <>
+            {/* Count + page-size selector */}
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-medium text-ink-soft">
+                {deals && !loading
+                  ? `${totalDeals} deal${totalDeals !== 1 ? 's' : ''} available`
+                  : 'Loading...'}
+              </p>
+              <div className="flex items-center gap-1.5 rounded-full border border-black/[0.06] bg-white px-2 py-1 shadow-float">
+                <span className="mr-1 pl-1 text-[11px] font-semibold text-ink-soft">Show</span>
+                {LIMIT_OPTIONS.map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setLimitAndPersist(n)}
+                    data-testid={`limit-${n}`}
+                    className={`min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full px-4 py-2.5 text-xs font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 ${
+                      effectiveLimit === n
+                        ? 'bg-ink text-white shadow-sm'
+                        : 'text-ink-soft hover:text-ink hover:bg-black/[0.04]'
+                    }`}
+                  >
+                    {LIMIT_LABELS[n]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {renderGridContent(loading, pageDeals, refresh, router, onFilterChange, onReset)}
+            </div>
+
+            <Pagination
+              page={safePage}
+              totalPages={totalPages}
+              total={totalDeals}
+              pageSize={pageSize}
+              onPageChange={(p) => {
+                onPageChange?.(p);
+                // Smooth-scroll back to the top of the grid so the user sees
+                // the new page's results rather than the pagination at the bottom.
+                const target =
+                  typeof document !== 'undefined'
+                    ? document.getElementById('deals-filters')
+                    : null;
+                if (target && typeof target.scrollIntoView === 'function') {
+                  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
+            />
+          </>
+        );
+      })()}
     </section>
   );
 }
@@ -226,8 +316,9 @@ function renderGridContent(
   refresh: () => void,
   router: ReturnType<typeof useRouter>,
   onFilterChange: (filters: Filters) => void,
+  onReset: () => void,
 ) {
-  const onClearFilters = () => onFilterChange({});
+  const onClearFilters = onReset;
   if (loading && !deals) {
     return Array.from({ length: 6 }).map((_, i) => <DealCardSkeleton key={i} />);
   }
