@@ -19,13 +19,14 @@ export default function ItineraryTimeline({
 }: ItineraryTimelineProps) {
   if (!ports || ports.length === 0) {
     return (
-      <div className="rounded-3xl border border-black/[0.05] bg-white p-4 shadow-float">
-        <h2 className="mb-4 font-display text-2xl font-bold text-ink">Itinerary</h2>
+      <div className="rounded-3xl border border-black/[0.05] bg-white p-5 sm:p-6 shadow-xs">
+        <h2 className="mb-4 font-display text-2xl font-bold text-ink">
+          Itinerary
+        </h2>
         <p className="text-ink-soft">No itinerary details available for this sailing.</p>
       </div>
     );
   }
-
   const isFirst = (i: number) => i === 0;
   const isLast = (i: number) => i === ports.length - 1;
 
@@ -58,16 +59,16 @@ export default function ItineraryTimeline({
               </div>
 
               {/* Port card */}
-              <div className="min-w-0 flex-1 pt-1.5">
-                <p className="font-display text-lg font-bold text-ink">{port}</p>
-                <p className="text-xs text-ink-soft">
-                  {isFirst(i)
-                    ? `Embarkation · ${departurePort}`
-                    : isLast(i)
-                      ? `Debarkation`
-                      : `${daysPerSegment} night${daysPerSegment > 1 ? 's' : ''} at sea`}
-                </p>
-              </div>
+                            <div className="min-w-0 flex-1 pt-2">
+                              <p className="font-display text-lg font-bold text-ink">{port}</p>
+                              <p className="text-xs text-ink-soft">
+                                {isFirst(i)
+                                  ? `Embarkation · ${departurePort}`
+                                  : isLast(i)
+                                    ? 'Debarkation'
+                                    : `${daysPerSegment} night${daysPerSegment > 1 ? 's' : ''} at sea`}
+                              </p>
+                            </div>
 
               {/* Arrow connector (desktop) */}
               {!isLast(i) && (

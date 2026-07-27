@@ -12,6 +12,8 @@ import PriceHistoryPanel from '@/components/sailing/PriceHistoryPanel';
 import EnhancedDealAnalysis from '@/components/sailing/EnhancedDealAnalysis';
 import EnhancedPriceForecast from '@/components/sailing/EnhancedPriceForecast';
 import SailingInfoPanel from '@/components/sailing/SailingInfoPanel';
+import SailingSubNav from '@/components/sailing/SailingSubNav';
+import MobileBookingBar from '@/components/sailing/MobileBookingBar';
 
 interface SailingData {
   sailing: {
@@ -53,12 +55,12 @@ export default function SailingDetailPage() {
     return (
       <>
         <Header />
-        <main className="min-h-screen pt-20 px-4 sm:px-6">
+        <main className="min-h-screen scroll-pt-24 pt-20 pb-20 md:pb-8 px-4 sm:px-6">
           <div className="mx-auto max-w-7xl">
             <div className="rounded-3xl border border-coral-ink/15 bg-coral-soft p-8">
-              <p className="text-coral-ink">No sailing ID provided.</p>
-            </div>
-          </div>
+              <p className="text-coral-ink">No sailing ID provided</p>
+           </div>
+         </div>
         </main>
         <Footer />
       </>
@@ -68,7 +70,27 @@ export default function SailingDetailPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen pt-20 px-4 sm:px-6">
+      {/* 
+        Z-index stack (sailing detail page):
+          Header         z-50 (fixed top)
+          Sub-nav        z-40 (sticky top-16)
+          Modal/cards    z-20
+          Hero content   z-10
+        scroll-pt-24 ensures anchor jumps land below the sticky bars.
+      */}
+      {/* Define sections for sub-nav and scroll-mt-32 */}
+      <SailingSubNav 
+        sections={[
+          { id: 'overview', label: 'Overview' },
+          { id: 'itinerary', label: 'Itinerary' },
+          { id: 'price-history', label: 'Price History' },
+          { id: 'deal-analysis', label: 'Deal Analysis' },
+          { id: 'cabins', label: 'Cabins' },
+          { id: 'forecast', label: 'Forecast' },
+          { id: 'ship-info', label: 'Ship Info' }
+        ]} 
+      />
+      <main className="min-h-screen scroll-pt-24 pt-20 pb-24 md:pb-12 px-4 sm:px-6 pb-[80px] sm:pb-0">
         <div className="mx-auto max-w-7xl">
           {loading && (
             <div className="space-y-6">
@@ -76,9 +98,9 @@ export default function SailingDetailPage() {
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <div className="h-64 animate-pulse rounded-3xl bg-black/[0.04]" />
                 <div className="h-64 animate-pulse rounded-3xl bg-black/[0.04]" />
-              </div>
+             </div>
               <div className="h-72 animate-pulse rounded-3xl bg-black/[0.04]" />
-            </div>
+           </div>
           )}
 
           {error && (
@@ -92,30 +114,32 @@ export default function SailingDetailPage() {
           )}
 
           {data && (
-            <div className="space-y-3">
+            <div className="space-y-8 sm:space-y-12">
               {/* Hero */}
-              <SailingHero
-                ship={data.sailing.ship}
-                line={data.sailing.line}
-                region={data.sailing.region}
-                port={data.sailing.port}
-                days={data.sailing.days}
-                departureDate={data.sailing.departureDate}
-                price={data.sailing.price || 0}
-                originalPrice={data.sailing.originalPrice || 0}
-                dropPercent={data.sailing.dropPercent || 0}
-                cabinType={data?.cabinBreakdown?.[0]?.cabinType || ''}
-              />
+              <section id="overview">
+                <SailingHero
+                  ship={data.sailing.ship}
+                  line={data.sailing.line}
+                  region={data.sailing.region}
+                  port={data.sailing.port}
+                  days={data.sailing.days}
+                  departureDate={data.sailing.departureDate}
+                  price={data.sailing.price || 0}
+                  originalPrice={data.sailing.originalPrice || 0}
+                  dropPercent={data.sailing.dropPercent || 0}
+                  cabinType={data?.cabinBreakdown?.[0]?.cabinType || ''}
+                />
+             </section>
 
               {/* Itinerary + Info 2-col on desktop */}
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <section id="itinerary" className="grid grid-cols-1 gap-6 lg:grid-cols-3 scroll-mt-32">
                 <div className="lg:col-span-2">
                   <ItineraryTimeline
                     ports={data.sailing.route}
                     days={data.sailing.days}
                     departurePort={data.sailing.port}
                   />
-                </div>
+               </div>
                 <div>
                   <SailingInfoPanel
                     ship={data.sailing.ship}
@@ -127,46 +151,68 @@ export default function SailingDetailPage() {
                     cabinCategories={data?.cabinBreakdown?.map((c: any) => c.cabinType).filter(Boolean) || undefined}
                     itinerary={data.sailing.route}
                   />
-                </div>
-              </div>
+               </div>
+             </section>
 
-              {/* Price History + Analysis 2-col */}
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {/* Price History */}
+              <section id="price-history" className="scroll-mt-32">
                 <PriceHistoryPanel
                   priceHistory={data.priceHistory}
                   currentPrice={data.sailing.price || 0}
                   cabinBreakdown={data.cabinBreakdown}
                 />
-              </div>
+             </section>
+
               {/* Enhanced Deal Analysis (Phase 2) */}
-              <EnhancedDealAnalysis
-                sailingId={data.sailing.sailing_id}
-                bookingUrl={data.sailing.bookingUrl}
-                bookingLabel={data.sailing.line}
-                context={{
-                  line: data.sailing.line,
-                  ship: data.sailing.ship,
-                  days: data.sailing.days,
-                  region: data.sailing.region,
-                  port: data.sailing.port,
-                  route: data.sailing.route,
-                  price: data.sailing.price || 0,
-                  originalPrice: data.sailing.originalPrice || 0,
-                  dropPercent: data.sailing.dropPercent || 0
-                }}
-              />
+              <section id="deal-analysis" className="scroll-mt-32">
+                <EnhancedDealAnalysis
+                  sailingId={data.sailing.sailing_id}
+                  bookingUrl={data.sailing.bookingUrl}
+                  bookingLabel={data.sailing.line}
+                  context={{
+                    line: data.sailing.line,
+                    ship: data.sailing.ship,
+                    days: data.sailing.days,
+                    region: data.sailing.region,
+                    port: data.sailing.port,
+                    route: data.sailing.route,
+                    price: data.sailing.price || 0,
+                    originalPrice: data.sailing.originalPrice || 0,
+                    dropPercent: data.sailing.dropPercent || 0
+                  }}
+                />
+             </section>
 
               {/* Cabin Pricing */}
-              <div id="cabin-pricing" className="rounded-2xl border border-black/[0.04] bg-white p-4 shadow-float">
-                <h2 className="mb-6 font-display text-2xl font-bold text-ink">Cabin Pricing</h2>
+              <section id="cabins" className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-xs sm:p-6 scroll-mt-32">
+                <div className="mb-5 flex items-center justify-between">
+                  <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">Cabin Pricing</h2>
+                  <span className="text-xs font-medium text-ink-soft">Per cabin, taxes & gratuities included</span>
+               </div>
                 <PriceComparisonTable sailingId={data.sailing.sailing_id} />
-              </div>
+             </section>
 
               {/* Enhanced Price Forecast (Phase 2) */}
-              <EnhancedPriceForecast sailingId={data.sailing.sailing_id} />
+              <section id="forecast" className="scroll-mt-32">
+                <EnhancedPriceForecast sailingId={data.sailing.sailing_id} />
+             </section>
 
-              {/* Book CTA + Track Price Alert */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center pb-8">
+              {/* Ship Info (sourced from SailingInfoPanel data — collapse if same) */}
+              <section id="ship-info" className="scroll-mt-32">
+                <SailingInfoPanel
+                  ship={data.sailing.ship}
+                  line={data.sailing.line}
+                  region={data.sailing.region}
+                  port={data.sailing.port}
+                  days={data.sailing.days}
+                  totalCabins={data?.cabinBreakdown?.length || undefined}
+                  cabinCategories={data?.cabinBreakdown?.map((c: any) => c.cabinType).filter(Boolean) || undefined}
+                  itinerary={data.sailing.route}
+                />
+             </section>
+
+              {/* Book CTA + Track Price Alert — moved into sticky mobile bar (PHASE 5) */}
+              <div className="hidden md:flex flex-col sm:flex-row gap-4 justify-center pt-4">
                 {data.sailing.bookingUrl && (
                   <a
                     href={data.sailing.bookingUrl}
@@ -176,7 +222,7 @@ export default function SailingDetailPage() {
                     className="rounded-full bg-indigo px-12 py-4 text-base font-bold text-white shadow-[0_12px_24px_-8px_rgba(42,68,231,0.55)] hover:bg-indigo-dark active:scale-[0.98]"
                   >
                     Book This Cruise
-                  </a>
+                 </a>
                 )}
                 <a
                   href={`/alerts?sailing=/sailing/${data.sailing.sailing_id}`}
@@ -184,11 +230,18 @@ export default function SailingDetailPage() {
                   className="rounded-full border-2 border-indigo px-12 py-4 text-base font-bold text-indigo hover:bg-indigo/5 active:scale-[0.98] transition-colors"
                 >
                   Track Price Alert
-                </a>
-              </div>
-            </div>
+               </a>
+             </div>
+           </div>
           )}
         </div>
+        {data?.sailing && (
+          <MobileBookingBar
+            price={data.sailing.price || 0}
+            bookingUrl={data.sailing.bookingUrl}
+            bookingLabel="Book Deal"
+          />
+        )}
       </main>
       <Footer />
     </>
