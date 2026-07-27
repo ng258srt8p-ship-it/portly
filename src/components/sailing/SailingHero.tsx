@@ -90,7 +90,7 @@ export default function SailingHero({
 
         {/* ===== RIGHT COLUMN (1/3 width) — Price Callout Card ===== */}
         <div className="lg:col-span-1">
-          <div className="flex flex-col items-center gap-4 p-4 bg-black/[0.2] rounded-2xl border border-black/[0.1]">
+          <div className="lg:sticky lg:top-28 flex flex-col items-center gap-4 p-4 bg-black/[0.2] rounded-2xl border border-black/[0.1]">
             {/* Large Monospace Fare */}
             <span className="font-mono-tab text-5xl font-black tracking-tight sm:text-6xl">
               ${roundedPrice.toLocaleString()}

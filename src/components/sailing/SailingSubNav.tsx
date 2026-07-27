@@ -22,21 +22,39 @@ export default function SailingSubNav({ sections }: SailingSubNavProps) {
 
   useEffect(() => {
     if (typeof window === 'undefined' || !sections.length) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActive(entry.target.id);
-          }
+
+    const updateActive = () => {
+      // Offset: header (98px) + subnav (~53px) = ~151px.
+      // Section is "active" when its top passes below this offset.
+      const offset = 160;
+      let current = sections[0].id;
+      for (const s of sections) {
+        const el = document.getElementById(s.id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= offset) {
+          current = s.id;
         }
-      },
-      { threshold: 0.3, rootMargin: '-20% 0px -80% 0px' }
-    );
-    sections.forEach((s) => {
-      const el = document.getElementById(s.id);
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
+      }
+      setActive(current);
+    };
+
+    // Run on scroll (throttled with rAF)
+    let ticking = false;
+    const onScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          updateActive();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    updateActive(); // Initial call
+
+    return () => window.removeEventListener('scroll', onScroll);
   }, [sections]);
 
   if (!sections.length) return null;
@@ -44,7 +62,7 @@ export default function SailingSubNav({ sections }: SailingSubNavProps) {
   return (
     <nav
       data-testid="sailing-subnav"
-      className="sticky top-[72px] z-30 w-full bg-white/80 backdrop-blur-md border-b border-black/[0.06] py-2 px-4"
+      className="sticky top-[100px] z-30 w-full bg-white/80 backdrop-blur-md border-b border-black/[0.06] py-2 px-4"
       aria-label="Section navigation"
     >
       <div className="flex overflow-x-auto space-x-4">

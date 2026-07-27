@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Sailing Detail Page Refactor', () => {
   test.use({
-    baseURL: 'https://c4063471.portly-1i0.pages.dev',
+    baseURL: 'https://ff54e564.portly-1i0.pages.dev',
   });
 
   test('sailing page loads, subnav visible, mobile booking bar works', async ({ page }) => {

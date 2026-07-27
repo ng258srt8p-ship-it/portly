@@ -90,7 +90,7 @@ export default function SailingDetailPage() {
           { id: 'ship-info', label: 'Ship Info' }
         ]} 
       />
-      <main className="min-h-screen scroll-pt-24 pt-20 pb-24 md:pb-12 px-4 sm:px-6 pb-[80px] sm:pb-0">
+      <main className="min-h-screen scroll-pt-28 pt-28 pb-24 md:pb-12 px-4 sm:px-6 pb-[80px] sm:pb-0">
         <div className="mx-auto max-w-7xl">
           {loading && (
             <div className="space-y-6">
@@ -116,7 +116,7 @@ export default function SailingDetailPage() {
           {data && (
             <div className="space-y-8 sm:space-y-12">
               {/* Hero */}
-              <section id="overview">
+              <section id="overview" className="scroll-mt-32">
                 <SailingHero
                   ship={data.sailing.ship}
                   line={data.sailing.line}
