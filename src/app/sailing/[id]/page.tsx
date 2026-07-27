@@ -17,7 +17,9 @@ export async function generateStaticParams() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://portly-api.vqh9mnrdbp.workers.dev';
 
   try {
-    const res = await fetch(`${apiUrl}/api/deals?limit=0`);
+    // limit=0 falls back to the worker default (20). Use limit=500 so we get
+    // every current sailing ID and the static export matches the live catalog.
+    const res = await fetch(`${apiUrl}/api/deals?limit=500`);
     if (!res.ok) throw new Error(`API returned ${res.status}`);
     const deals = await res.json() as Array<{ id: string }>;
     if (!Array.isArray(deals) || deals.length === 0) throw new Error('No deals returned');

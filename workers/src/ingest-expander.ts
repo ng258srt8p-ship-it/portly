@@ -95,24 +95,88 @@ function genFingerprint(baseFingerprint: string, sailDate: string): string {
   return `${baseFingerprint}__${sailDate}`;
 }
 
-/** Generate a fresh price history from base + 90-day trailing walk. */
-function genHistory(currentPrice: number, originalPrice: number, sailDate: string, id: string): number[] {
-  const out: number[] = [];
-  let p = originalPrice;
+/**
+ * Generate a fresh price history from base + 90-day trailing walk.
+ *
+ * Real cruise fare history isn't a clean diagonal — it's a noisy random walk
+ * with occasional promo bumps, mid-cycle price holds, and short-term spikes.
+ * We blend a deterministic drift toward `currentPrice` with per-step volatility
+ * and pick a "shape" (5 archetypes) so the resulting sparkline tells a story
+ * rather than looking like a straight line.
+ */
+function genHistory(currentPrice: number, originalPrice: string | number, sailDate: string, id: string): number[] {
+  const origPrice = typeof originalPrice === 'string' ? Number(originalPrice) : originalPrice;
   const steps = 12;  // ~12 data points (every ~7 days for 90 days)
-  for (let i = 0; i < steps; i++) {
-    // Walk down from original slowly toward current
-    const t = i / (steps - 1);
-    const base = originalPrice + (currentPrice - originalPrice) * t;
-    let hash = 0;
-    const key = id + i;
-    for (let j = 0; j < key.length; j++) hash = ((hash << 5) - hash + key.charCodeAt(j)) | 0;
-    const jitter = 1 + ((Math.abs(hash) % 1000) / 1000 - 0.5) * 0.04;
-    out.push(Math.max(50, Math.round(base * jitter)));
+  const out: number[] = [];
+
+  // Deterministic seed derived from the sailing identity so histories are stable
+  // across re-expansions but unique per sailing (no two cards render identically).
+  let seed = 0;
+  const seedKey = id + sailDate;
+  for (let i = 0; i < seedKey.length; i++) {
+    seed = ((seed << 5) - seed + seedKey.charCodeAt(i)) | 0;
   }
-  out.push(currentPrice);
+  // Mulberry32 PRNG for reproducible per-step volatility
+  let rngState = (Math.abs(seed) || 1) >>> 0;
+  const rand = () => {
+    rngState = (rngState + 0x6D2B79F5) >>> 0;
+    let t = rngState;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+
+  // Pick an archetype — each tells a different "story" on the sparkline.
+  // 0 = steady decline with volatility (most common)
+  // 1 = promo bump mid-cycle (price pulled then re-applied)
+  // 2 = V-shape (big drop then partial recovery then drop)
+  // 3 = stair-step (hold then sudden drop)
+  // 4 = early drop then stable (early-bird hold)
+  const archetype = Math.floor(rand() * 5);
+
+  // Build the trend component per archetype as a fraction of the way from
+  // originalPrice to currentPrice. The volatility (±8% per step) is applied
+  // on top, so even same-archetype deals look distinct.
+  const blend = (i: number, storyFraction: number) => {
+    const t = i / (steps - 1);
+    const base = origPrice + (currentPrice - origPrice) * (t + storyFraction * 0.15);
+    const jitter = 1 + (rand() - 0.5) * 0.16; // ±8% volatility
+    return Math.max(50, Math.round(base * jitter));
+  };
+
+  for (let i = 0; i < steps; i++) {
+    const t = i / (steps - 1);
+    let storyFraction = 0;
+    switch (archetype) {
+      case 0: // Steady decline — minimal story offset
+        storyFraction = (rand() - 0.5) * 0.3;
+        break;
+      case 1: // Mid-cycle bump: pull down, lift up, pull down again
+        storyFraction = i === Math.floor(steps / 2) ? 0.6 : -0.1;
+        break;
+      case 2: // V-shape: deeper mid-window, recovery mid-late, final drop
+        if (i >= 4 && i <= 7) storyFraction = 0.4;
+        else if (i === 8 || i === 9) storyFraction = -0.2;
+        break;
+      case 3: // Stair-step: hold flat until halfway, then accelerate drop
+        storyFraction = t < 0.5 ? 0.25 : -0.3;
+        break;
+      case 4: // Early drop then stable
+        storyFraction = t < 0.25 ? 0.4 : -0.15;
+        break;
+    }
+    out.push(blend(i, storyFraction));
+  }
+
+  // Force last value to exactly match the current price — the deal card shows
+  // it as the headline so the sparkline endpoint must converge on it.
+  if (out.length > 0) {
+    out[out.length - 1] = currentPrice;
+  }
   return out;
 }
+
+export { genHistory };
 
 /** Find base sailings that have NOT yet been expanded — order by last_updated_at ASC. */
 async function getBaseSailings(env: IngestEnv, limit: number): Promise<BaseSailing[]> {

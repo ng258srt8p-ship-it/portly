@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getAllSailings, getSailingDetail, makeFingerprint, applyPriceDrift } from './scraper-data';
 import { enrichSailing, runEnrichmentTick, findCandidatesForEnrichment } from './enrich-sailing';
-import { runIngestExpansionTick, debugBaseSailingSelect } from './ingest-expander';
+import { runIngestExpansionTick, debugBaseSailingSelect, genHistory } from './ingest-expander';
 import { runAlertEvaluationTick, runAlertDispatchTick } from './alert-engine';
 import { getMetricsSnapshot } from './metrics-analytics';
 import { runBulkImportTick } from './bulk-import';
@@ -1286,6 +1286,40 @@ app.get('/api/admin/ingest-status', async (c) => {
        (SELECT COUNT(*) FROM sailings WHERE id NOT LIKE '%__v%m') AS base`
   ).first();
   return c.json({ lastTick: lastTick ? JSON.parse(lastTick) : null, db: counts });
+});
+
+// POST /api/admin/backfill-history — regenerate the `history` field for every
+// sailing using the current genHistory() generator. Used after upgrading the
+// generator so existing rows get fresh, more realistic-looking curves without
+// waiting for the expander cron to create new variants.
+//
+// Optional body: { max?: number } — limit number of rows to update (default 500).
+app.post('/api/admin/backfill-history', async (c) => {
+  if (!ADMIN_GATE(c.req.header('Authorization'), c.env.SCRAPER_SECRET)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const body = await c.req.json<{ max?: number }>().catch(() => ({} as any));
+  const max = Math.min(Math.max(Number(body?.max ?? 500), 1), 1000);
+
+  const rows = await c.env.DB.prepare(
+    `SELECT id, price, original_price, sail_date FROM sailings ORDER BY last_updated_at DESC LIMIT ?`
+  ).bind(max).all();
+
+  let updated = 0;
+  const errors: string[] = [];
+  for (const row of (rows.results || []) as Array<{ id: string; price: number; original_price: number; sail_date: string }>) {
+    try {
+      const history = genHistory(Number(row.price), Number(row.original_price), row.sail_date, row.id);
+      await c.env.DB.prepare(
+        `UPDATE sailings SET history = ?, last_updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+      ).bind(JSON.stringify(history), row.id).run();
+      updated++;
+    } catch (e: any) {
+      errors.push(`${row.id}: ${e?.message || String(e)}`);
+    }
+  }
+
+  return c.json({ requested: max, scanned: (rows.results || []).length, updated, errors: errors.slice(0, 10) });
 });
 
 // GET /api/admin/ingest-debug — debug the base sailing selector
