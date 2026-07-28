@@ -637,6 +637,8 @@ app.get('/api/sailing/:id', async (c) => {
     SELECT s.id, s.sail_date AS departure_date, s.nights,
            s.price, s.original_price, s.duration,
            s.departure_port, s.departure_region,
+           s.booking_url,
+           s.booking_label,
            s.history,
            sh.name AS ship, cl.name AS cruise_line,
            d.name AS destination

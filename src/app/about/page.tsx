@@ -121,8 +121,8 @@ export default function AboutPage() {
                     </h3>
                     <p className="mt-2 text-ink-soft">
                       The moment your tracked sailing drops or a solo supplement
-                      waiver appears, you're the first to know. Set it and
-                      forget it — we'll watch the tide for you.
+                      waiver appears, you&apos;re the first to know. Set it and
+                      forget it — we&apos;ll watch the tide for you.
                     </p>
                   </div>
                 </div>
@@ -281,7 +281,7 @@ export default function AboutPage() {
                   No Affiliate Bias
                 </h3>
                 <p className="mt-2 text-ink-soft">
-                  We don't take commissions from cruise lines. Our only
+                  We don&apos;t take commissions from cruise lines. Our only
                   incentive is your trust.
                 </p>
               </div>
