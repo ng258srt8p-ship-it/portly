@@ -519,7 +519,7 @@ app.get('/api/filters/departure-ports', async (c) => {
   }
   const catalog = await buildFilterCatalog(c.env);
   await c.env.CACHE.put(FILTERS_CACHE_KEY, JSON.stringify(catalog), { expirationTtl: FILTERS_CACHE_TTL });
-  return c.json({ departurePorts: catalog.departurePorts );
+  return c.json({ departurePorts: catalog.departurePorts });
 });
 
 // POST /api/deals — upsert sailing from scraper
