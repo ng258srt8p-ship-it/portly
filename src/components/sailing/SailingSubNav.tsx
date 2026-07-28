@@ -85,7 +85,7 @@ export default function SailingSubNav({ sections }: SailingSubNavProps) {
       className="sticky top-[var(--header-height)] z-30 w-full bg-white/80 backdrop-blur-md border-b border-black/[0.06] py-2 px-4"
       aria-label="Section navigation"
     >
-      <div className="flex overflow-x-auto space-x-4">
+      <div className="flex flex-wrap gap-2 scrollbar-none min-w-0">
         {sections.map((sec) => (
           <button
             key={sec.id}
@@ -117,7 +117,7 @@ export default function SailingSubNav({ sections }: SailingSubNavProps) {
                 setTimeout(() => updateActiveSafely(), 1300);
               }
             }}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:bg-black/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/500 ${active === sec.id ? 'bg-indigo/10 text-indigo' : 'text-ink-soft'}`}
+            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs sm:text-sm font-medium transition-colors hover:bg-black/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/500 ${active === sec.id ? 'bg-indigo/10 text-indigo' : 'text-ink-soft'}`}
           >
             <MaterialIcon name="circle" size="xs" className={`text-xs font-medium ${active === sec.id ? 'text-indigo' : 'text-ink-faint'}`} />
             <span className="whitespace-nowrap">{sec.label}</span>

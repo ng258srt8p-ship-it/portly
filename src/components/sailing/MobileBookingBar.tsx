@@ -35,6 +35,7 @@ export default function MobileBookingBar({
   return (
     <div
       className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-white/95 backdrop-blur-md border-t border-black/[0.08] shadow-lg md:hidden"
+      style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
     >
       {/* Left side: price + note */}
       <div className="flex-1 space-y-1 text-sm">
