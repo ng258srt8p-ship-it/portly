@@ -71,17 +71,27 @@ enhance, deploy, and verify the cruise platform at
    ```
    Both must finish with exit code 0 before moving on.
 
-### PHASE 3 — COMMIT & DEPLOY TO CLOFAREFLARE
+### PHASE 3 — COMMIT, DOC, & DEPLOY
 
-1. Stage and commit:
-   ```bash
-   git add .
-   git commit -m "feat(hermes-loop): [Brief Description] - Cycle $(date +%Y%m%d-%H%M)"
-   ```
-2. Push to GitHub to trigger Cloudflare Pages build:
-   ```bash
-   git push origin main
-   ```
+Every cycle produces **two artifacts**:
+
+1. **Code change** — the actual fix/feature.
+2. **`HERMES_AUTONOMOUS_LOG.md` update** — a new `### Cycle #N` section
+   appended below the existing divider. Never overwrite prior cycle entries.
+
+Commit them **together**, then push:
+
+```bash
+git add .
+git commit -m "feat(hermes-loop): [Cycle #N] [Brief Description]"
+git push origin main
+```
+
+If `git push` fails (non-fast-forward, auth expired, CI rejected the build):
+- Retry once. If it still fails, log ⚠️ Partial in the cycle section with the
+  exact stderr and `git status` output, then continue — the next cycle can
+  reconcile.
+
 3. Wait 45–60 seconds for Cloudflare Pages to build and deploy the update to
    `https://portly-1i0.pages.dev/`.
 
@@ -100,13 +110,19 @@ enhance, deploy, and verify the cruise platform at
 
 ### PHASE 5 — LOG & CYCLE RESET
 
-1. Update the cycle section in `HERMES_AUTONOMOUS_LOG.md` with:
-   - Timestamp (UTC + local)
-   - Feature/Fix implemented
-   - Live URL verified (`https://portly-1i0.pages.dev/`)
-   - Playwright test results (passed / total + any noteworthy deltas)
-   - Files touched
-2. Commit the log update alongside the change.
+1. The cycle section was already appended in Phase 3. **Before exiting** verify
+   it includes:
+   - **Status:** ✅ Complete / ⚠️ Partial / ❌ Blocked
+   - **Feature / Fix:** one-line description
+   - **Live URL verified:** `https://portly-1i0.pages.dev/` (with the
+     deploy commit SHA from Cloudflare Pages if visible)
+   - **Playwright test results:** `<N>/<N> passed` across all 5 projects
+     (chromium, firefox, webkit, mobile-chrome, mobile-safari). Note any
+     project-specific skips or new flakes.
+   - **Files touched:** `path/file.tsx:LINE` references
+   - **Next-cycle follow-ups:** anything deferred so it isn't lost
+2. If the log entry was NOT committed in Phase 3 (because of a push failure),
+   commit it now with `git commit --amend --no-edit` and retry the push.
 3. Output: `HERMES CYCLE COMPLETE. Standby for next iteration.`
 
 ---
@@ -119,12 +135,15 @@ enhance, deploy, and verify the cruise platform at
 - **Live E2E command:** `BASE_URL=https://portly-1i0.pages.dev/ npx playwright test`.
 - **Playwright config:** `./playwright.config.ts` — `BASE_URL` env var
   overrides the default `http://localhost:3002`.
+- **Cycle log template:** `HERMES_AUTONOMOUS_LOG.md` — append new cycles
+  below the divider, do not rewrite past cycles.
+- **Standing prompt file:** `HERMES_LOOP_PROMPT.md` (this file).
+- **Runner:** `run-hermes-loop.sh` — handles locking, logging, scheduling.
+  Invoke via `./run-hermes-loop.sh` for infinite loop, or
+  `SINGLE_CYCLE=1 ./run-hermes-loop.sh` for one-shot.
 - **Existing e2e specs:** `e2e/*.spec.ts` — 35 specs covering sailing detail,
   deals filter, history drawer, accessibility, CWV, lighthouse, AI content,
   funnel, etc. Extend rather than duplicate.
-- **Modified files at session start:** 9 (deals page, sailing detail, FilterBar,
-  FilterSelectionGrid, SailingHero, SailingSubNav, Dropdown, globals.css,
-  lighthouse history) — review `git status` before editing.
 - **Deploy target:** Cloudflare Pages project `portly-1i0`; preview URLs are
   per-deploy, production auto-builds from `main` push.
 
@@ -139,3 +158,15 @@ enhance, deploy, and verify the cruise platform at
   user direction.
 - If a cycle's scope turns out larger than expected, narrow it, log the
   remainder as a follow-up, and roll into the next iteration.
+- **Never** delete or rewrite past entries in `HERMES_AUTONOMOUS_LOG.md` —
+  it's the audit trail of the entire loop.
+
+## RUNTIME NOTES
+
+- The loop is invoked via `hermes chat -q "<prompt>" --max-turns 60` (you are
+  the chat, not the runner — the runner is the shell script). Do not try to
+  call `hermes run` or any non-existent subcommand.
+- Your workdir is already the Portly repo (`/Users/georgetozer/Development/Portly`).
+- `npm run lint` currently emits ESLint-10 config noise but exits 0 — this
+  is pre-existing, not your fault, do not try to fix it as a side-quest.
+  Note it as a follow-up if you touch lint config.
