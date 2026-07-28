@@ -12,7 +12,6 @@ import PriceHistoryPanel from '@/components/sailing/PriceHistoryPanel';
 import EnhancedDealAnalysis from '@/components/sailing/EnhancedDealAnalysis';
 import EnhancedPriceForecast from '@/components/sailing/EnhancedPriceForecast';
 import SailingInfoPanel from '@/components/sailing/SailingInfoPanel';
-import SailingSubNav from '@/components/sailing/SailingSubNav';
 
 interface SailingData {
   sailing: {
@@ -72,27 +71,16 @@ export default function SailingDetailPage() {
       {/*
         Z-index stack (sailing detail page):
           z-50  Header (fixed top), Modals, Dropdowns
-          z-30  SailingSubNav (sticky below header)
           z-20  Hero price callout card (sticky on lg+)
           z-10  Hero content grid
           z-0   Background gradients, glow accents
 
-        Sticky offsets use --header-height (98px) + --subnav-height (56px)
-        defined as CSS custom properties in globals.css.
+        Sticky offsets use --header-height (98px) defined as a CSS custom
+        property in globals.css. (--subnav-height removed 2026-07-28 when
+        SailingSubNav was retired — see commit log.)
       */}
-      {/* Define sections for sub-nav and scroll-mt-32 */}
-      <SailingSubNav 
-        sections={[
-          { id: 'overview', label: 'Overview' },
-          { id: 'itinerary', label: 'Itinerary' },
-          { id: 'price-history', label: 'Price History' },
-          { id: 'deal-analysis', label: 'Deal Analysis' },
-          { id: 'cabins', label: 'Cabins' },
-          { id: 'forecast', label: 'Forecast' },
-          { id: 'ship-info', label: 'Ship Info' }
-        ]} 
-      />
-      <main className="min-h-screen scroll-pt-28 pt-[calc(var(--header-height)+var(--subnav-height))] pb-12 px-4 sm:px-6">
+      {/* Section anchors preserved via scroll-mt-* on each <section> below */}
+      <main className="min-h-screen scroll-pt-28 pt-[var(--header-height)] pb-12 px-4 sm:px-6">
         <div className="mx-auto max-w-7xl">
           {loading && (
             <div className="space-y-6">
