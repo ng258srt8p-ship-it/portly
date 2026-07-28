@@ -162,7 +162,7 @@ export function PriceComparisonTable({
               <div className="hidden md:flex col-span-2 items-center justify-end">
                 <div className="text-right">
                   <div className="font-mono tabular-nums text-lg font-bold text-primary leading-none">Loading...</div>
-                  <div className="font-mono tabular-nums text-xs text-neon-teal-400">Loading...</div>
+                  <div className="font-mono tabular-nums text-xs text-neon-teal-800">Loading...</div>
                 </div>
               </div>
               <div className="hidden md:flex col-span-1 items-center justify-end">
@@ -274,7 +274,7 @@ export function PriceComparisonTable({
                 <div className="font-mono tabular-nums text-lg font-bold text-primary leading-none">
                   {formatPrice(cabin.total)}
                 </div>
-                <div className="font-mono tabular-nums text-xs text-neon-teal-400">
+                <div className="font-mono tabular-nums text-xs text-neon-teal-800">
                   {formatPrice(cabin.perPersonPerDay)}/pp/night
                 </div>
               </div>
@@ -332,7 +332,7 @@ export function PriceComparisonTable({
                   <p className="text-xs text-ink-faint">Includes base fare + taxes/fees + gratuities</p>
                   <div className="flex justify-between items-center text-sm">
                     <span className="font-interface text-xs text-tertiary">Per person / night</span>
-                    <span className="font-mono tabular-nums text-sm text-neon-teal-400 font-semibold">
+                    <span className="font-mono tabular-nums text-sm text-neon-teal-800 font-semibold">
                       {formatPrice(cabin.perPersonPerDay)}
                     </span>
                   </div>
@@ -354,7 +354,7 @@ export function PriceComparisonTable({
       {/* Footer note */}
       <div className="mt-3 px-4">
         <p className="font-interface text-xs text-tertiary flex items-center gap-1.5">
-          <svg className="w-3.5 h-3.5 text-neon-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-3.5 h-3.5 text-neon-teal-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           All prices shown are total out-the-door including base fare, port taxes/fees, and mandatory gratuities.

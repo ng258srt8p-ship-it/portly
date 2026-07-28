@@ -167,7 +167,7 @@ export function CruiseCard({ cruise }: CruiseCardProps) {
               
               {/* Per-person-per-day breakdown */}
               <div className="flex items-center gap-2">
-                <span className="font-mono tabular-nums text-sm text-neon-teal-400 font-semibold">
+                <span className="font-mono tabular-nums text-sm text-neon-teal-800 font-semibold">
                   ${cruise.perPersonPerDay.toFixed(0)}
                 </span>
                 <span className="font-interface text-xs text-tertiary">

@@ -15,7 +15,7 @@ const buttonVariants = cva(
         danger:
           'bg-neon-coral-500 text-white hover:bg-neon-coral-400 shadow-glow-coral',
         'outline-accent':
-          'bg-transparent border border-neon-teal-500/30 text-neon-teal-400 hover:bg-neon-teal-500/10',
+          'bg-transparent border border-neon-teal-500/30 text-neon-teal-800 hover:bg-neon-teal-500/10',
       },
       size: {
         sm: 'px-3 py-1.5 text-sm rounded-md gap-1.5',
