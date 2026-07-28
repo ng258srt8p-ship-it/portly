@@ -1131,6 +1131,12 @@ app.get('/api/enhanced/price-forecast/:id', async (c) => {
   // Generate cabin-specific forecasts
   const cabinForecasts = [];
   const cabinTypes = ['Inside', 'Oceanview', 'Balcony', 'Suite'];
+  // Normalize trend to match the frontend's expected values
+  // (rising | falling | stable). Worker-internal trend above is up/down/stable.
+  const normalizedTrend = priceTrend === 'rising' ? 'rising' : priceTrend === 'falling' ? 'falling' : 'stable';
+  // Confidence heuristic: more price history points = higher confidence.
+  // 0 points → 0.3, 40+ points → 0.85.
+  const confidence = Math.min(0.85, 0.3 + history.length * 0.015);
   for (const type of cabinTypes) {
     // In a real implementation, we'd look up base price for this cabin type
     // For now, approximate using overall price with typical premiums
@@ -1146,10 +1152,11 @@ app.get('/api/enhanced/price-forecast/:id', async (c) => {
     const forecast30d = Math.round(basePrice * (1 + (priceTrend === 'rising' ? 0.08 : priceTrend === 'falling' ? -0.08 : 0)));
     cabinForecasts.push({
       cabinType: type,
-      basePricePerPerson: Math.round(basePrice),
+      currentPrice: Math.round(basePrice),
       forecast7d,
       forecast30d,
-      trend,
+      confidence,
+      trend: normalizedTrend,
     });
   }
 
