@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getAllSailings, getSailingDetail, makeFingerprint, applyPriceDrift } from './scraper-data';
-import { enrichSelling, runEnrichmentTick, findCandidatesForEnrichment } from './enrich-sailing';
+import { runEnrichmentTick, findCandidatesForEnrichment } from './enrich-sailing';
 import { runIngestExpansionTick, debugBaseSailingSelect, genHistory } from './ingest-expander';
 import { runAlertEvaluationTick, runAlertDispatchTick } from './alert-engine';
 import { getMetricsSnapshot } from './metrics-analytics';
@@ -395,7 +395,7 @@ app.get('/api/search', async (c) => {
     ${where}
   `;
   const { results: countResults } = await c.env.DB.prepare(countSql).bind(...binds).all();
-  const total = countResults[0]?.total || 0;
+  const total = Number(countResults[0]?.total) || 0;
 
   // Then, get paginated results
   const limitClause = limit > 0 ? ' LIMIT ? OFFSET ?' : '';
@@ -847,7 +847,7 @@ app.post('/api/alerts/create', async (c) => {
   // Extract sailing_id from URL if provided (e.g., "/sailing/carnival_conquest_2026-03-12_miami_4")
   let sailingId: string | null = null;
   if (body.sailingUrl) {
-    const match = body.sailingUrl.match(/\\/sailing\\/([^\\/?#]+)/);
+    const match = body.sailingUrl.match(/\/sailing\/([^/?#]+)/);
     if (match) sailingId = match[1];
   }
 
@@ -1162,7 +1162,7 @@ app.get('/api/enhanced/price-forecast/:id', async (c) => {
       trend,
       cabinForecasts,
     }
-  );
+  });
 });
 
 export default app;
