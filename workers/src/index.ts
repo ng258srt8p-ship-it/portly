@@ -239,17 +239,24 @@ app.get('/api/solo-friendly', async (c) => {
 //      (81 rows × small joins — bounded result set)
 ////
 // Returns and shape of the actual JSON are unchanged — the wrapper just guards
-// the body behind a 5-min KV cache so the 30-second Worker CPU budget isn't
+// the body behind a KV cache so the 30-second Worker CPU budget isn't
 // burned every time the /history page polls every 30s.
+//
+// TTL: 1800s (30 min) — bumped from 300s on 2026-07-28 to reduce Workers KV
+// read pressure (50% of free daily tier consumed mid-cycle). Matches the
+// Hermes improvement-loop cadence, so a single Playwright audit makes 1 KV
+// read instead of N. Filter catalog data rarely changes within a sync cycle,
+// so freshness impact is minimal. Re-evaluate after upgrading to a paid plan.
 app.get('/api/history', async (c) => {
   const HISTORY_CACHE_KEY = 'history:snapshot:v1';
+  const HISTORY_CACHE_TTL = 1800; // 30 min — see comment above
   const cached = await c.env.CACHE.get(HISTORY_CACHE_KEY);
   if (cached) {
     c.header('X-History-Cache', 'hit');
     return c.json(JSON.parse(cached));
   }
   const payload = await computeHistorySnapshot(c.env);
-  await c.env.CACHE.put(HISTORY_CACHE_KEY, JSON.stringify(payload), { expirationTtl: 300 });
+  await c.env.CACHE.put(HISTORY_CACHE_KEY, JSON.stringify(payload), { expirationTtl: HISTORY_CACHE_TTL });
   c.header('X-History-Cache', 'miss');
   return c.json(payload);
 });
@@ -351,16 +358,71 @@ app.get('/api/stats', async (c) => {
 // GET /api/search
 app.get('/api/search', async (c) => {
   const q = c.req.query('q');
-  if (!q) return c.json({ results: [] });
-  const { results } = await c.env.DB.prepare(
-    `SELECT s.*, cl.name AS cruise_line, sh.name AS ship, d.name AS destination FROM sailings s
-     JOIN cruise_lines cl ON s.cruise_line_id = cl.id
-     JOIN ships sh ON s.ship_id = sh.id
-     LEFT JOIN destinations d ON s.destination_id = d.id
-     WHERE sh.name LIKE ? OR cl.name LIKE ? OR d.name LIKE ? OR s.departure_port LIKE ?
-     LIMIT 20`
-  ).bind(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`).all();
-  return c.json({ results: results.map(formatSailing) });
+  // Pagination parameters
+  const MAX_SEARCH_LIMIT = 500;
+  const limitParamRaw = c.req.query('limit');
+  let limit = 20;
+  if (typeof limitParamRaw === 'string') {
+    const lower = limitParamRaw.toLowerCase();
+    if (lower === 'all') {
+      limit = MAX_SEARCH_LIMIT;
+    } else {
+      const parsed = Number(limitParamRaw);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        limit = Math.min(parsed, MAX_SEARCH_LIMIT);
+      } else if (parsed === 0) {
+        limit = 0; // treat 0 as "all" - no LIMIT clause
+      }
+    }
+  }
+  const offset = Math.min(Math.max(Number(c.req.query('offset') || 0), 0), 50_000);
+
+  // Build WHERE clause
+  let where = 'WHERE 1=1';
+  const binds: any[] = [];
+  if (q) {
+    where += ' AND (sh.name LIKE ? OR cl.name LIKE ? OR d.name LIKE ? OR s.departure_port LIKE ?)';
+    binds.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+  }
+
+  // First, get total count
+  const countSql = `
+    SELECT COUNT(*) AS total
+    FROM sailings s
+    JOIN cruise_lines cl ON s.cruise_line_id = cl.id
+    JOIN ships sh ON s.ship_id = sh.id
+    LEFT JOIN destinations d ON s.destination_id = d.id
+    ${where}
+  `;
+  const { results: countResults } = await c.env.DB.prepare(countSql).bind(...binds).all();
+  const total = countResults[0]?.total || 0;
+
+  // Then, get paginated results
+  const limitClause = limit > 0 ? ' LIMIT ? OFFSET ?' : '';
+  const sql = `
+    SELECT s.*, cl.name AS cruise_line, sh.name AS ship, d.name AS destination
+    FROM sailings s
+    JOIN cruise_lines cl ON s.cruise_line_id = cl.id
+    JOIN ships sh ON s.ship_id = sh.id
+    LEFT JOIN destinations d ON s.destination_id = d.id
+    ${where}
+    ORDER BY s.id
+    ${limitClause}
+  `;
+  if (limit > 0) {
+    binds.push(limit, offset);
+  }
+  const { results } = await c.env.DB.prepare(sql).bind(...binds).all();
+
+  const page = limit > 0 ? Math.floor(offset / limit) + 1 : 1;
+  const totalPages = limit > 0 ? Math.ceil(total / limit) : 1;
+
+  return c.json({
+    total,
+    page,
+    totalPages,
+    results: results.map(formatSailing)
+  });
 });
 
 // ────────────────────────────────────────────────────────────────────────
@@ -371,7 +433,11 @@ app.get('/api/search', async (c) => {
 // ────────────────────────────────────────────────────────────────────────
 
 const FILTERS_CACHE_KEY = 'filters:catalog:v1';
-const FILTERS_CACHE_TTL = 300; // 5 min — these rarely change within a sync cycle
+// TTL: 1800s (30 min) — bumped from 300s on 2026-07-28 to reduce Workers KV
+// read pressure (50% of free daily tier consumed mid-cycle). Filter catalog
+// rarely changes within a sync cycle, so freshness impact is minimal.
+// Re-evaluate after upgrading to a paid plan.
+const FILTERS_CACHE_TTL = 1800;
 
 interface FilterCatalog {
   cruiseLines: string[];
@@ -843,7 +909,7 @@ app.patch('/api/alerts/:id', async (c) => {
     binds.push(body.sailing_url);
   }
   if (fields.length === 0) return c.json({ error: 'no fields to update' }, 400);
-  fields.push('updated_at = datetime(\\'now\\')');
+  fields.push("updated_at = datetime('now')");
   binds.push(id);
 
   const res = await c.env.DB.prepare(
@@ -987,15 +1053,15 @@ app.get('/api/enhanced/deal-analysis/:id', async (c) => {
     'Nieuw Amsterdam': { description: 'Signature-class ship launched 2010, featuring the Culinary Arts Center and BB King Blues Club.', highlights: ['BB King Blues Club', 'Culinary Arts Center', '2,106 passengers'] },
     'Koningsdam': { description: 'Pinnacle-class ship launched 2016, the largest in the HAL fleet with a 3-story atrium.', highlights: ['Pinnacle-class', '3-story atrium', 'Rolling Stone Rock Room', '2,650 passengers'] },
     'Queen Mary 2': { description: 'The only ocean liner in service, launched 2004. Features the only planetarium at sea.', highlights: ['Only ocean liner', 'Planetarium at sea', 'Transatlantic specialist', '2,691 passengers'] },
-    'Queen Anne': { description: 'Cunard\\'s newest ship launched 2024, featuring a redesigned P&o style with British heritage.', highlights: ['Launched 2024', 'British heritage', '3,000 passengers'] },
-    'Wonder of the Seas': { description: 'Oasis-class mega-ship launched 2022, the world\\'s 2nd largest cruise ship at 6,988 passengers.', highlights: ['Oasis-class', '6,988 passengers', '8 neighborhoods', 'Launched 2022'] },
+    'Queen Anne': { description: 'Cunard\'s newest ship launched 2024, featuring a redesigned P&o style with British heritage.', highlights: ['Launched 2024', 'British heritage', '3,000 passengers'] },
+    'Wonder of the Seas': { description: 'Oasis-class mega-ship launched 2022, the world\'s 2nd largest cruise ship at 6,988 passengers.', highlights: ['Oasis-class', '6,988 passengers', '8 neighborhoods', 'Launched 2022'] },
     'Harmony of the Seas': { description: 'Oasis-class ship launched 2016, featuring the Perfect Storm waterslides and Central Park.', highlights: ['Perfect Storm slides', 'Central Park', '6,687 passengers'] },
-    'Icon of the Seas': { description: 'Icon-class ship launched 2024, the world\\'s largest cruise ship with the first water park at sea.', highlights: ['World\\'s largest', 'Launched 2024', 'Category 6 waterpark', '7,600 passengers', 'LNG-powered'] },
+    'Icon of the Seas': { description: 'Icon-class ship launched 2024, the world\'s largest cruise ship with the first water park at sea.', highlights: ['World\'s largest', 'Launched 2024', 'Category 6 waterpark', '7,600 passengers', 'LNG-powered'] },
     'Norwegian Encore': { description: 'Breakaway Plus-class ship launched 2019, featuring the longest race track at sea.', highlights: ['Longest race track', 'Galaxy Pavilion VR', '3,998 passengers'] },
     'Norwegian Prima': { description: 'Prima-class ship launched 2022, featuring the first free-fall drop ride at sea.', highlights: ['Free-fall drop ride', 'Prima-class', '3,099 passengers', 'Launched 2022'] },
     'MSC Seascape': { description: 'Seaside EVO-class ship launched 2022, featuring the first Robotron interactive ride.', highlights: ['Robotron ride', 'Seaside EVO', '5,877 passengers', 'Launched 2022'] },
     'MSC Virtuosa': { description: 'Meraviglia Plus-class ship launched 2021, featuring the longest promenade at sea.', highlights: ['Longest promenade', 'Maraviglia Plus', '5,742 passengers'] },
-    'Disney Wish': { description: 'Disney\\'s newest Triton-class ship launched 2022, featuring the first Disney attraction at sea.', highlights: ['AquaMouse attraction', 'Triton-class', 'Launched 2022', '1,555 passengers'] },
+    'Disney Wish': { description: 'Disney\'s newest Triton-class ship launched 2022, featuring the first Disney attraction at sea.', highlights: ['AquaMouse attraction', 'Triton-class', 'Launched 2022', '1,555 passengers'] },
     'Disney Fantasy': { description: 'Dream-class ship launched 2012, featuring the AquaDuck water coaster.', highlights: ['AquaDuck', 'Dream-class', '2,500 passengers'] },
     'Celebrity Apex': { description: 'Edge-class ship launched 2020, featuring the Magic Carpet cantilevered platform.', highlights: ['Magic Carpet', 'Edge-class', 'Launched 2020', '3,260 passengers'] },
     'Celebrity Beyond': { description: 'Edge-class ship launched 2022, featuring the largest Resort Deck and rooftop garden.', highlights: ['Rooftop Garden', 'Edge-class', 'Launched 2022', '3,260 passengers'] }
@@ -1007,7 +1073,7 @@ app.get('/api/enhanced/deal-analysis/:id', async (c) => {
   const dealScoreJustification = [
     { title: 'Price Below Recent Peak', content: `The current fare of $${price.toLocaleString()} is ${dropPct}% below the recent high of $${original.toLocaleString()} — that's a $${(original - price).toLocaleString()} savings per person. On a 7-night sailing, this magnitude of drop occurs in roughly 15% of fare cycles.` },
     { title: 'Per-Night Cost Benchmark', content: `At $${perNight}/night per person (base fare only), this sailing sits in the ${dropPct >= 25 ? 'bottom 10th' : dropPct >= 15 ? 'bottom 25th' : 'middle'} percentile for ${s.destination || 'Caribbean'} sailings of similar duration. Comparable sailings average $${Math.round(perNight * 1.3)}/night.` },
-    { title: 'Historical Trend', content: `Price has been ${priceTrend} for ${history.length >= 2 ? \`${history.length} consecutive data points\` : 'the recent tracking period'}. ${priceTrend === 'falling' ? 'The downward trend suggests the line may be discounting to fill cabins — a buyer-favorable signal.' : priceTrend === 'rising' ? 'Rising prices indicate this fare may increase further — consider booking soon.' : 'Stable pricing suggests this fare has found its equilibrium.'}` }
+    { title: 'Historical Trend', content: `Price has been ${priceTrend} for ${history.length >= 2 ? `${history.length} consecutive data points` : 'the recent tracking period'}. ${priceTrend === 'falling' ? 'The downward trend suggests the line may be discounting to fill cabins — a buyer-favorable signal.' : priceTrend === 'rising' ? 'Rising prices indicate this fare may increase further — consider booking soon.' : 'Stable pricing suggests this fare has found its equilibrium.'}` }
   ];
 
   const shipValueScore = Math.min(92, 60 + Math.floor(dropPct / 3));
