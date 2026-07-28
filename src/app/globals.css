@@ -128,7 +128,6 @@
      Sub-nav sits directly below at offset --header-height. */
   --header-height: 6.125rem;     /* 98px */
   --subnav-height: 3.5rem;       /* 56px */
-  --mobile-bar-height: 4.75rem;  /* 76px */
 }
 
 /* ============================================================

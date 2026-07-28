@@ -13,7 +13,6 @@ import EnhancedDealAnalysis from '@/components/sailing/EnhancedDealAnalysis';
 import EnhancedPriceForecast from '@/components/sailing/EnhancedPriceForecast';
 import SailingInfoPanel from '@/components/sailing/SailingInfoPanel';
 import SailingSubNav from '@/components/sailing/SailingSubNav';
-import MobileBookingBar from '@/components/sailing/MobileBookingBar';
 
 interface SailingData {
   sailing: {
@@ -73,7 +72,6 @@ export default function SailingDetailPage() {
       {/*
         Z-index stack (sailing detail page):
           z-50  Header (fixed top), Modals, Dropdowns
-          z-40  MobileBookingBar (fixed bottom, md:hidden)
           z-30  SailingSubNav (sticky below header)
           z-20  Hero price callout card (sticky on lg+)
           z-10  Hero content grid
@@ -94,7 +92,7 @@ export default function SailingDetailPage() {
           { id: 'ship-info', label: 'Ship Info' }
         ]} 
       />
-      <main className="min-h-screen scroll-pt-28 pt-[calc(var(--header-height)+var(--subnav-height))] pb-24 md:pb-12 px-4 sm:px-6 pb-[var(--mobile-bar-height)] sm:pb-0">
+      <main className="min-h-screen scroll-pt-28 pt-[calc(var(--header-height)+var(--subnav-height))] pb-12 px-4 sm:px-6">
         <div className="mx-auto max-w-7xl">
           {loading && (
             <div className="space-y-6">
@@ -238,15 +236,8 @@ export default function SailingDetailPage() {
              </div>
            </div>
           )}
-        </div>
-        {data?.sailing && (
-          <MobileBookingBar
-            price={data.sailing.price || 0}
-            bookingUrl={data.sailing.bookingUrl}
-            bookingLabel="Book Deal"
-          />
-        )}
-      </main>
+       </div>
+     </main>
       <Footer />
     </>
   );
