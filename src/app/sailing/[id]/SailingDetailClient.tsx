@@ -70,13 +70,17 @@ export default function SailingDetailPage() {
   return (
     <>
       <Header />
-      {/* 
+      {/*
         Z-index stack (sailing detail page):
-          Header         z-50 (fixed top)
-          Sub-nav        z-40 (sticky top-16)
-          Modal/cards    z-20
-          Hero content   z-10
-        scroll-pt-24 ensures anchor jumps land below the sticky bars.
+          z-50  Header (fixed top), Modals, Dropdowns
+          z-40  MobileBookingBar (fixed bottom, md:hidden)
+          z-30  SailingSubNav (sticky below header)
+          z-20  Hero price callout card (sticky on lg+)
+          z-10  Hero content grid
+          z-0   Background gradients, glow accents
+
+        Sticky offsets use --header-height (98px) + --subnav-height (56px)
+        defined as CSS custom properties in globals.css.
       */}
       {/* Define sections for sub-nav and scroll-mt-32 */}
       <SailingSubNav 
@@ -90,7 +94,7 @@ export default function SailingDetailPage() {
           { id: 'ship-info', label: 'Ship Info' }
         ]} 
       />
-      <main className="min-h-screen scroll-pt-28 pt-28 pb-24 md:pb-12 px-4 sm:px-6 pb-[80px] sm:pb-0">
+      <main className="min-h-screen scroll-pt-28 pt-[calc(var(--header-height)+var(--subnav-height))] pb-24 md:pb-12 px-4 sm:px-6 pb-[var(--mobile-bar-height)] sm:pb-0">
         <div className="mx-auto max-w-7xl">
           {loading && (
             <div className="space-y-6">

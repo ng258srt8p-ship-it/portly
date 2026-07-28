@@ -154,7 +154,7 @@ export default function DealsPage() {
   return (
     <>
       <Header />
-      <main className="pt-20 pb-20 lg:pb-0">
+      <main className="pt-[var(--header-height)] pb-24 lg:pb-0 scroll-pt-24">
         <ExploreDealsHero filters={filters} onFilterChange={handleFilterChange} />
         <div id="deals-filters" className="scroll-mt-24">
           <DealsGrid

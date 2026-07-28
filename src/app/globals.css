@@ -121,6 +121,14 @@
   /* Selection */
   --selection-bg: #2a44e7;
   --selection-color: #ffffff;
+
+  /* ─── Layout Tokens — Sticky Offset System ─── */
+  /* Header is `fixed top-0` with `pt-4` (16px) + inner rounded-full div
+     with `py-2.5` (20px total) + `min-h-[44px]` button content = 98px.
+     Sub-nav sits directly below at offset --header-height. */
+  --header-height: 6.125rem;     /* 98px */
+  --subnav-height: 3.5rem;       /* 56px */
+  --mobile-bar-height: 4.75rem;  /* 76px */
 }
 
 /* ============================================================
@@ -168,6 +176,15 @@
 
 html {
   scroll-behavior: smooth;
+  /* Anchor scroll offset — clears the sticky header (76px) plus a small buffer.
+     Prevents deep-linked #section anchors from being hidden under the header. */
+  scroll-padding-top: calc(var(--header-height) + var(--subnav-height) + 0.5rem);
+}
+
+@media (max-width: 767px) {
+  html {
+    scroll-padding-top: calc(var(--header-height) + 0.5rem);
+  }
 }
 
 body {

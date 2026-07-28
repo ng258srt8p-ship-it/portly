@@ -54,7 +54,7 @@ export default function Dropdown({ label, value, options, onChange, icon, disabl
       </button>
 
       {open && !disabled && (
-        <div className="absolute left-2 right-2 top-[calc(100%+8px)] z-30 max-h-64 overflow-y-auto rounded-2xl border border-black/[0.06] bg-white p-1.5 shadow-float-lg sm:left-0 sm:right-auto sm:w-72">
+        <div className="absolute left-2 right-2 top-[calc(100%+8px)] z-50 max-h-64 overflow-y-auto rounded-2xl border border-black/[0.06] bg-white p-1.5 shadow-float-lg sm:left-0 sm:right-auto sm:w-72">
           {options.map((option) => (
             <button
               key={option}

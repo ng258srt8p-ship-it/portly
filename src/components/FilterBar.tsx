@@ -150,7 +150,7 @@ function MultiSelectDropdown({
 
       {open && (
         <div
-          className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-64 overflow-y-auto
+          className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-64 overflow-y-auto
             rounded-2xl border border-black/[0.06] bg-white p-1.5 shadow-float-lg
             animate-in fade-in-0 zoom-in-95 duration-150"
           role="listbox"
@@ -262,7 +262,7 @@ function SingleSelectDropdown({
 
       {open && (
         <div
-          className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-64 overflow-y-auto
+          className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-64 overflow-y-auto
             rounded-2xl border border-black/[0.06] bg-white p-1.5 shadow-float-lg
             animate-in fade-in-0 zoom-in-95 duration-150"
           role="listbox"
