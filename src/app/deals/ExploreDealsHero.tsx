@@ -25,19 +25,20 @@ export default function ExploreDealsHero({ filters, onFilterChange }: ExploreDea
 
   const { data: stats } = useLiveData(fetcher, { pollIntervalMs: 60000 });
 
-  const toggleBadge = (badgeType: 'drop' | 'solo' | 'gold') => {
+  const toggleBadge = useCallback((badgeType: 'drop' | 'solo' | 'gold') => {
     const current = filters.badgeType ?? [];
     const next = current.includes(badgeType)
       ? current.filter((b) => b !== badgeType)
       : [...current, badgeType];
     onFilterChange({ ...filters, badgeType: next.length ? next : undefined });
-  };
+  }, [filters, onFilterChange]);
 
-  const toggleAnyDuration = () => {
-    const isAnyDuration = filters.minNights === undefined && filters.maxNights === undefined;
-    if (isAnyDuration) return; // already "any duration", nothing to do
+  const toggleAnyDuration = useCallback(() => {
+    if (filters.minNights === undefined && filters.maxNights === undefined) {
+      return; // already any duration
+    }
     onFilterChange({ ...filters, minNights: undefined, maxNights: undefined });
-  };
+  }, [filters, onFilterChange]);
 
   return (
     <section className="relative overflow-hidden border-b border-black/[0.04] bg-gradient-to-b from-indigo/[0.03] via-transparent to-transparent">
@@ -130,8 +131,7 @@ function FilterChip({
         shadow-float transition-all duration-150
         ${active
           ? 'bg-indigo text-white border-indigo shadow-sm'
-          : 'border border-black/[0.06] bg-white text-ink-soft hover:border-indigo/30 hover:text-indigo'
-        }
+          : 'border border-black/[0.06] bg-white text-ink-soft hover:border-indigo/30 hover:text-indigo'}
         focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 focus-visible:ring-offset-2
       `}
     >
