@@ -1,11 +1,18 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const getPortFromEnv = (): number => {
+// BASE_URL precedence:
+//   1. process.env.BASE_URL (explicit override, e.g. live Cloudflare Pages)
+//   2. http://localhost:<PORT|NEXT_PUBLIC_PORT|3002>  (local dev server)
+// Set BASE_URL=https://portly-1i0.pages.dev/ to run E2E against the live deployment.
+const getBaseURL = (): string => {
+  if (process.env.BASE_URL && process.env.BASE_URL.length > 0) {
+    return process.env.BASE_URL;
+  }
   const fromEnv = parseInt(process.env.PORT || process.env.NEXT_PUBLIC_PORT || '0', 10);
-  if (fromEnv > 0) return fromEnv;
-  return 3002; // default to the actual running dev server
+  const port = fromEnv > 0 ? fromEnv : 3002;
+  return `http://localhost:${port}`;
 };
-const BASE_URL = `http://localhost:${getPortFromEnv()}`;
+const BASE_URL = getBaseURL();
 
 export default defineConfig({
  testDir: './e2e',
