@@ -86,3 +86,32 @@
 - Audit remaining e2e specs for the same stale check pattern (test claiming component doesn't exist when it was re-introduced)
 - The `_smoke.spec.ts` is the most critical — the other 1200+ tests in the full suite should be triaged next
 ✅ Cycle #23 Complete
+
+## Cycle #24
+**Feature / Fix:** Update `filter-bar-audit.spec.ts` to test current mobile filter pattern (MobileFilterBar drawer + sticky bottom bar)
+
+**Phase 1 — Audit findings:**
+- `filter-bar-audit.spec.ts` had 7 failures across all 5 browser projects (Mobile Filter Bar - Collapsed State + Comprehensive UI/UX Audit on mobile)
+- Root cause: The test was written for an older filter pattern — it expected `[data-testid="filter-selection-grid"] button[aria-expanded]` (inline mobile toggle inside FilterSelectionGrid)
+- Current design uses `MobileFilterBar` — a sticky bottom bar (`lg:hidden` with `[data-testid="mobile-filters-button"]`) that opens a full-screen drawer (`[data-testid="mobile-filter-drawer"]`) hosting the FilterSelectionGrid with `defaultExpanded={true}`
+- The inline FilterSelectionGrid is wrapped in `hidden md:block` (parent), so its mobile toggle is unreachable on mobile (<768px) — this is by design, not a bug
+
+**Phase 2 — Implementation:**
+- Replaced stale "Mobile Filter Bar - Collapsed State" test with three new tests matching actual UX:
+  1. "Mobile Filter Bar - Sticky Bottom Bar (375px)" — verifies Filters button → drawer with all 4 dropdowns (Line, Region, Dest, Ship) + Sort + Nights/Type/Price
+  2. "Mobile Filter Bar - Sort popover works" — verifies bottom-bar Sort button opens popover with options
+  3. "Filter Bar - Comprehensive UI/UX Audit (desktop)" — preserves desktop inline filter verification at 1280px
+- Updated selectors to use correct test IDs: `filter-cruise-line` (not `filter-line`), `mobile-filters-button`, `mobile-filter-drawer`, `mobile-filter-backdrop`
+- Added touch-target checks (≥44px) for mobile drawer buttons per Apple HIG / WCAG 2.5.5
+
+**Phase 3 — Local Verification:**
+- `npx tsc --noEmit`: ✅ Passed (exit 0)
+- `BASE_URL=https://portly-1i0.pages.dev/ npx playwright test e2e/filter-bar-audit.spec.ts --workers=1`: **15/15 passed** across 5 browser projects
+- Combined with smoke tests: **50/50 passed** (35 smoke + 15 filter-bar-audit)
+
+**Phase 4 — Notes / follow-ups for next cycle:**
+- The `e2e/` directory is gitignored per project convention; committed this spec as a named regression test since it now validates core mobile filter UX
+- Addressed Cycle #23 follow-up: "Audit remaining e2e specs for the same stale check pattern" — filter-bar-audit.spec.ts was the highest-impact stale spec (7 failures → 0)
+- Other diagnostic specs in `e2e/_diag_*.spec.ts` are intentionally not committed (one-shot debugging tools)
+- Remaining full-suite timeout issue (1270 tests) — consider splitting into targeted runs with `--workers=3`
+✅ Cycle #24 Complete
