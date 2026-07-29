@@ -34,6 +34,13 @@ export interface FilterSelectionGridProps {
   shipCounts?: Record<string, number>;
   portCounts?: Record<string, number>;
   regionCounts?: Record<string, number>;
+  /**
+   * Whether the mobile collapse toggle starts expanded.
+   * Set to `true` when the grid is rendered inside an already-open drawer
+   * (e.g. MobileFilterBar) so the user sees filters immediately instead of
+   * a collapsed nested toggle. Defaults to `false`.
+   */
+  defaultExpanded?: boolean;
 }
 
 export type NightOption = '0-3' | '4-7' | '8-14';
@@ -590,9 +597,11 @@ export default function FilterSelectionGrid({
   shipCounts,
   portCounts,
   regionCounts,
+  defaultExpanded = false,
 }: FilterSelectionGridProps) {
   // Mobile collapse state
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  console.log('FilterSelectionGrid expanded state:', expanded, 'defaultExpanded:', defaultExpanded);
 
   // Count active filters for badge
   const activeCount = [

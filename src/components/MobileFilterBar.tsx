@@ -164,6 +164,7 @@ export default function MobileFilterBar({
                 regionCounts={regionCounts}
                 hasActiveFilters={activeFilterCount > 0}
                 onClear={onReset}
+                defaultExpanded={true}
               />
             </div>
 

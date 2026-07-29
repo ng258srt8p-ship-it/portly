@@ -77,17 +77,40 @@ test.describe('Deals-page filter chips — must remain clickable', () => {
     await page.goto(`${FRONTEND}/deals`, { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForTimeout(6000);
 
-    // Tap the "Filter" button in the sticky bottom bar
-    const filterBtn = page.locator('a[href="#deals-filters"], button:has-text("Filter")').first();
-    if ((await filterBtn.count()) > 0) {
-      await filterBtn.click({ timeout: 3000 }).catch(() => {});
-      await page.waitForTimeout(800);
-    }
+    // The mobile sticky bottom bar has a dedicated Filters button.
+    const mobileFilterBtn = page.locator('[data-testid="mobile-filters-button"]');
+    await expect(mobileFilterBtn).toBeVisible({ timeout: 10_000 });
+    await mobileFilterBtn.click();
+    await page.waitForTimeout(800);
 
-    // Confirm the filter section (which IS the FilterSelectionGrid) is visible
-    // and not just hidden via CSS
-    const cruiseLine = page.locator('[data-testid="filter-cruise-line"]').first();
-    await expect(cruiseLine).toBeVisible({ timeout: 10_000 });
+    // The drawer should be open now — verify its presence.
+    const drawer = page.locator('[data-testid="mobile-filter-drawer"]');
+    await expect(drawer).toBeVisible({ timeout: 5_000 });
+
+    // Debug: log what we found inside the drawer
+    const drawerCount = await drawer.count();
+    console.log(`DEBUG: Found ${drawerCount} mobile-filter-drawer elements`);
+    
+    // Also log the filter-cruise-line count inside the drawer
+    const filterInDrawer = drawer.locator('[data-testid="filter-cruise-line"]');
+    const filterCountInDrawer = await filterInDrawer.count();
+    console.log(`DEBUG: Found ${filterCountInDrawer} filter-cruise-line elements inside drawer`);
+    
+    // Check if any are visible
+    const visibleCount = await filterInDrawer.filter({ visible: true }).count();
+    console.log(`DEBUG: ${visibleCount} of ${filterCountInDrawer} filter-cruise-line elements are visible`);
+
+    // Scope our filter checks to the drawer so we don't match the hidden
+    // desktop FilterSelectionGrid (which is display:none on mobile but
+    // still in the DOM and would resolve as "hidden" with .first()).
+    for (const { id, label } of FILTER_IDS) {
+      const chip = drawer.locator(`[data-testid="${id}"]`).first();
+      await expect(chip, `${label} should be visible inside mobile drawer`).toBeVisible({ timeout: 10_000 });
+
+      // The chip's dropdown button should accept pointer events
+      const btn = chip.locator('button').first();
+      expect(await btn.evaluate((el) => window.getComputedStyle(el).pointerEvents)).not.toBe('none');
+    }
   });
 
   test('desktop: Selecting a Line filter actually narrows the result set', async ({ page, viewport }) => {
