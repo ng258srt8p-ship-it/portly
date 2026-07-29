@@ -245,7 +245,7 @@ export default function EnhancedDealAnalysis({
   }, [data, context]);
 
   const fetchAnalysis = async (force = false) => {
-    let cancelled = false;
+    const cancelled = false;
     setLoading(true);
     setError(null);
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
