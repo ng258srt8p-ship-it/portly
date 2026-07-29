@@ -45,3 +45,44 @@
   2. Checking for any remaining hardcoded localhost:3001 references in the codebase
   3. Verifying that all E2E tests pass consistently against the live deployment
 ✅ Cycle #21 Complete
+
+## Cycle #22
+**Feature / Fix:** ValidateDeal to expect string ID for API deal validation — internal utility fix
+
+**Status:** ✅ Complete
+**Live URL verified:** https://portly-1i0.pages.dev/
+**Playwright:** 35/35 passed (5 projects: chromium, firefox, webkit, Mobile Chrome, Mobile Safari)
+
+## Cycle #23
+**Feature / Fix:** Fix duplicate `<Header />` component and mislocated `<SailingSubNav>` in `SailingDetailClient.tsx`; sync smoke test expectations with component presence
+
+**Phase 1 — Audit findings:**
+- The live Playwright smoke test suite showed 1 failure: "sailing detail page loads" expected `[data-testid="sailing-subnav"]` count=0 but found 1
+- Root cause #1: `SailingSubNav` was recreated in commit 9019df8 as a header-attached pill, but the test was never updated — it still asserted the component was "gone" (count 0)
+- Root cause #2: `SailingDetailClient.tsx` had `<Header />` rendered TWICE (lines 71-72) — a duplicate from when the patch tool merged the SailingSubNav addition. This caused two stacked header pills
+- Root cause #3: `SailingSubNav` was placed at lines 73-83 (outside the `data &&` gate) AND again at lines 119-130 (inside the data block) — the outer one would render during loading/error states but couldn't navigate to sections that hadn't mounted yet
+
+**Phase 2 — Implementation:**
+- Removed duplicate `<Header />` at line 72
+- Moved the single correct `<SailingSubNav>` inside the `data &&` gate (only renders when sections exist)
+- Removed the duplicate outer SailingSubNav (lines 73-83) that was outside the data block
+- Updated smoke test from `toHaveCount(0)` → `toHaveCount(1)` for `[data-testid="sailing-subnav"]`
+
+**Phase 3 — Build, Commit, Deploy:**
+- `npx tsc --noEmit`: ✅ Passed (exit 0)
+- `BUILD_TARGET=export npm run build`: ✅ 520 pages generated (500 sailing IDs)
+- Commit: `feat(hermes-loop): [Cycle #23] Fix duplicate Header and SailingSubNav in sailing detail page; update smoke test to expect subnav present`
+- Push: `git push origin main` succeeded
+- Worker: No changes needed (frontend-only fix)
+- Deploy: `npx wrangler pages deploy out --project-name=portly --branch=main` → https://38bd20e0.portly-1i0.pages.dev
+
+**Phase 4 — Live verification:**
+- `BASE_URL=https://portly-1i0.pages.dev/ npx playwright test e2e/_smoke.spec.ts e2e/button-size.spec.ts` → **35/35 passed** across 5 browser projects
+- Verified after CF Pages propagation (~60s wait): all tests green
+
+**Phase 5 — Notes / follow-ups for next cycle:**
+- The full Playwright suite (1270 tests) times out after 240s — need to run it in subsets or with reduced workers
+- Check `config.yaml` for `playwright.workers` setting and try `--workers=3` for the full run
+- Audit remaining e2e specs for the same stale check pattern (test claiming component doesn't exist when it was re-introduced)
+- The `_smoke.spec.ts` is the most critical — the other 1200+ tests in the full suite should be triaged next
+✅ Cycle #23 Complete
