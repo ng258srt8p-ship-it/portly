@@ -17,7 +17,7 @@
 - Changed the `_redirects` rule to use `302` (temporary redirect) which Cloudflare Pages supports for external proxies
 - Updated all frontend components to use empty->external redirects
 - Changed all four frontend API fallback values from `'http://localhost:3001'` to `''` (empty string) so they use relative paths (`/api/*`) which get redirected by the `_redirects` rule
-- The `selling/[id]/page.tsx` file already used the direct Worker URL for build-time SSG (`generateStaticParams`), which is correct and left unchanged
+- The `sailing/[id]/page.tsx` file already used the direct Worker URL for build-time SSG (`generateStaticParams`), which is correct and left unchanged
 
 **Phase 3 — Deploy:**
 - Commit: `git commit -m "feat(hermes-loop): [Cycle #21] Fix API proxy on Cloudflare Pages and frontend API fallbacks"`
