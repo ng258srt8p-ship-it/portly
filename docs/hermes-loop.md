@@ -9,8 +9,29 @@ live Cloudflare Pages deployment at **https://portly-1i0.pages.dev/**.
 |---|---|
 | [`../HERMES_LOOP_PROMPT.md`](../HERMES_LOOP_PROMPT.md) | Standing system instruction for each cycle (5 phases) |
 | [`../HERMES_AUTONOMOUS_LOG.md`](../HERMES_AUTONOMOUS_LOG.md) | Append-only cycle history (never rewritten) |
-| [`../run-hermes-loop.sh`](../run-hermes-loop.sh) | Shell runner — locking, logging, scheduling |
-| [`../playwright.config.ts`](../playwright.config.ts) | Patched to honor `BASE_URL` env var for live E2E |
+| [`../docs/hermes-loop/opencode-model-probe.sh`](hermes-loop/opencode-model-probe.sh) | Discovers a working OpenCode Zen free model each cycle |
+| [`../docs/hermes-loop/portly-cycle.sh`](hermes-loop/portly-cycle.sh) | Cycle wrapper — picks a model, invokes `hermes chat -q`, logs |
+| [`../playwright.config.ts`](../playwright.config.ts) | Honors `BASE_URL` env var for live E2E against Cloudflare Pages |
+
+## Model provider: OpenCode Zen (key-less)
+
+This project uses **OpenCode Zen** free models served from
+`http://127.0.0.1:3459/v1`. No API key is required. The goal is to avoid
+NVIDIA NIM entirely (NIM is reserved for the separate NIM Radar Protector
+project; Portly stays on the free local endpoint).
+
+The cron job runs the `docs/hermes-loop/portly-cycle.sh` wrapper, which:
+1. Calls `docs/hermes-loop/opencode-model-probe.sh` to find the first currently-working
+   free model from an ordered preference list.
+2. Passes the chosen model + `--provider custom:opencode-zen --model <name>`
+   to `hermes chat -q`.
+3. Logs to `hermes-cycles.log`.
+
+This insulates the loop from upstream model renames, retirements, and rate
+limits — if `deepseek-v4-flash-free` stops working, the probe automatically
+falls through to `big-pickle`, `mimo-v2.5-free`, `nemotron-3-ultra-free`, and
+`north-mini-code-free` (in that order). To add or reorder candidates, edit
+`PREFERRED_MODELS` in `docs/hermes-loop/opencode-model-probe.sh`.
 
 ## How a cycle works
 
