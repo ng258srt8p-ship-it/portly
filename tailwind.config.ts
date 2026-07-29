@@ -220,6 +220,10 @@ const config: Config = {
         float: '0 24px 48px -12px rgba(18, 19, 26, 0.06), 0 4px 12px -4px rgba(18, 19, 26, 0.04)',
         'float-lg': '0 32px 64px -16px rgba(18, 19, 26, 0.08), 0 8px 20px -6px rgba(18, 19, 26, 0.05)',
 
+        // Subtle card shadow — used by deal cards, small inline containers, buttons
+        // (shadow-xs is referenced in DealsGrid and other primary surfaces)
+        xs: '0 1px 2px 0 rgba(18, 19, 26, 0.04), 0 0 0 0 rgba(18, 19, 26, 0)',
+
         // Portly dark theme shadows
         sm: '0 1px 2px 0 rgba(0, 0, 0, 0.4)',
         md: '0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4)',

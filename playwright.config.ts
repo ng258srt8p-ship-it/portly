@@ -5,26 +5,31 @@ dotenv.config();
 // BASE_URL precedence:
 //   1. process.env.BASE_URL (explicit override, e.g. live Cloudflare Pages)
 //   2. http://localhost:<PORT|NEXT_PUBLIC_PORT|3002>  (local dev server)
-// Set BASE_URL=https://portly-1i0.pages.dev/ to run E2E against the live deployment.
+// Set BASE_URL=https://portly-1i0.pages.dev to run E2E against the live deployment.
 const getBaseURL = (): string => {
-  return process.env.BASE_URL || 'https://portly-1i0.pages.dev/';
+  let base = process.env.BASE_URL || 'https://portly-1i0.pages.dev';
+  // Remove any trailing slashes to avoid double slashes when navigating
+  while (base.endsWith('/')) {
+    base = base.slice(0, -1);
+  }
+  return base;
 };
 const BASE_URL = getBaseURL();
 
 export default defineConfig({
- testDir: './e2e',
- fullyParallel: true,
- forbidOnly: !!process.env.CI,
- retries: process.env.CI ? 2 : 0,
- workers: process.env.CI ? 1 : undefined,
- reporter: 'html',
- timeout: 60000,
- use: {
-   baseURL: BASE_URL,
-   trace: 'on-first-retry',
-   screenshot: 'only-on-failure',
-   video: 'retain-on-failure',
- },
+  testDir: './e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: 'html',
+  timeout: 60000,
+  use: {
+    baseURL: BASE_URL,
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+  },
   projects: [
     {
       name: 'chromium',
