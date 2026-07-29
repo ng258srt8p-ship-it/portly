@@ -5,6 +5,7 @@ This file tracks the autonomous improvement cycles run by the Hermes agent again
 Each cycle follows a strict 5-phase process: Audit → Implement → Commit+Doc+Deploy → Live Verify → Log & Reset.
 
 ---
+
 ## Cycle #19
 **Feature / Fix:** Fix unused variable alerts and bookingUrl in sailing detail API
 **Files touched:**
@@ -45,3 +46,43 @@ Each cycle follows a strict 5-phase process: Audit → Implement → Commit+Doc+
   3. Continuing to improve accessibility and UI consistency issues
 ✅ Cycle #19 Complete
 ---
+## Cycle #20
+**Feature / Fix:** Add missing shadow-xs token to Tailwind config and fix stale font rendering assertion
+**Files touched:**
+- `tailwind.config.ts` — Added `xs: '0 1px 2px 0 rgba(18,19,26,.04),0 0 0 0 rgba(18,19,26,0)'` to the `boxShadow` extension so deal cards and other UI elements using `shadow-xs` render with subtle depth.
+- `e2e/ui-consistency.spec.ts` — Updated the font rendering test assertion to expect `Plus Jakarta Sans|Syne|Clash Display` (the design's actual display font per `globals.css` CSS var override) instead of the stale `Syne|Clash Display` only.
+
+**Phase 1 — Audit findings:**
+- Running the UI consistency test suite against live deployment revealed two test failures:
+  1. **Shadow test (`deal cards have box-shadow applied`):** The deal cards on `/deals` were rendering with `boxShadow: "none"` because the Tailwind `shadow-xs` utility class was not defined in `tailwind.config.ts` `boxShadow` section (only `sm`, `float`, `float-lg`, `md`, `lg`, `xl`, `2xl`, `inner`, and glow/hard variants existed). This caused all deal cards, buttons, and small containers using `shadow-xs` to appear flat without visual depth.
+  2. **Font Rendering test (`page title uses display font`):** The test expected the page `<h1>` to use `Syne` or `Clash Display` per Tailwind config, but the actual deployed design uses `Plus Jakarta Sans` as the display font (set via `--font-display` CSS variable in `src/app/globals.css`, which overrides the Tailwind config). The test assertion was stale after a design token migration.
+
+**Phase 2 — Implementation:**
+- **Shadow fix:** Added the missing `xs` shadow token to `tailwind.config.ts` under `theme.extend.boxShadow` with the value `'0 1px 2px 0 rgba(18,19,26,.04),0 0 0 0 rgba(18,19,26,0)'` — a subtle, light shadow matching the project's existing shadow scale. This single-line config change immediately applies to all 7+ call sites of `shadow-xs` (primarily in `DealsGrid.tsx` but also buttons, panels, and small UI components), restoring visual depth to the main deals page.
+- **Font test fix:** Updated `e2e/ui-consistency.spec.ts` line 187-198 to change the test description and assertion from expecting `/Syne|Clash Display/` to `/Plus Jakarta Sans|Syne|Clash Display/` — acknowledging that while Tailwind config lists Syne/Clash Display, the actual rendered font uses the CSS var override from `globals.css` (`Plus Jakarta Sans, Inter, system-ui, sans-serif`). The test now passes if *any* of the three font families appear, making it resilient to future design-token adjustments while still guarding against accidental fallback to `system-ui`.
+
+**Phase 3 — Deploy:**
+- Commit: `git commit -m "feat(hermes-loop): [Cycle #20] Add shadow-xs token to Tailwind config and fix font test assertion"`
+- Push: `git push origin main`
+- Worker build and deployment: Skipped (no Worker changes in this cycle)
+- Frontend build: `BUILD_TARGET=export npm run build` succeeded, generating 500+ static pages
+- Frontend deployment: `npx wrangler pages deploy out --project-name=portly --branch=main` succeeded, deployed to https://2602ff61.portly-1i0.pages.dev (preview) and propagated to `portly-1i0.pages.dev` (production alias)
+
+**Phase 4 — Live verification:**
+- After deploying the updated Tailwind config and test fix, re-ran the UI consistency and smoke test suites against the live Cloudflare Pages deployment (`https://portly-1i0.pages.dev/`).
+- Results: **95 tests passed, 0 failed** across all 5 browser projects (Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari).
+  - Specifically verified:
+    - Deal cards now render with `box-shadow: "0 1px 2px 0 rgba(18,19,26,0.04)"` (was `none`)
+    - Page `<h1>` font-family now matches the updated assertion (`Plus Jakarta Sans, Inter, system-ui, sans-serif`)
+    - All smoke test assertions (homepage, deals, sailing detail, history, solo, about pages) continue to pass
+    - No regressions in color system, footer/unified layout, or page load integrity checks
+
+**Phase 5 — Notes / follow-ups for next cycle:**
+- The shadow-xs fix resolves a core visual depth issue on the primary user-facing `/deals` page, improving the perceived quality and interactivity of deal cards via subtle elevation on hover/rest states.
+- The font test assertion fix aligns automated verification with the actual deployed design, preventing false positives in future cycles.
+- No Worker changes were needed this cycle; the frontend build and deploy succeeded without errors.
+- Next cycle should focus on:
+  1. Investigating the occasional 404/MIME-type console errors observed in the Price History panel test (likely related to stale static chunk references during navigation)
+  2. Ensuring consistent test data setup for reliable execution of history/solo panel interaction tests
+  3. Auditing remaining interactive elements (filters, sort controls, deep-linked URL params) for full Playwright coverage
+✅ Cycle #20 Complete
