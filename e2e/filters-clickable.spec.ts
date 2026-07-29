@@ -87,19 +87,6 @@ test.describe('Deals-page filter chips — must remain clickable', () => {
     const drawer = page.locator('[data-testid="mobile-filter-drawer"]');
     await expect(drawer).toBeVisible({ timeout: 5_000 });
 
-    // Debug: log what we found inside the drawer
-    const drawerCount = await drawer.count();
-    console.log(`DEBUG: Found ${drawerCount} mobile-filter-drawer elements`);
-    
-    // Also log the filter-cruise-line count inside the drawer
-    const filterInDrawer = drawer.locator('[data-testid="filter-cruise-line"]');
-    const filterCountInDrawer = await filterInDrawer.count();
-    console.log(`DEBUG: Found ${filterCountInDrawer} filter-cruise-line elements inside drawer`);
-    
-    // Check if any are visible
-    const visibleCount = await filterInDrawer.filter({ visible: true }).count();
-    console.log(`DEBUG: ${visibleCount} of ${filterCountInDrawer} filter-cruise-line elements are visible`);
-
     // Scope our filter checks to the drawer so we don't match the hidden
     // desktop FilterSelectionGrid (which is display:none on mobile but
     // still in the DOM and would resolve as "hidden" with .first()).

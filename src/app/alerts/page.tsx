@@ -54,7 +54,7 @@ export default function AlertsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
       const res = await fetch(`${API_BASE}/api/alerts/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

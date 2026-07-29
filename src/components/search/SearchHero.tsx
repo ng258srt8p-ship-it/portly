@@ -6,7 +6,7 @@ import Dropdown from "@/components/ui/Dropdown";
 import { fetchFilterOptions } from "@/services/cruiseApi";
 import { useLiveData } from "@/hooks/useLiveData";
 
-const STATS_API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const STATS_API = process.env.NEXT_PUBLIC_API_URL || '';
 
 function CompassIcon() {
   return (

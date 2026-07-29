@@ -17,7 +17,7 @@ interface ExploreDealsHeroProps {
 
 export default function ExploreDealsHero({ filters, onFilterChange }: ExploreDealsHeroProps) {
   const fetcher = useCallback(async () => {
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
     const res = await fetch(`${API_BASE}/api/stats`);
     if (!res.ok) throw new Error('Failed to load stats');
     return res.json() as Promise<Stats>;
