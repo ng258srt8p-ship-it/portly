@@ -73,7 +73,7 @@ export default function AlertsPage() {
     }
   };
 
-  const isFormValid = email.length > 0 && EMAIL_REGEX.test(email) && (sailingUrl.length === 0 || sailingUrl.trim().length > 0);
+  const isFormValid = email.length > 0 && isEmailValid && isUrlValid;
 
   return (
     <>

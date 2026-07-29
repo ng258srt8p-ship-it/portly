@@ -784,7 +784,7 @@ app.get('/api/sailing/:id', async (c) => {
       route,
       region: row.departure_region || destination,
       departureDate: row.departure_date,
-      bookingUrl: undefined,
+      bookingUrl: row.booking_url,
       price: Number(row.price) || 0,
       originalPrice: Number(row.original_price) || 0,
       dropPercent,
