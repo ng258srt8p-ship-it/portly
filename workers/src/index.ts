@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getAllSailings, getSailingDetail, makeFingerprint, applyPriceDrift } from './scraper-data';
-import { runEnrichmentTick, findCandidatesForEnrichment } from './enrich-sailing';
+import { runEnrichmentTick, findCandidatesForEnrichment, enrichSailing } from './enrich-sailing';
 import { runIngestExpansionTick, debugBaseSailingSelect, genHistory } from './ingest-expander';
 import { runAlertEvaluationTick, runAlertDispatchTick } from './alert-engine';
 import { getMetricsSnapshot } from './metrics-analytics';
@@ -1172,6 +1172,55 @@ app.get('/api/enhanced/price-forecast/:id', async (c) => {
       cabinForecasts,
     }
   });
+});
+
+// ADMIN ENRICHMENT ENDPOINTS
+app.post('/api/admin/enrich/:id', async (c) => {
+  const auth = c.req.header('Authorization');
+  if (auth !== `Bearer ${c.env.SCRAPER_SECRET}`) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const sailingId = c.req.param('id');
+  const force = c.req.query('force') === '1';
+  const result = await enrichSailing(c.env, sailingId, { force });
+  if (!result.ok) {
+    return c.json({ error: result.reason || 'enrichment failed' }, 500);
+  }
+  return c.json(result);
+});
+
+app.get('/api/admin/enrichment-status', async (c) => {
+  const auth = c.req.header('Authorization');
+  if (auth !== `Bearer ${c.env.SCRAPER_SECRET}`) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const enrichedCount = await c.env.DB.prepare(
+    `SELECT COUNT(*) as count FROM sailings WHERE ai_generated_at IS NOT NULL`
+  ).first();
+  const avgScore = await c.env.DB.prepare(
+    `SELECT AVG(ai_score) as avg FROM sailings WHERE ai_score IS NOT NULL`
+  ).first();
+  return c.json({
+    db: {
+      enriched: Number(enrichedCount?.count) || 0,
+      avg_score: Number(avgScore?.avg) || 0,
+    },
+    cache: {
+      lastTick: await c.env.CACHE.get('enrichment:last_tick'),
+      tickCount: await c.env.CACHE.get('enrichment:tick_count'),
+    }
+  });
+});
+
+app.get('/api/admin/enrich/candidates', async (c) => {
+  const auth = c.req.header('Authorization');
+  if (auth !== `Bearer ${c.env.SCRAPER_SECRET}`) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const maxParam = c.req.query('max');
+  const max = maxParam ? Math.min(parseInt(maxParam, 10), 100) : 20;
+  const candidateIds = await findCandidatesForEnrichment(c.env, max);
+  return c.json({ ids: candidateIds });
 });
 
 export default app;

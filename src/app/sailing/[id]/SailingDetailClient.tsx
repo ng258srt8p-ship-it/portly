@@ -7,6 +7,7 @@ import PriceComparisonTable from '@/components/PriceComparisonTable';
 import Footer from '@/components/Footer';
 import { useLiveData } from '@/hooks/useLiveData';
 import SailingHero from '@/components/sailing/SailingHero';
+import SailingSubNav from '@/components/sailing/SailingSubNav';
 import ItineraryTimeline from '@/components/sailing/ItineraryTimeline';
 import PriceHistoryPanel from '@/components/sailing/PriceHistoryPanel';
 import EnhancedDealAnalysis from '@/components/sailing/EnhancedDealAnalysis';
@@ -68,19 +69,29 @@ export default function SailingDetailPage() {
   return (
     <>
       <Header />
-      {/*
-        Z-index stack (sailing detail page):
-          z-50  Header (fixed top), Modals, Dropdowns
-          z-20  Hero price callout card (sticky on lg+)
-          z-10  Hero content grid
-          z-0   Background gradients, glow accents
+      <Header />
+            <SailingSubNav
+              sections={[
+                { id: "overview", label: "Overview" },
+                { id: "itinerary", label: "Itinerary" },
+                { id: "price-history", label: "Price History" },
+                { id: "deal-analysis", label: "Deal Analysis" },
+                { id: "cabins", label: "Cabins" },
+                { id: "forecast", label: "Forecast" },
+                { id: "ship-info", label: "Ship Info" },
+              ]}
+            />
+            {/* Z-index stack (sailing detail page):
+                z-50  Header (fixed top), Modals, Dropdowns
+                z-20  Hero price callout card (sticky on lg+)
+                z-10  Hero content grid
+                z-0   Background gradients, glow accents
 
-        Sticky offsets use --header-height (98px) defined as a CSS custom
-        property in globals.css. (--subnav-height removed 2026-07-28 when
-        SailingSubNav was retired — see commit log.)
-      */}
+              Sticky offsets use --header-height (98px) defined as a CSS custom
+              property in globals.css.
+            */}
       {/* Section anchors preserved via scroll-mt-* on each <section> below */}
-      <main className="min-h-screen scroll-pt-28 pt-[var(--header-height)] pb-12 px-4 sm:px-6">
+      <main className="min-h-screen scroll-pt-28 pt-[calc(var(--header-height)+var(--subnav-height))] pb-12 px-4 sm:px-6">
         <div className="mx-auto max-w-7xl">
           {loading && (
             <div className="space-y-6">
