@@ -69,27 +69,15 @@ export default function SailingDetailPage() {
   return (
     <>
       <Header />
-      <Header />
-            <SailingSubNav
-              sections={[
-                { id: "overview", label: "Overview" },
-                { id: "itinerary", label: "Itinerary" },
-                { id: "price-history", label: "Price History" },
-                { id: "deal-analysis", label: "Deal Analysis" },
-                { id: "cabins", label: "Cabins" },
-                { id: "forecast", label: "Forecast" },
-                { id: "ship-info", label: "Ship Info" },
-              ]}
-            />
-            {/* Z-index stack (sailing detail page):
-                z-50  Header (fixed top), Modals, Dropdowns
-                z-20  Hero price callout card (sticky on lg+)
-                z-10  Hero content grid
-                z-0   Background gradients, glow accents
+      {/* Z-index stack (sailing detail page):
+          z-50  Header (fixed top), Modals, Dropdowns
+          z-20  Hero price callout card (sticky on lg+)
+          z-10  Hero content grid
+          z-0   Background gradients, glow accents
 
-              Sticky offsets use --header-height (98px) defined as a CSS custom
-              property in globals.css.
-            */}
+        Sticky offsets use --header-height (98px) defined as a CSS custom
+        property in globals.css.
+      */}
       {/* Section anchors preserved via scroll-mt-* on each <section> below */}
       <main className="min-h-screen scroll-pt-28 pt-[calc(var(--header-height)+var(--subnav-height))] pb-12 px-4 sm:px-6">
         <div className="mx-auto max-w-7xl">
@@ -116,6 +104,18 @@ export default function SailingDetailPage() {
 
           {data && (
             <div className="space-y-8 sm:space-y-12">
+              {/* SailingSubNav - sticky sub-nav pill below header */}
+              <SailingSubNav
+                sections={[
+                  { id: "overview", label: "Overview" },
+                  { id: "itinerary", label: "Itinerary" },
+                  { id: "price-history", label: "Price History" },
+                  { id: "deal-analysis", label: "Deal Analysis" },
+                  { id: "cabins", label: "Cabins" },
+                  { id: "forecast", label: "Forecast" },
+                  { id: "ship-info", label: "Ship Info" },
+                ]}
+              />
               {/* Hero */}
               <section id="overview" className="scroll-mt-32">
                 <SailingHero

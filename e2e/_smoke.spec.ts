@@ -44,13 +44,13 @@ test.describe('smoke test against live preview', () => {
     await expect(
       page.getByRole('heading', { name: 'Carnival Horizon', exact: true })
     ).toBeVisible({ timeout: 15000 });
-    // Section anchors (SailingSubNav was removed; section ids preserved for deep links)
+    // Section anchors (SailingSubNav preserved for deep links)
     for (const id of ['#overview', '#price-history', '#deal-analysis', '#cabins', '#forecast', '#ship-info']) {
       await expect(page.locator(id)).toBeAttached({ timeout: 5000 });
     }
-    // Verify SailingSubNav is gone
+    // Verify SailingSubNav is present
     const subnav = page.locator('[data-testid="sailing-subnav"]');
-    await expect(subnav).toHaveCount(0);
+    await expect(subnav).toHaveCount(1);
   });
 
   test('history page loads', async ({ page }) => {
