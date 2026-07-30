@@ -129,6 +129,18 @@ export default function SailingDetailPage() {
                   originalPrice={data.sailing.originalPrice || 0}
                   dropPercent={data.sailing.dropPercent || 0}
                   cabinType={data?.cabinBreakdown?.[0]?.cabinType || ''}
+                  cabinTier={(() => {
+                    const cb = data?.cabinBreakdown?.[0];
+                    if (!cb) return null;
+                    return {
+                      cabinType: cb.cabinType || '',
+                      baseFare: cb.baseFarePerPerson ?? cb.base ?? 0,
+                      portTax: cb.portTaxPerPerson ?? cb.portFees ?? cb.portTax ?? 0,
+                      gratuityPerNight: cb.gratuityPerPersonPerNight ?? cb.gratuity ?? cb.mandatoryGratuities ?? 0,
+                      nights: cb.nights || cb.raw?.nights || data.sailing.days || 7,
+                    };
+                  })()}
+                  bookingUrl={data.sailing.bookingUrl || ''}
                 />
              </section>
 
