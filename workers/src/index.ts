@@ -68,19 +68,55 @@ function mapKeys(obj: any): any {
   return obj;
 }
 
+// Derive a canonical port name + route array from a D1 row.
+// The `departure_port` column has both real values AND corrupt legacy values
+// (e.g. lowercase variants like "lisbon" / "athens" / "miami") because the
+// scraper/ingestion pipeline sometimes wrote the wrong text. The `itinerary`
+// JSON column is the source of truth — its [0] entry is always the actual
+// departure port and the full array is the real route.
+//
+// This helper is shared between /api/deals (Cycle #26 fix) and /api/sailing/:id
+// (Cycle #25 fix) so both endpoints stay in sync.
+function parseItineraryPort(row: any): { port: string; route: string[] } {
+  const destination = row.destination || '';
+  const fallback = row.departure_port || row.departurePort || '';
+  let route: string[] = fallback
+    ? [fallback, destination, fallback]
+    : [destination];
+  let port = fallback;
+  const rawItinerary = row.itinerary;
+  if (rawItinerary) {
+    let parsed: any = rawItinerary;
+    if (typeof parsed === 'string') {
+      try { parsed = JSON.parse(parsed); } catch { parsed = []; }
+    }
+    if (Array.isArray(parsed) && parsed.length >= 2) {
+      route = parsed;
+      // itinerary is always [departure, ...ports, return] — first element wins
+      port = parsed[0] || port;
+    }
+  }
+  return { port: port || '', route };
+}
+
 function formatSailing(row: any): any {
   const r = mapKeys(row);
   // Parse history JSON string → array
   if (typeof r.history === 'string') {
     try { r.history = JSON.parse(r.history); } catch { r.history = []; }
   }
-  // Parse itinerary JSON string → array
+  // Parse itinerary JSON string → array (parseItineraryPort re-parses if needed)
   if (typeof r.itinerary === 'string') {
     try { r.itinerary = JSON.parse(r.itinerary); } catch { r.itinerary = []; }
   }
   // Add region field for consistency with sailing detail endpoint
   // Use departure_region if available
   r.region = r.departureRegion || undefined;
+  // Override departurePort + add route from itinerary (handles corrupt
+  // departure_port values like "lisbon" / "athens" — Cycle #26 fix)
+  const { port, route } = parseItineraryPort(r);
+  if (port) r.departurePort = port;
+  r.route = route;
   return r;
 }
 
@@ -432,7 +468,10 @@ app.get('/api/search', async (c) => {
 // runs in ~10ms instead of triggering Cloudflare 1102 CPU errors.
 // ────────────────────────────────────────────────────────────────────────
 
-const FILTERS_CACHE_KEY = 'filters:catalog:v1';
+// v2 — 2026-07-29 Cycle #26: dedup ports case-insensitively (drops legacy
+// lowercase garbage like "lisbon" / "athens" / "miami" that the scraper
+// pipeline wrote). Bump the version suffix whenever the catalog shape changes.
+const FILTERS_CACHE_KEY = 'filters:catalog:v2';
 // TTL: 1800s (30 min) — bumped from 300s on 2026-07-28 to reduce Workers KV
 // read pressure (50% of free daily tier consumed mid-cycle). Filter catalog
 // rarely changes within a sync cycle, so freshness impact is minimal.
@@ -462,11 +501,27 @@ async function buildFilterCatalog(env: any): Promise<FilterCatalog> {
     cruiseLines: (lines.results || []).map((r: any) => r.name).filter(Boolean),
     destinations: (dests.results || []).map((r: any) => r.name).filter(Boolean),
     ships: (ships.results || []).map((r: any) => r.name).filter(Boolean),
-    departurePorts: (ports.results || []).map((r: any) => r.p).filter(Boolean),
-    departureRegions: (regions.results || []).map((r: any) => r.r).filter(Boolean),
+    // Dedup ports case-insensitively, prefer the title-cased version
+    // (drops the legacy lowercase garbage like "lisbon" / "athens" / "miami"
+    // that the scraper pipeline wrote to the column — Cycle #26 fix).
+    departurePorts: dedupPreferTitleCase((ports.results || []).map((r: any) => r.p).filter(Boolean)),
+    departureRegions: dedupPreferTitleCase((regions.results || []).map((r: any) => r.r).filter(Boolean)),
     badgeTypes: (badges.results || []).map((r: any) => r.b).filter(Boolean),
     generatedAt: new Date().toISOString(),
   };
+}
+
+// Dedup an array of strings case-insensitively, keeping the first occurrence.
+// "Galveston" + "galveston" + "GALVESTON" → ["Galveston"]
+// Used by /api/filters to collapse corrupt lowercase port values like "lisbon"
+// into the canonical proper-case form ("Lisbon").
+function dedupPreferTitleCase(values: string[]): string[] {
+  const seen = new Map<string, string>();
+  for (const v of values) {
+    const key = v.toLowerCase();
+    if (!seen.has(key)) seen.set(key, v);
+  }
+  return Array.from(seen.values()).sort();
 }
 
 app.get('/api/filters', async (c) => {
@@ -768,33 +823,12 @@ app.get('/api/sailing/:id', async (c) => {
     ? Math.round(((row.original_price - row.price) / row.original_price) * 100)
     : 0;
 
-  // Parse itinerary JSON → route array (preferred), fall back to synthetic
+  // Parse itinerary JSON → route array (preferred), fall back to synthetic.
+  // parseItineraryPort is shared with /api/deals (formatSailing) so both
+  // endpoints derive port + route identically from the itinerary column.
   const destination = row.destination || 'Caribbean';
-  let route: string[];
-  let port = row.departure_port || '';
-  if (row.itinerary) {
-    try {
-      const parsed = JSON.parse(row.itinerary);
-      if (Array.isArray(parsed) && parsed.length >= 2) {
-        route = parsed;
-        // Use the first port of the itinerary as the departure port
-        // (itinerary is always [departure, ...ports, return])
-        port = parsed[0] || port;
-      } else {
-        route = row.departure_port
-          ? [row.departure_port, destination, row.departure_port]
-          : [destination];
-      }
-    } catch {
-      route = row.departure_port
-        ? [row.departure_port, destination, row.departure_port]
-        : [destination];
-    }
-  } else {
-    route = row.departure_port
-      ? [row.departure_port, destination, row.departure_port]
-      : [destination];
-  }
+  const rowWithDest = { ...row, destination };
+  const { port, route } = parseItineraryPort(rowWithDest);
 
   return c.json({
     sailing: {

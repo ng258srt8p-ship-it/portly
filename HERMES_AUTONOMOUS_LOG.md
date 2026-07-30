@@ -160,3 +160,51 @@ The `itinerary` column was already populated correctly by the expander/ingestion
 - The `e2e/sailing-api-contract.spec.ts` was already committed in 3676ad9; no new commit needed for the spec
 
 ✅ Cycle #25 Complete
+
+## Cycle #26
+|**Feature / Fix:** Fix `/api/deals` returning garbage `departurePort` values ("lisbon", "athens", lowercase variants) instead of deriving from the `itinerary[0]` JSON column — every Miami cruise showed "Lisbon" on the deals page
+
+|**Status:** ✅ Complete
+|**Live URL verified:** https://portly-1i0.pages.dev/ (new deploy: https://884061c2.portly-1i0.pages.dev)
+|**Playwright:** 50/50 passed across all 5 browser projects (smoke + sailing-api-contract + filter-bar-audit + departure-port-contract)
+
+|**Phase 1 — Audit findings:**
+|- Live `/api/deals?limit=100`: 100/100 sailings have `itinerary[0] !== departurePort` — confirmed 100% mismatch rate
+|- Live deal card UI: `<Tag>{deal.departurePort}</Tag>` in `DealsGrid.tsx:372` displays "lisbon" / "athens" / "vancouver" etc. for cruises that actually depart Miami / Galveston / etc.
+|- `/api/filters` returns BOTH proper-case and lowercase variants of the same port (e.g., `["Athens","athens","Miami","miami"]`) — polluted filter dropdown after the fix would still show duplicates
+|- Root cause: The `s.departure_port` column in D1 contains both real values (proper-case) and corrupt/legacy values (lowercase, foreign cities). The `formatSailing()` helper parses `itinerary` correctly but does NOT override `departurePort` from `itinerary[0]` — only the `/api/sailing/:id` handler does this (Cycle #25)
+|- Cycle #25's own follow-up note flagged this exact bug: "consider a shared helper `parseItinerary(row)` used by both `/api/deals` and `/api/sailing/:id`"
+|- Class of bug #17 (Worker↔frontend contract drift / Pitfall #17) — recurring for the third time on different call paths
+|- Also affects: filter dropdown population (`useFilterCatalog`), ActiveFilterPills display, filter query results (`?departurePort=Miami` may miss rows that have lowercase `departure_port`)
+
+**Phase 2 — Implementation (`workers/src/index.ts`):**
+1. Extracted shared helper `parseItineraryPort(row)` returning `{ port, route }` from a D1 row — used by both `/api/deals` (via `formatSailing`) and `/api/sailing/:id` so the two endpoints stay in sync (Cycle #25 follow-up)
+2. Updated `formatSailing()` to override `departurePort` from `itinerary[0]` and add a `route` array field
+3. Updated `/api/sailing/:id` to delegate to `parseItineraryPort()` (DRY — replaces the inline parse logic from Cycle #25)
+4. Added `dedupPreferTitleCase()` helper for `/api/filters` to drop lowercase duplicates (e.g. "lisbon" → "Lisbon") and keep canonical proper-case names
+5. Bumped `FILTERS_CACHE_KEY` from `v1` → `v2` and deleted both KV keys (`wrangler kv key delete`) to force catalog refresh on next request
+6. New regression spec `e2e/departure-port-contract.spec.ts` validates the contract end-to-end
+
+**Phase 3 — Build, Deploy, Verify:**
+- `cd workers && npx tsc --noEmit`: ✅
+- `cd workers && npx wrangler deploy --dry-run --outdir /tmp/wrangler-out`: ✅
+- `cd workers && npx wrangler deploy`: ✅ → https://portly-api.vqh9mnrdbp.workers.dev
+- `BUILD_TARGET=export npx next build`: ✅ 520 pages (500 sailing IDs)
+- `npx wrangler pages deploy out --project-name=portly --branch=main`: ✅ https://884061c2.portly-1i0.pages.dev
+- KV cache invalidated (v1 + v2); fresh fetch confirmed: `/api/filters` returns only proper-case ports (e.g. "Lisbon" not "lisbon")
+- `/api/deals?limit=100`: **0/100 mismatches** (was 100/100)
+- Sample: `carnival_horizon_2026-03-08_miami_6__big_31__v4m` → `departurePort: "Miami"`, `itinerary[0]: "Miami"` ✅
+
+**Phase 4 — Live E2E verification:**
+- `BASE_URL=https://884061c2.portly-1i0.pages.dev/ npx playwright test e2e/_smoke.spec.ts e2e/sailing-api-contract.spec.ts e2e/filter-bar-audit.spec.ts e2e/departure-port-contract.spec.ts --workers=1`: **50/50 passed** across all 5 browser projects (chromium, firefox, webkit, Mobile Chrome, Mobile Safari) in 2.9 min
+- New spec `e2e/departure-port-contract.spec.ts` (committed with `git add -f` per project convention for named regression tests):
+  - API gate: 50 deals, 0 mismatches
+  - UI gate: no "lisbon" or "athens" strings on /deals page
+  - Filter gate: no duplicate ports differing only by case
+
+**Phase 5 — Notes / follow-ups for next cycle:**
+- Class of bug (Worker↔frontend contract drift) recurred three times now on `/api/deals` and `/api/sailing/:id`; the new shared helper `parseItineraryPort()` should be the LAST place that handles this logic
+- Consider extracting a similar helper for the `region` field — `/api/sailing/:id` uses `s.destination` while `/api/deals` uses `s.departure_region` (different mappings, same drift risk)
+- The remaining lowercase garbage values in the D1 `sailings.departure_port` column (`amsterdam`, `fort-lauderdale`) are not harmful now that the API overrides them — but they should be cleaned up in a future D1 sweep migration (`UPDATE sailings SET departure_port = '' WHERE departure_port != '' AND ...`)
+- Next opportunity: Cycle #27 — pick a single new improvement (UI/UX, performance, accessibility, or another contract drift)
+✅ Cycle #26 Complete
