@@ -5,7 +5,8 @@
 # a model at runtime — insulated from upstream model renames/EOLs.
 #
 # Output:
-#   echo's the first working model ID (one line) — callers capture via $(...).
+#   Default mode: echo's the first working model ID (one line) — callers capture via $(...).
+#   --list-all:   echo's ALL working model IDs (one per line), for CI discovery.
 #   If nothing works, exits non-zero with a stderr message.
 #
 # Strategy:
@@ -27,12 +28,18 @@ OPENCODE_ZEN_BASE="${OPENCODE_ZEN_BASE:-http://127.0.0.1:3459}"
 # Timeout per probe — if a model takes longer than this to answer, skip it.
 PROBE_TIMEOUT="${PROBE_TIMEOUT:-10}"
 
+# Parse flags
+LIST_ALL=false
+if [[ "${1:-}" == "--list-all" ]]; then
+  LIST_ALL=true
+fi
+
 # Candidate free models on OpenCode Zen, ordered by preference for this workload
 # (code-agent + tool-calling needs large context + JSON output).
 # Update this list when OpenCode Zen publishes new free models or retires old ones.
 PREFERRED_MODELS=(
+  "big-pickle"               # general-purpose, large context, consistently available
   "deepseek-v4-flash-free"   # code-specialised, large context — best for agent cycles
-  "big-pickle"               # general-purpose, large context
   "mimo-v2.5-free"           # fast fallback
   "nemotron-3-ultra-free"    # NVIDIA fallback
   "north-mini-code-free"     # tiny code model, last-resort
@@ -96,13 +103,24 @@ main() {
         [ "$found" -eq 0 ] && candidates+=("$m")
     done < <(discover_live_models)
 
-    # Probe each in order; first success wins.
+    # Probe each in order.
+    local working=()
     for model in "${candidates[@]}"; do
         if probe_one "$model" >/dev/null 2>&1; then
-            printf '%s\n' "$model"
-            exit 0
+            working+=("$model")
+            if [ "$LIST_ALL" = false ]; then
+                printf '%s\n' "$model"
+                exit 0
+            fi
         fi
     done
+
+    if [ "$LIST_ALL" = true ]; then
+        if [ ${#working[@]} -gt 0 ]; then
+            printf '%s\n' "${working[@]}"
+            exit 0
+        fi
+    fi
 
     echo "❌ No working OpenCode Zen free model found." >&2
     echo "   Tried: ${candidates[*]}" >&2

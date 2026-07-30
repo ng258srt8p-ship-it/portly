@@ -1,0 +1,114 @@
+name: OpenCode Zen Model Discovery
+
+on:
+  schedule:
+    # Run daily at 03:00 UTC (after OpenCode Zen's typical model refresh window)
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  probe:
+    name: Probe OpenCode Zen free models
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run model probe
+        id: probe
+        run: |
+          # Make the probe script executable
+          chmod +x docs/hermes-loop/opencode-model-probe.sh
+          
+          # Run it and capture output (one model per line)
+          set +e
+          MODELS=$(bash docs/hermes-loop/opencode-model-probe.sh 2>&1)
+          EXIT_CODE=$?
+          set -e
+          
+          echo "models<<EOF" >> $GITHUB_OUTPUT
+          echo "$MODELS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+      - name: Parse and compare models
+        id: compare
+        run: |
+          # Extract models from probe output (skip any non-model lines)
+          MODEL_LINES=$(echo "${{ steps.probe.outputs.models }}" | grep -E '^[a-z0-9_-]+$' || true)
+          
+          # Current preferred models from source
+          CURRENT=$(grep -A 10 'const PREFERRED_MODELS' server/utils/openCodeClient.ts | grep -Eo '[a-z0-9_-]+-free' | sort -u)
+          
+          echo "=== Probe discovered ==="
+          echo "$MODEL_LINES"
+          echo "=== Currently preferred ==="
+          echo "$CURRENT"
+          
+          # Find new models (in probe output but not in PREFERRED_MODELS)
+          NEW_MODELS=$(comm -13 <(echo "$CURRENT" | sort) <(echo "$MODEL_LINES" | sort -u) | grep -v '^$' || true)
+          
+          echo "=== New models found ==="
+          echo "$NEW_MODELS"
+          
+          if [ -n "$NEW_MODELS" ]; then
+            echo "new_models<<EOF" >> $GITHUB_OUTPUT
+            echo "$NEW_MODELS" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "has_new=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_new=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create issue for new models
+        if: steps.compare.outputs.has_new == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const newModels = `${{ steps.compare.outputs.new_models }}`.trim().split('\n').filter(Boolean);
+            const title = `🤖 New OpenCode Zen free models discovered: ${newModels.join(', ')}`;
+            const body = `**Automated model discovery** ran at ${new Date().toISOString()} and found ${newModels.length} model(s) not in the current \`PREFERRED_MODELS\` list:\n\n${newModels.map(m => `- \`${m}\``).join('\n')}\n\n---\n\n**Action needed:** If these models have been consistently available for a few days, add them to \`server/utils/openCodeClient.ts\` in the \`PREFERRED_MODELS\` array (near the top).\n\nCurrent preferred models are:\n\`\`\`ts\nconst PREFERRED_MODELS: readonly string[] = [\n  'big-pickle',\n  'deepseek-v4-flash-free',\n  'mimo-v2.5-free',\n  'nemotron-3-ultra-free',\n  'north-mini-code-free',\n];\`\`\`\n\nThe \`openCodeClient.ts\` will auto-discover these on next init if they're added to the list.`;
+
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: ['opencode-model-discovery'],
+            });
+
+            const alreadyOpen = existing.find(i => i.title.includes(newModels[0]));
+            if (alreadyOpen) {
+              console.log('Issue already exists for these models, skipping creation');
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['opencode-model-discovery', 'enhancement'],
+              });
+            }
+
+      - name: Log completion
+        run: |
+          echo "✅ Model discovery complete"
+          if [ "${{ steps.compare.outputs.has_new }}" = "true" ]; then
+            echo "📋 New models found — issue created"
+          else
+            echo "📋 No new models"
+          fi
