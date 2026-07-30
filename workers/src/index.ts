@@ -1293,4 +1293,48 @@ app.get('/api/admin/enrich/candidates', async (c) => {
   return c.json({ ids: candidateIds });
 });
 
+// ADMIN ALERT TICK ENDPOINTS — wired for Cycle #29
+// Was imported on line 6 but had no route handler. The dashboard's
+// "Run Alert Tick" button calls these and was getting 404.
+app.post('/api/admin/alert-eval-tick', async (c) => {
+  const auth = c.req.header('Authorization');
+  if (auth !== `Bearer ${c.env.SCRAPER_SECRET}`) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const body = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  const max = Number((body as { max?: number }).max) || 25;
+  try {
+    const result = await runAlertEvaluationTick(c.env, { maxPerTick: max });
+    // Persist last_tick metadata so /api/metrics dashboard shows it
+    await c.env.CACHE.put(
+      'alerts:last_eval_tick',
+      JSON.stringify({ ts: new Date().toISOString(), result }),
+      { expirationTtl: 60 * 60 * 24 * 7 }
+    );
+    return c.json({ ok: true, ...result });
+  } catch (err: any) {
+    return c.json({ ok: false, error: 'eval_tick_failed', message: err?.message || 'unknown' }, 500);
+  }
+});
+
+app.post('/api/admin/alert-dispatch-tick', async (c) => {
+  const auth = c.req.header('Authorization');
+  if (auth !== `Bearer ${c.env.SCRAPER_SECRET}`) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const body = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  const max = Number((body as { max?: number }).max) || 10;
+  try {
+    const result = await runAlertDispatchTick(c.env, { maxPerTick: max });
+    await c.env.CACHE.put(
+      'alerts:last_dispatch_tick',
+      JSON.stringify({ ts: new Date().toISOString(), result }),
+      { expirationTtl: 60 * 60 * 24 * 7 }
+    );
+    return c.json({ ok: true, ...result });
+  } catch (err: any) {
+    return c.json({ ok: false, error: 'dispatch_tick_failed', message: err?.message || 'unknown' }, 500);
+  }
+});
+
 export default app;

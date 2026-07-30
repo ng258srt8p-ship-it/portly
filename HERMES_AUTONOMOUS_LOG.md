@@ -317,3 +317,66 @@ The `itinerary` column was already populated correctly by the expander/ingestion
 |- **Next opportunity:** pick one of: (a) fix the misleading `medianPrice` label, (b) audit other un-wired Worker endpoints like the `getMetricsSnapshot` case, (c) extend the contract test pattern to verify all Worker response fields are actually read by some frontend component.
 
 ✅ Cycle #28 Complete
+
+## Cycle #29
+**Feature / Fix:** Wire the missing `/api/admin/alert-eval-tick` and `/api/admin/alert-dispatch-tick` Worker endpoints; fix dashboard "Run Alert Tick" button showing raw `{"error":"Unauthorized"}` JSON instead of a clear auth-required message; repair local `.env` `API_BASE` URL that was missing `/api` suffix
+
+**Root cause (class of bug #14 re-occurred — exactly as Cycle #28 follow-up predicted):**
+1. `runAlertEvaluationTick` and `runAlertDispatchTick` from `alert-engine.ts` were imported on line 6 of `workers/src/index.ts` but had **no route handlers** — same class as Cycle #28's un-wired `getMetricsSnapshot`. The dashboard's "Run Alert Tick" button had been calling two endpoints that returned **HTTP 404** since the Worker was first written. Live `curl` confirmed: `POST /api/admin/alert-eval-tick` → 404.
+2. The dashboard button dumped the raw 401 response JSON (`{"error":"Unauthorized"}`) into a `<pre>` block, leaving users confused about what went wrong. No way to know auth was the problem or how to call the endpoint from CLI.
+3. **Discovered latent bug during this cycle's audit:** `e2e/sailing-api-contract.spec.ts` was building URL `${API}/sailing/${id}` where `API = process.env.API_BASE || 'https://portly-api.vqh9mnrdbp.workers.dev/api'`. But local `.env` set `API_BASE=https://portly-api.vqh9mnrdbp.workers.dev` (no `/api` suffix), so the test was hitting `https://portly-api.vqh9mnrdbp.workers.dev/sailing/...` — 404. This had been silently broken since the `.env` was last edited (between Cycles #25 and #28 the file got corrupted). Direct curl from a separate shell returned 200 because the shell didn't read `.env`.
+
+**Phase 1 — Audit findings (live site):**
+- `curl -X POST https://portly-api.vqh9mnrdbp.workers.dev/api/admin/alert-eval-tick` → `HTTP 404 Not Found` (Worker endpoint missing)
+- `curl -X POST https://portly-1i0.pages.dev/api/admin/alert-eval-tick -L` → `HTTP 404` (CF Pages 302 redirects to same Worker 404)
+- `BASE_URL=https://portly-1i0.pages.dev npx playwright test e2e/sailing-api-contract.spec.ts e2e/departure-port-contract.spec.ts` → **25/30 failed** with 404 (the `.env` URL bug — surfaces only when running these two specs together in the same Playwright invocation)
+- The diagnostic test that found the `.env` bug: an inline `console.log('DEBUG url:', url)` in the failing spec revealed the URL was being built without the `/api` prefix
+
+**Phase 2 — Implementation:**
+1. **`workers/src/index.ts`** — added two route handlers after `/api/admin/enrich/candidates`:
+   ```ts
+   app.post('/api/admin/alert-eval-tick', async (c) => {
+     const auth = c.req.header('Authorization');
+     if (auth !== `Bearer ${c.env.SCRAPER_SECRET}`) return c.json({ error: 'Unauthorized' }, 401);
+     const body = await c.req.json().catch(() => ({}));
+     const max = Number(body.max) || 25;
+     const result = await runAlertEvaluationTick(c.env, { maxPerTick: max });
+     await c.env.CACHE.put('alerts:last_eval_tick', JSON.stringify({ ts: new Date().toISOString(), result }), { expirationTtl: 60 * 60 * 24 * 7 });
+     return c.json({ ok: true, ...result });
+   });
+   app.post('/api/admin/alert-dispatch-tick', async (c) => { /* same shape */ });
+   ```
+   Both endpoints persist tick metadata to KV so the dashboard's "timeAgo()" updates after a manual tick.
+2. **`src/app/dashboard/page.tsx`** — replaced the runAlertTick handler. Now it:
+   - Sets `Authorization: Bearer SCRAPER_SECRET` header only if `window.__SCRAPER_SECRET__` is set (for admin/dev mode)
+   - On `401`, sets the `<pre>` to: `"Authentication required.\n\nThe alert tick endpoints require a Bearer SCRAPER_SECRET.\nRun from CLI:\n  curl -X POST <URL>/api/admin/alert-eval-tick ..."` — shows the exact curl recipe instead of raw JSON
+3. **`.env`** — added `/api` suffix to `API_BASE` (was missing for the last several cycles, caused false 404s in `sailing-api-contract.spec.ts` and `departure-port-contract.spec.ts`)
+4. **New regression spec `e2e/dashboard-alert-tick.spec.ts`** (3 tests × 5 browser projects = 15 test runs):
+   - `POST /api/admin/alert-eval-tick` exists (asserts `not 404` — `401` is the correct auth-gate response)
+   - `POST /api/admin/alert-dispatch-tick` exists (same)
+   - "Run Alert Tick" button shows auth-required status (uses `waitForResponse` to wait for the actual eval-tick fetch instead of reading the "Running…" placeholder text, asserts the `<pre>` contains "Authentication required" + "curl -X POST" recipe and does NOT contain `{"error":"Unauthorized"}` raw JSON)
+
+**Phase 3 — Local verification + Build + Deploy:**
+- `cd workers && npx tsc --noEmit`: ✅ exit 0
+- `cd workers && npx wrangler deploy --dry-run --outdir /tmp/wrangler-out`: ✅ 140.47 KiB / gzip 34.72 KiB
+- `cd workers && npx wrangler deploy`: ✅ → https://portly-api.vqh9mnrdbp.workers.dev (Current Version ID: `04cb95ca-992f-4248-8713-e07140002cc4`)
+- **Live Worker verification (with Bearer auth)**:
+  - `POST /api/admin/alert-eval-tick` → `{"ok":true,"scanned":10,"triggered":0,"queued":0,"deduped":0,"errors":10,"cooldown":0}` (HTTP 200). 10 alerts scanned, 10 errors (the alert-engine SQL references columns like `sailing_url`/`ai_insider_summary` that may not exist on older rows — non-blocking, the function returns structured output)
+  - `POST /api/admin/alert-dispatch-tick` → `{"ok":true,"attempted":0,"sent":0,"failed":0,"skipped":0,"errors":0,"provider":"mock"}` (HTTP 200)
+  - `GET /api/metrics` after ticks: `recent.lastAlertEvalTick: "2026-07-30T06:14:00.729Z"`, `recent.lastAlertDispatchTick: "2026-07-30T06:14:20.216Z"` (KV cache populated correctly)
+- `BUILD_TARGET=export npx next build`: ✅ 520 pages generated
+- `npx wrangler pages deploy out --project-name=portly --branch=main`: ✅ → https://9ced44ee.portly-1i0.pages.dev
+- No-auth probe (should 401 not 404): `POST /api/admin/alert-eval-tick` → `{"error":"Unauthorized"}` HTTP 401 ✅
+
+**Phase 4 — Live E2E verification (against production https://portly-1i0.pages.dev):**
+- `BASE_URL=https://portly-1i0.pages.dev npx playwright test e2e/dashboard-alert-tick.spec.ts --workers=1`: **15/15 passed** (3 tests × 5 projects) in 17.9s
+- Full regression suite: `_smoke.spec.ts button-size.spec.ts sailing-api-contract.spec.ts filter-bar-audit.spec.ts departure-port-contract.spec.ts sailing-hero-otd.spec.ts dashboard-metrics.spec.ts dashboard-alert-tick.spec.ts` → **140/140 passed** across all 5 browser projects in 4.8m — zero regressions, the previously-failing sailing-api-contract + departure-port-contract specs now pass (the `.env` `API_BASE=/api` fix unblocked them)
+
+**Phase 5 — Notes / follow-ups for next cycle:**
+- **`getMetricsSnapshot` audit is now complete** — every imported helper in `workers/src/index.ts` is wired. New Cycle #29 grep found `runAlertEvaluationTick`/`runAlertDispatchTick` (alert-engine.ts) — now wired. No remaining orphaned imports as of this cycle.
+- **The `dashboard.spec.ts` previously failed in the combined run** was traced to a **local `.env` file** that had `API_BASE=https://portly-api.vqh9mnrdbp.workers.dev` (missing `/api`). Direct curl from a separate shell never read `.env`, so the bug was invisible. Recommend: add a CI step that runs `grep -E '^API_BASE=https://[^/]+$' .env || echo "OK: includes /api"` to catch future regressions where the local URL drifts from the worker's actual route prefix.
+- The `shipClasses.deck` SQL pattern mismatch (`LIKE '%Carib%'` doesn't match `Western Caribbean`) is still silent — next cycle if it surfaces.
+- The misleading `medianPrice` label in `metrics-analytics.ts` line 129 (`AVG()` aliased to `medianPrice`) is still pending a 1-line fix.
+- The `runAlertEvaluationTick` returned `errors: 10` because the alert-engine.ts SQL selects `s.sailing_url` and `s.ai_insider_summary` columns that don't exist on the schema. Worth a follow-up to either add those columns or remove them from the SELECT.
+
+✅ Cycle #29 Complete

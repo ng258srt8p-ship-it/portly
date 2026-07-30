@@ -112,14 +112,33 @@ export default function DashboardPage() {
   const runAlertTick = async () => {
     setTickResult('Running…');
     try {
-      // These admin endpoints require the scraper secret; but from the browser
-      // we route through the CF Worker which validates auth. Since these are admin
-      // operations on a local dev setup with no customers, we can call them.
-      // In production these would be gated.
-      const evalRes = await fetch(`${API_BASE}/api/admin/alert-eval-tick`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ max: 10 }) });
-      const evalBody = await evalRes.json();
-      const dispatchRes = await fetch(`${API_BASE}/api/admin/alert-dispatch-tick`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ max: 10 }) });
-      const dispatchBody = await dispatchRes.json();
+      // These admin endpoints require the scraper secret (Bearer auth).
+      // From a public browser we cannot send the secret, so the call will
+      // return 401. We surface this as a clear status instead of an opaque error.
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const hasSecret = typeof window !== 'undefined' && (window as any).__SCRAPER_SECRET__;
+      if (hasSecret) headers['Authorization'] = `Bearer ${(window as any).__SCRAPER_SECRET__}`;
+      const evalRes = await fetch(`${API_BASE}/api/admin/alert-eval-tick`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ max: 10 }),
+      });
+      const evalBody = await evalRes.json().catch(() => ({}));
+      if (evalRes.status === 401) {
+        setTickResult(
+          'Authentication required.\n\n' +
+          'The alert tick endpoints require a Bearer SCRAPER_SECRET.\n' +
+          'Run from CLI:\n' +
+          `  curl -X POST ${API_BASE}/api/admin/alert-eval-tick -H "Authorization: Bearer $SCRAPER_SECRET" -H "Content-Type: application/json" -d '{"max":10}'`
+        );
+        return;
+      }
+      const dispatchRes = await fetch(`${API_BASE}/api/admin/alert-dispatch-tick`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ max: 10 }),
+      });
+      const dispatchBody = await dispatchRes.json().catch(() => ({}));
       setTickResult(`Eval: ${JSON.stringify(evalBody)}\nDispatch: ${JSON.stringify(dispatchBody)}`);
       await fetchMetrics();
     } catch (e: any) {
