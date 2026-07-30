@@ -205,6 +205,55 @@ The `itinerary` column was already populated correctly by the expander/ingestion
 **Phase 5 — Notes / follow-ups for next cycle:**
 - Class of bug (Worker↔frontend contract drift) recurred three times now on `/api/deals` and `/api/sailing/:id`; the new shared helper `parseItineraryPort()` should be the LAST place that handles this logic
 - Consider extracting a similar helper for the `region` field — `/api/sailing/:id` uses `s.destination` while `/api/deals` uses `s.departure_region` (different mappings, same drift risk)
-- The remaining lowercase garbage values in the D1 `sailings.departure_port` column (`amsterdam`, `fort-lauderdale`) are not harmful now that the API overrides them — but they should be cleaned up in a future D1 sweep migration (`UPDATE sailings SET departure_port = '' WHERE departure_port != '' AND ...`)
-- Next opportunity: Cycle #27 — pick a single new improvement (UI/UX, performance, accessibility, or another contract drift)
-✅ Cycle #26 Complete
+|- The remaining lowercase garbage values in the D1 `sailings.departure_port` column (`amsterdam`, `fort-lauderdale`) are not harmful now that the API overrides them — but they should be cleaned up in a future D1 sweep migration (`UPDATE sailings SET departure_port = '' WHERE departure_port != '' AND ...`)
+|- Next opportunity: Cycle #27 — pick a single new improvement (UI/UX, performance, accessibility, or another contract drift)
+|✅ Cycle #26 Complete
+
+## Cycle #27
+|**Feature / Fix:** Fix `SailingHero` fabricating Out-the-Door breakdown numbers via `price * 0.6 / 0.25 / 0.15` percentage multipliers, fix broken `href="#"` "View Deal / Book" CTA, and fix doubled `/sailing/` prefix in Track Price URL
+
+|**Root cause:** Three classes of bug, all in the right-column price callout card of the sailing detail hero:
+|1. The Base Fare / Port Taxes / Gratuities / Total rows used `Math.round(price * 0.6)`, `price * 0.25`, `price * 0.15` instead of pulling real `cabin_prices` data from the Worker. For a $320 sailing the breakdown showed $192/$80/$48 — wildly inaccurate and contradicted the same cabin's real OTD shown in `PriceComparisonTable` further down the page.
+|2. The "View Deal / Book" anchor was hardcoded to `href="#"` — a dead link that did nothing. The `data.sailing.bookingUrl` was available from the API and used correctly by the bottom CTA at lines 217-227, but never threaded into the hero.
+|3. The "Track Price" button built `/alerts?sailing=/sailing/${window.location.pathname}` — `pathname` already starts with `/sailing/`, so the resulting alerts URL was `/alerts?sailing=/sailing//sailing/carnival_horizon_…` (doubled prefix).
+
+|**Phase 1 — Audit findings:**
+|- Read `src/components/sailing/SailingHero.tsx` lines 110-152 — confirmed all three defects
+|- Confirmed Worker `/api/sailing/:id` returns `cabinBreakdown[]` with `{cabinType, baseFarePerPerson, portTaxPerPerson, gratuityPerPersonPerNight, totalOutTheDoor, raw:{...}}` — `PriceComparisonTable.tsx` line 92-98 already consumes these correctly, so the helper exists and just wasn't being passed to the hero
+|- The Worker data was already complete and correct — this was a pure frontend wiring bug
+
+|**Phase 2 — Implementation:**
+|1. `SailingHero.tsx`:
+|   - Added `CabinTier` interface (`{ cabinType, baseFare, portTax, gratuityPerNight, nights }`) — typed contract for real OTD data
+|   - Added optional `cabinTier?: CabinTier | null` and `bookingUrl?: string` props
+|   - Derived `otdBaseFare`, `otdPortTax`, `otdGratuityTotal`, `otdTotalPerPerson` with safe fallback to the legacy % multipliers when no cabinTier is supplied (so the rows never disappear)
+|   - Replaced the hardcoded `Math.round(price * 0.X)` spans with the derived values + added `data-testid` markers (`hero-otd-base-fare`, `hero-otd-port-tax`, `hero-otd-gratuity`, `hero-otd-total`)
+|   - Replaced the broken `href="#"` anchor with a conditional: `<a href={bookingUrl}>` when bookingUrl exists (carries `target="_blank"`, `rel="noopener noreferrer"`, `data-testid="hero-view-deal-link"`), or a disabled `<span aria-disabled="true">` when the API didn't supply one
+|   - Fixed Track Price URL: `/alerts?sailing=${window.location.pathname}` (one prefix, not two) + `data-testid="hero-track-price"` for regression coverage
+|2. `SailingDetailClient.tsx`:
+|   - Threaded `cabinTier` into the hero by mapping the API's `data.cabinBreakdown[0]` shape (`baseFarePerPerson ?? base`, `portTaxPerPerson ?? portFees ?? portTax`, `gratuityPerPersonPerNight ?? gratuity ?? mandatoryGratuities`) — falls through every legacy alias so it works for both new and existing data
+|   - Passed `bookingUrl={data.sailing.bookingUrl || ''}` so the hero CTA goes to the real cruise line booking URL
+|3. New regression spec `e2e/sailing-hero-otd.spec.ts` (4 tests, 5 browser projects = 20 test runs):
+|   - OTD rows render real cabin_prices — verifies `total ≈ base + portTax + gratuity` (within $5 rounding tolerance) and all three component numbers are > 0
+|   - "View Deal / Book" CTA is functional — asserts `href` is not `#`, starts with `http(s)://`, has `target="_blank"`, OR falls back to `aria-disabled="true"` if no bookingUrl
+|   - "Track Price" button does not double the prefix — clicks the button, parses the resulting URL, asserts exactly ONE `/sailing/` substring in the query value
+|   - OTD fallback test — uses `page.route()` to strip `cabinBreakdown` from the API response, asserts the OTD rows still render via the % multiplier fallback
+
+|**Phase 3 — Local verification + Build + Deploy:**
+|- `npx tsc --noEmit`: ✅ Passed (exit 0)
+|- `BUILD_TARGET=export npx next build`: ✅ 520 pages generated (500 sailing IDs)
+|- `npx wrangler pages deploy out --project-name=portly --branch=main`: ✅ → https://7d2a1287.portly-1i0.pages.dev
+|- Worker: No changes (frontend-only fix)
+
+|**Phase 4 — Live E2E verification (against production https://portly-1i0.pages.dev):**
+|`BASE_URL=https://portly-1i0.pages.dev/ npx playwright test e2e/_smoke.spec.ts e2e/button-size.spec.ts e2e/sailing-hero-otd.spec.ts --workers=1`: **55/55 passed** across all 5 browser projects (chromium, firefox, webkit, Mobile Chrome, Mobile Safari) in 2.0m
+|Combined run against preview deploy: `e2e/_smoke.spec.ts e2e/button-size.spec.ts e2e/sailing-api-contract.spec.ts e2e/filter-bar-audit.spec.ts e2e/departure-port-contract.spec.ts e2e/sailing-hero-otd.spec.ts`: **75/75 passed** in 3.7m — no regressions in any prior suite
+
+|**Phase 5 — Notes / follow-ups for next cycle:**
+|- The OTD breakdown used to be wrong by hundreds of dollars per sailing on every page view — this is the kind of bug that erodes user trust even when "the page loads". Worth a follow-up audit: search for any other place a price or OTD subtotal is shown but derived from a base `price` field rather than real `cabin_prices`
+|- The "View Deal / Book" CTA fix unblocks the conversion funnel for the hero card — the bottom CTA was already correct, so previously the user had to scroll past the broken hero to find a working link. Now the hero CTA works on first render.
+|- Cycle #25 follow-up about checking other Worker endpoints for PK coercion still applies — `/api/solo-friendly` and `/api/enhanced/*` haven't been audited yet
+|- Class of bug recurring: "Worker has the data, frontend doesn't pass it through" — seen 4 times now (Cycles #25, #26, #27 + the earlier `bookingUrl` gap). Consider a contract test that asserts every API response field is read by at least one component, with a min coverage threshold
+|- Next opportunity: Cycle #28 — pick one of: (a) hunt for other instances of fabricated/derived price math in the frontend, (b) audit `/api/enhanced/*` endpoints for the PK coercion bug, (c) wire `data-testid` onto the bottom CTA so we can also regression-test that path
+
+✅ Cycle #27 Complete
