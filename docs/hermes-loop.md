@@ -13,25 +13,49 @@ live Cloudflare Pages deployment at **https://portly-1i0.pages.dev/**.
 | [`../docs/hermes-loop/portly-cycle.sh`](hermes-loop/portly-cycle.sh) | Cycle wrapper — picks a model, invokes `hermes chat -q`, logs |
 | [`../playwright.config.ts`](../playwright.config.ts) | Honors `BASE_URL` env var for live E2E against Cloudflare Pages |
 
-## Model provider: OpenCode Zen (key-less)
+## Model providers — two-layer split
 
-This project uses **OpenCode Zen** free models served from
-`http://127.0.0.1:3459/v1`. No API key is required. The goal is to avoid
-NVIDIA NIM entirely (NIM is reserved for the separate NIM Radar Protector
-project; Portly stays on the free local endpoint).
+This project uses **two** model providers, deliberately separated by task type:
 
-The cron job runs the `docs/hermes-loop/portly-cycle.sh` wrapper, which:
-1. Calls `docs/hermes-loop/opencode-model-probe.sh` to find the first currently-working
-   free model from an ordered preference list.
-2. Passes the chosen model + `--provider custom:opencode-zen --model <name>`
-   to `hermes chat -q`.
-3. Logs to `hermes-cycles.log`.
+### Polishing loop (cron `bd4c3d8951c0`)
 
-This insulates the loop from upstream model renames, retirements, and rate
-limits — if `deepseek-v4-flash-free` stops working, the probe automatically
-falls through to `big-pickle`, `mimo-v2.5-free`, `nemotron-3-ultra-free`, and
-`north-mini-code-free` (in that order). To add or reorder candidates, edit
-`PREFERRED_MODELS` in `docs/hermes-loop/opencode-model-probe.sh`.
+The 30-minute code-edit loop is driven by **`fcm-nim` via `custom:nim-router`**
+(NIM Radar local proxy at `http://127.0.0.1:9119/v1`). This is a multi-turn
+agent that reads files, runs tests, edits TypeScript, builds, commits, and
+pushes — it needs tool-calling reliability on long contexts, which NIM Radar's
+key-rotation proxy handles well.
+
+### Data-layer code (`server/services/*`)
+
+Portly's data-layer (deal analysis, price forecast, cruise generation) uses
+**OpenCode Zen free models, key-less, with auto-rotating discovery**. Default
+model: `big-pickle` (stealth, consistently available). The wrapper at
+`docs/hermes-loop/portly-cycle.sh` (used by tests, ad-hoc cron fallback, and
+the CI workflow) probes the public endpoint `https://opencode.ai/zen/v1` at
+runtime via `docs/hermes-loop/opencode-model-probe.sh` and picks the first
+model that responds. Fallback chain:
+
+1. `big-pickle` *(default)*
+2. `deepseek-v4-flash-free`
+3. `mimo-v2.5-free`
+4. `nemotron-3-ultra-free`
+5. `north-mini-code-free`
+
+If `big-pickle` stops working, the probe automatically falls through to the
+next. The TypeScript client (`server/utils/openCodeClient.ts`) also re-probes
+on every retryable failure, so the production data layer self-heals when
+upstream rotates models. To add or reorder candidates, edit `PREFERRED_MODELS`
+in either `docs/hermes-loop/opencode-model-probe.sh` or
+`server/utils/openCodeClient.ts`.
+
+### How the cron picks a model
+
+The cron job is pinned to `fcm-nim` for the code-edit cycle (via
+`hermes cron edit bd4c3d8951c0 --model fcm-nim --provider custom:nim-router`).
+For the **data layer**, the deployed server is what calls OpenCode Zen at
+runtime via the auto-rotating client — there is no separate cron step for
+that, because the data layer runs as part of the live deployment when
+enrichment endpoints fire.
 
 ## How a cycle works
 

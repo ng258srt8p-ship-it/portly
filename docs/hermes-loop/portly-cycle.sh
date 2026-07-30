@@ -43,18 +43,22 @@ cd "$PROJECT_ROOT"
 PROMPT_FILE="HERMES_LOOP_PROMPT.md"
 LOG_FILE="HERMES_AUTONOMOUS_LOG.md"
 LIVE_LOG="hermes-cycles.log"
-PROBE="$PROJECT_ROOT/scripts/opencode-model-probe.sh"
+PROBE="$PROJECT_ROOT/docs/hermes-loop/opencode-model-probe.sh"
 
 # ---- Pre-flight ------------------------------------------------------------
 [ -f "$PROMPT_FILE" ] || { echo "❌ Missing $PROMPT_FILE" >&2; exit 3; }
 [ -f "$LOG_FILE" ]    || { echo "❌ Missing $LOG_FILE" >&2; exit 3; }
-[ -x "$PROBE" ]       || { echo "❌ Missing $PROBE" >&2; exit 3; }
+[ -x "$PROBE" ]       || { echo "❌ Missing $PROBE (run: chmod +x $PROBE)" >&2; exit 3; }
 command -v hermes >/dev/null 2>&1 || { echo "❌ 'hermes' not on PATH" >&2; exit 2; }
 
 # ---- Pick a model ----------------------------------------------------------
+# Default preference order (mirrors docs/hermes-loop/opencode-model-probe.sh
+# PREFERRED_MODELS): big-pickle first — stealth model, consistently available.
+# The probe script does live health checks before picking, so the chain here
+# is just a preference order, not a hard contract.
 MODEL="${OVERRIDE_MODEL:-}"
 if [ -z "$MODEL" ]; then
-    echo "🔎 Probing OpenCode Zen for a working free model..." >&2
+    echo "🔎 Probing OpenCode Zen for a working free model (prefers big-pickle)..." >&2
     if ! MODEL="$("$PROBE" 2>/dev/null)"; then
         echo "❌ No OpenCode Zen free model is responding. Cycle aborts." >&2
         exit 1
