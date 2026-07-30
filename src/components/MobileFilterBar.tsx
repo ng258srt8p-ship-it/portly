@@ -68,12 +68,13 @@ export default function MobileFilterBar({
   return (
     <>
       {/* Sticky bottom bar — mobile only */}
-      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2 border-t border-black/[0.08] bg-white/95 px-4 py-3 shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.1)] backdrop-blur-lg lg:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2 px-3 pb-3 lg:hidden">
+        <div className="flex flex-1 items-center gap-2 rounded-full border border-black/[0.06] bg-white/80 px-2 py-2 shadow-float backdrop-blur-xl">
         <button
           type="button"
           onClick={() => setFiltersOpen(true)}
           data-testid="mobile-filters-button"
-          className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-black/[0.04] px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
+          className="flex min-h-[36px] flex-1 items-center justify-center gap-2 rounded-full bg-black/[0.04] px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
         >
           <MaterialIcon name="filter_list" size="sm" />
           Filters
@@ -86,11 +87,12 @@ export default function MobileFilterBar({
         <button
           type="button"
           onClick={() => setSortOpen((prev) => !prev)}
-          className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-black/[0.04] px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
+          className="flex min-h-[36px] flex-1 items-center justify-center gap-2 rounded-full bg-black/[0.04] px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-black/[0.08] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
         >
           <MaterialIcon name="swap_vert" size="sm" />
           Sort
         </button>
+        </div>
       </div>
 
       {/* Sort popover */}
