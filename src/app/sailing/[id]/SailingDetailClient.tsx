@@ -164,8 +164,12 @@ export default function SailingDetailPage() {
                   }
                   days={data.sailing.days}
                   route={data.sailing.route || []}
+                  region={data.sailing.region}
                   line={data.sailing.line}
                   ship={data.sailing.ship}
+                  shipClass={data.sailing.shipClass ?? null}
+                  shipLaunchedYear={data.sailing.shipLaunchedYear ?? null}
+                  history={data.sailing.history || []}
                   cabinBreakdown={data.cabinBreakdown}
                   aiScore={data.sailing.aiScore ?? null}
                   aiDealScoreNarrative={data.sailing.aiDealScoreNarrative ?? null}

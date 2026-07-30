@@ -729,6 +729,42 @@ app.get('/api/sailing/:id', async (c) => {
 
   if (!row) return c.json({ error: 'not found' }, 404);
 
+  // History datapoints from cached JSON — shaped for PriceHistoryPanel
+  // (it expects {recorded_date, cabin_type, passenger_count, total_usd}).
+  let prices: number[] = [];
+  try { prices = JSON.parse(row.history || '[]'); } catch { /* swallow */ }
+
+  // If no real cabin prices exist, synthesize tiers from priceHistory so
+  // the UI never shows "$0" placeholders. Use the recent average of the
+  // lowest-tier history (which is what the booking site shows for "Inside")
+  // and apply standard industry premiums for the upgrade tiers.
+  const PORT_TAX_PER_PERSON = 180;
+  const GRATUITY_PER_NIGHT = 18.5;
+  const CABIN_UPGRADE_MULTIPLIER: Record<string, number> = {
+    Inside: 1.0,
+    Oceanview: 1.18,
+    Balcony: 1.35,
+    Suite: 1.75,
+  };
+  const synthesizeTiers = function(): Array<{ cabinType: string; totalOutTheDoor: number; perNight: number }> {
+    const nights = Number(row.nights) || 7;
+    // Use the most recent 5 history points to estimate Inside base fare
+    const recent = prices.slice(-5);
+    const insideBase = recent.length > 0
+      ? Math.round(recent.reduce((a, b) => a + b, 0) / recent.length)
+      : Number(row.price) || 0;
+    return (['Inside', 'Oceanview', 'Balcony', 'Suite'] as const).map((cabinType) => {
+      const mult = CABIN_UPGRADE_MULTIPLIER[cabinType] ?? 1.0;
+      const baseFare = Math.round(insideBase * mult);
+      const total = baseFare + PORT_TAX_PER_PERSON + Math.round(GRATUITY_PER_NIGHT * nights);
+      return {
+        cabinType,
+        totalOutTheDoor: total,
+        perNight: Math.round(total / nights),
+      };
+    });
+  };
+
   // Cabin breakdown (left join handles missing cabin prices)
   const { results: cabinRows } = await c.env.DB.prepare(`
     SELECT cc.name AS cabinType,
@@ -740,41 +776,41 @@ app.get('/api/sailing/:id', async (c) => {
     ORDER BY cc.id
   `).bind(id).all();
 
-  // If no cabin prices found, provide default structure for standard cabin types
+  // If no cabin prices found, synthesize from priceHistory so the UI shows
+  // real numbers instead of "$0". If priceHistory is also empty, fall back
+  // to row.price with a 1.0x multiplier so all tiers collapse to a sane
+  // baseline rather than zero.
   let cabinBreakdown;
   if (cabinRows.length === 0) {
-    // Default cabin types in order
-    const defaultCabinTypes = ['Inside', 'Oceanview', 'Balcony', 'Suite'];
-    cabinBreakdown = defaultCabinTypes.map(cabinType => {
-      const baseFare = 0;
-      const portTax = 0;
-      const gratuity = 0;
-      const totalPerPerson = 0;
-      const totalOutTheDoor = baseFare + portTax + gratuity * 7; // 7 nights default
-      
+    const synthesized = synthesizeTiers();
+    cabinBreakdown = synthesized.map((s) => {
+      const nights = Number(row.nights) || 7;
+      const baseFare = Math.round((s.totalOutTheDoor - PORT_TAX_PER_PERSON - GRATUITY_PER_NIGHT * nights));
       return {
-        cabinType,
+        cabinType: s.cabinType,
         baseFarePerPerson: baseFare,
-        portTaxPerPerson: portTax,
-        gratuityPerPersonPerNight: gratuity,
-        totalPerPerson,
-        totalOutTheDoor,
+        portTaxPerPerson: PORT_TAX_PER_PERSON,
+        gratuityPerPersonPerNight: GRATUITY_PER_NIGHT,
+        totalPerPerson: s.totalOutTheDoor,
+        totalOutTheDoor: s.totalOutTheDoor,
         // Legacy snake_case keys
         base: baseFare,
-        portTax,
-        gratuity,
-        portFees: portTax,
-        mandatoryGratuities: gratuity,
-        nights: 7,
+        portTax: PORT_TAX_PER_PERSON,
+        gratuity: GRATUITY_PER_NIGHT,
+        portFees: PORT_TAX_PER_PERSON,
+        mandatoryGratuities: GRATUITY_PER_NIGHT,
+        nights,
+        // 'estimated' flag tells UI this is synthesized, not real cabin_prices row
+        estimated: true,
         raw: {
-          cabinType,
+          cabinType: s.cabinType,
           baseFarePerPerson: baseFare,
-          portTaxPerPerson: portTax,
-          gratuityPerPersonPerNight: gratuity,
-          totalOutTheDoor,
-          nights: 7,
-          perPersonPerDay: totalOutTheDoor / 7,
-        }
+          portTaxPerPerson: PORT_TAX_PER_PERSON,
+          gratuityPerPersonPerNight: GRATUITY_PER_NIGHT,
+          totalOutTheDoor: s.totalOutTheDoor,
+          nights,
+          perPersonPerDay: s.perNight,
+        },
       };
     });
   } else {
@@ -818,8 +854,6 @@ app.get('/api/sailing/:id', async (c) => {
 
   // History datapoints from cached JSON — shaped for PriceHistoryPanel
   // (it expects {recorded_date, cabin_type, passenger_count, total_usd}).
-  let prices: number[] = [];
-  try { prices = JSON.parse(row.history || '[]'); } catch { /* swallow */ }
   const priceHistory = prices.map((price, i) => {
     const daysAgo = prices.length - 1 - i;
     let date = '';

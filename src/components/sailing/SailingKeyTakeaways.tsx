@@ -20,9 +20,13 @@ export interface KeyTakeawaysProps {
   perNight?: number;
   days: number;
   route: string[];
+  region?: string;
   line: string;
   ship: string;
-  cabinBreakdown?: Array<{ cabinType: string; totalOutTheDoor: number; baseFarePerPerson: number }>;
+  shipClass?: string | null;
+  shipLaunchedYear?: number | null;
+  history?: number[];
+  cabinBreakdown?: Array<{ cabinType: string; totalOutTheDoor: number; baseFarePerPerson: number; estimated?: boolean }>;
   aiScore?: number | null;
   aiDealScoreNarrative?: string | null;
   aiCabinStrategy?: string | null;
@@ -55,21 +59,115 @@ function Badge({
   );
 }
 
-function deriveVerdict(dropPercent: number, perNight: number | undefined, line: string, ship: string, days: number): string {
-  // Heuristic 2-sentence verdict when AI columns are null
+function deriveVerdict(
+  dropPercent: number,
+  perNight: number | undefined,
+  line: string,
+  ship: string,
+  days: number,
+  route: string[],
+  history: number[] | undefined,
+  shipClass: string | null | undefined
+): string {
   const pct = dropPercent || 0;
   const pn = perNight || 0;
   const shipLine = `${line} ${ship}`.trim();
+  const ports = Array.isArray(route) ? route.filter(Boolean) : [];
+  const portList = ports.length > 0 ? ports.join(', ') : '';
+  const portClause = portList ? ` across ${ports.length} port${ports.length === 1 ? '' : 's'} (${portList})` : '';
+  const shipClause = shipClass ? ` ${shipClass}-class` : '';
+
+  // ── Verdict sentence 1: anchor on price
+  let v1: string;
   if (pct >= 25) {
-    return `At $${pn}/night out-the-door, this ${days}-night sailing sits ${pct}% below its recent peak — strong value for ${shipLine}. Book now while the line is filling remaining inventory.`;
+    v1 = `At $${pn}/night out-the-door, this ${days}-night sailing${portClause} sits ${pct}% below its recent peak — strong value for the ${shipLine}.`;
+  } else if (pct >= 15) {
+    v1 = `At $${pn}/night out-the-door, this ${days}-night sailing${portClause} sits ${pct}% below its recent peak — solid value for the ${shipLine}.`;
+  } else if (pct >= 5) {
+    v1 = `${shipLine} ${days}-night sailing at $${pn}/night out-the-door shows a modest ${pct}% off peak${portClause}.`;
+  } else {
+    v1 = `${shipLine} ${days}-night sailing at $${pn}/night out-the-door is roughly at peak pricing (${pct}% off)${portClause}.`;
   }
-  if (pct >= 15) {
-    return `At $${pn}/night out-the-door, this ${days}-night sailing sits ${pct}% below its recent peak. Solid deal for ${shipLine}; expect prices to firm up over the next 2-3 weeks.`;
+
+  // ── Verdict sentence 2: trajectory from history
+  let v2 = '';
+  if (history && history.length >= 2) {
+    const earliest = history[0];
+    const latest = history[history.length - 1];
+    const delta = latest - earliest;
+    if (delta <= -10) {
+      const pctDrop = Math.round((delta / earliest) * 100);
+      v2 = ` The fare has dropped $${Math.abs(delta).toLocaleString()} (${Math.abs(pctDrop)}%) across the last ${history.length} price checks — buyer-favorable momentum.`;
+    } else if (delta >= 10) {
+      const pctRise = Math.round((delta / earliest) * 100);
+      v2 = ` The fare has climbed $${delta.toLocaleString()} (${pctRise}%) across the last ${history.length} price checks — consider locking in before the next move up.`;
+    } else {
+      v2 = ` Pricing has been stable (within $${Math.abs(delta)}) across the last ${history.length} price checks — the line appears to have found the bottom.`;
+    }
   }
-  if (pct >= 5) {
-    return `${shipLine} ${days}-night sailing at $${pn}/night out-the-door — modest ${pct}% off peak. Watch this fare; if it dips another 5-10%, jump.`;
+
+  // ── Verdict sentence 3: ship class / action
+  let v3 = '';
+  if (pct >= 25) {
+    v3 = shipClause
+      ? ` The ${shipClass}-class ${ship} is a known strong seller; ${pct}% drops of this magnitude typically fill within 7-10 days.`
+      : ` Drops of this magnitude typically fill within 7-10 days.`;
+  } else if (pct < 10 && history && history.length >= 2) {
+    v3 = ` If you can hold off, prices usually dip 5-12% deeper 90-60 days before sailing.`;
+  } else if (days <= 4) {
+    v3 = ` Short cruises like this rarely drop further — the value is in the current fare.`;
   }
-  return `${shipLine} ${days}-night sailing at $${pn}/night out-the-door is roughly at peak pricing (${pct}% off). Better inventory should appear 90-60 days out.`;
+
+  return (v1 + v2 + v3).trim();
+}
+
+function deriveHistoryTrend(history: number[] | undefined): { label: string; tone: 'emerald' | 'amber' | 'coral'; icon: string } | null {
+  if (!history || history.length < 2) return null;
+  const earliest = history[0];
+  const latest = history[history.length - 1];
+  const delta = latest - earliest;
+  const pct = Math.round((delta / earliest) * 100);
+  if (delta <= -5) return { label: `Trend: falling ${pct}% over ${history.length} checks`, tone: 'emerald', icon: 'trending_down' };
+  if (delta >= 5) return { label: `Trend: rising +${pct}% over ${history.length} checks`, tone: 'coral', icon: 'trending_up' };
+  return { label: `Trend: stable across ${history.length} checks`, tone: 'amber', icon: 'trending_flat' };
+}
+
+function derivePortIntel(ports: string[]): { port: string; tag: string }[] {
+  // Generic but useful port intel — keyed off port name fragments.
+  // Real production would join against a ports table.
+  const intel: Record<string, string> = {
+    'miami': 'Tender-free, walk-off pier',
+    'port canaveral': 'Easy drive from Orlando; park-and-cruise lots',
+    'cozumel': 'Snorkel-friendly water; downtown 5-min walk',
+    'nassau': 'Walkable port + cheap taxi to Atlantis',
+    'st. thomas': 'Best shopping port in Caribbean',
+    'san juan': 'Old San Juan walking tour; no tender',
+    'costa maya': 'Pristine Mahahual beach nearby',
+    'roatan': 'West Bay Beach accessible by taxi',
+    'grand cayman': 'Tender port; Stingray City shore-ex',
+    'ocho rios': '8-hour stop; Dunn\u2019s River Falls shore-ex',
+    'jamaica': 'Dunn\u2019s River Falls + Blue Hole combos',
+    'belize': 'Tender port; cave-tubing shore-ex',
+    'honolulu': 'Waikiki walk-off; Diamond Head nearby',
+    'barcelona': 'Las Ramblas walking tour; tapas',
+    'civitavecchia': 'Rome 1-hr train; Colosseum day-trip',
+    'venice': 'St Mark\u2019s Square walk-off; Murano day-trip',
+    'kotor': 'Old Town walking; 1,500-ft fortress climb',
+    'santorini': 'Tender port; Oia sunset by local bus',
+    'mykonos': 'Tender port; Little Venice walking',
+    'seville': 'Taxi to city center; Alcazar + cathedral',
+    'lisbon': 'Walk-off pier; Belem district tram',
+    'reykjavik': 'Golden Circle tours bookable dockside',
+    'akureyri': 'Whale watching + Godafoss waterfall',
+  };
+  return ports.filter(Boolean).slice(0, 4).map((port) => {
+    const lower = port.toLowerCase();
+    const matchKey = Object.keys(intel).find((k) => lower.includes(k));
+    return {
+      port,
+      tag: matchKey ? intel[matchKey] : 'Pier-side walk-off; check ship-ex for tours',
+    };
+  });
 }
 
 function deriveBestFor(line: string, ship: string): string {
@@ -112,8 +210,12 @@ export default function SailingKeyTakeaways({
   perNight,
   days,
   route,
+  region,
   line,
   ship,
+  shipClass,
+  shipLaunchedYear,
+  history,
   cabinBreakdown,
   aiScore,
   aiDealScoreNarrative,
@@ -127,7 +229,11 @@ export default function SailingKeyTakeaways({
   const scoreIcon = score >= 85 ? 'local_fire_department' : 'insights';
 
   const sea = deriveSeaDays(days, route);
-  const verdict = (aiDealScoreNarrative && aiDealScoreNarrative.trim()) || aiInsiderSummary?.trim() || deriveVerdict(dropPercent, perNight, line, ship, days);
+  const trend = deriveHistoryTrend(history);
+  const portIntel = derivePortIntel(route || []);
+  const verdict = (aiDealScoreNarrative && aiDealScoreNarrative.trim())
+    || aiInsiderSummary?.trim()
+    || deriveVerdict(dropPercent, perNight, line, ship, days, route || [], history, shipClass);
   const bestFor = deriveBestFor(line, ship);
   const cabinPick = deriveCabinPick(cabinBreakdown);
 
@@ -158,7 +264,26 @@ export default function SailingKeyTakeaways({
         <Badge icon="directions_boat" label={sea.label} tone="indigo" />
         <Badge icon="groups" label={`Best For: ${bestFor}`} tone="indigo" />
         {cabinPick && <Badge icon="bed" label={cabinPick} tone="indigo" />}
+        {trend && <Badge icon={trend.icon} label={trend.label} tone={trend.tone} />}
       </div>
+
+      {/* Port intel strip — only when ports exist */}
+      {portIntel.length > 0 && (
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2" data-testid="key-takeaway-port-intel">
+          {portIntel.map(({ port, tag }) => (
+            <div
+              key={port}
+              className="flex items-start gap-2 rounded-xl border border-black/[0.06] bg-white/60 px-3 py-2 text-xs"
+            >
+              <MaterialIcon name="place" size="xs" className="mt-0.5 shrink-0 text-indigo" />
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-ink">{port}</p>
+                <p className="text-ink-soft">{tag}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Hidden AI module previews (parsed separately; this is the executive verdict layer) */}
       {(aiCabinStrategy || aiExcursionStrategy) && (

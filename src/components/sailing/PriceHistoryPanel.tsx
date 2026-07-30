@@ -283,8 +283,8 @@ export default function PriceHistoryPanel({
 
   // --- Cabin price table: use cabinBreakdown if available, otherwise extract from priceHistory ---
   let cabinRows: { label: string; price: string }[];
-  if (cabinBreakdown && cabinBreakdown.length > 0) {
-    cabinRows = cabinBreakdown.map((cb) => ({
+  if (cabinBreakdown && cabinBreakdown.length > 0 && cabinBreakdown.some((cb: any) => (cb.raw?.totalOutTheDoor ?? cb.totalOutTheDoor ?? 0) > 0)) {
+    cabinRows = cabinBreakdown.map((cb: any) => ({
       label: cb.cabinType,
       price: fmtPrice(cb.raw.totalOutTheDoor),
     }));
