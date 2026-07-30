@@ -1,82 +1,117 @@
 /**
  * TripTide — OpenCode Zen key-less client with auto-rotating model discovery
+ *                and per-model daily-quota tracking
  *
- * Replaces the old OpenRouter client (portly/1i0 hit the 1000-req/day cap on
- * `openrouter/free`). OpenCode Zen at https://opencode.ai/zen/v1 is fully
- * key-less and has no daily quota.
+ * Replaces the old OpenRouter client whose 1000-req/day free-tier cap was
+ * unsustainable.  OpenCode Zen at https://opencode.ai/zen/v1 is key-less
+ * and has **no documented daily quota**, but some models may temporarily
+ * return 429 or FreeUsageLimitError.  This client blacklists those models
+ * until the next UTC midnight so healthy models aren't starved.
+ *
  *
  * ## Model selection — auto-rotating, prefers `big-pickle`
  *
- * Free OpenCode Zen models rotate without notice. To survive this:
+ * Free OpenCode Zen models rotate without notice.  To survive this:
  *
  *   1. The ordered `PREFERRED_MODELS` array below lists the models we
- *      want to try, in priority order. `big-pickle` is the user's
- *      preferred default (consistently available, "stealth" model).
+ *      want to try, in priority order.  `big-pickle` is the stealth
+ *      free model the user prefers (consistently available).
  *
- *   2. At client-init time, `refreshModelList()` shells out to
- *      `docs/hermes-loop/opencode-model-probe.sh` (or falls back to
- *      the cached `PREFERRED_MODELS`) and verifies each candidate with
- *      a 1-token chat completion. Models that 200 become the live
- *      `LIVE_MODELS` set; models that 4xx/5xx/time-out are dropped.
+ *   2. At client-init time `refreshModelList()` queries
+ *      `GET /v1/models` to discover every model whose id contains
+ *      `-free` and also the known `big-pickle` (which lacks the
+ *      `-free` suffix).  These are probed with a 1-token request.
+ *      Models that 200 become the live `LIVE_MODELS` set.
  *
- *   3. If a chosen model fails at request time (429 / 503 / 504 /
- *      FreeUsageLimitError), the client retries with the next live
- *      model — automatically picking up newly-released upstream
- *      models without a code change.
+ *   3. If a chosen model hits a retryable error (429 / 503 / 504 /
+ *      FreeUsageLimitError in the body) the client retries the next
+ *      live model and **cooldowns the failed model until 00:00 UTC**.
  *
- *   4. To add or reorder candidates, just edit `PREFERRED_MODELS` —
- *      no other code change needed. To add the latest upstream model,
- *      drop its name into the array.
+ *   4. To add or reorder candidates, edit `PREFERRED_MODELS` or the
+ *      `STEALTH_FREE` set — no other code change needed.
+ *
+ *
+ * ## Daily-quota handling
+ *
+ * OpenCode Zen does not publish rate-limit headers.  Instead the client
+ * infers a quota hit when it sees:
+ *   - HTTP 429
+ *   - Body text containing `FreeUsageLimitError`
+ *
+ * When this happens the failing model is **cooldowned until 00:00 UTC**
+ * so it isn't retried again for the rest of the day.  The next healthy
+ * model in the live chain is used instead.
+ *
+ *
+ * ## Reasoning-aware extraction
+ *
+ * Some models (`big-pickle`, `ling-3.0-flash-free`) emit full responses
+ * in `reasoning_content` and leave `content` empty for short prompts.
+ * The client skips these only when the caller's budget is reasonable
+ * (maxTokens >= 256); for short prompts the model that slurps its budget
+ * on reasoning gets rotated to the next — but the `big-pickle` fallback
+ * is always available as a last resort if no other model produces content.
  *
  * ## Rate limiting
  *
- * Goes through the global `NimRateLimiter` (same one the old
- * OpenRouter client used) so per-model RPM and global spacing are
- * preserved across the app.
+ * Goes through the global `NimRateLimiter` (same one the old OpenRouter
+ * client used) so per-model RPM and global spacing are preserved.
  */
 
 import { getGlobalLimiter } from './nimRateLimiter';
 
 const globalLimiter = getGlobalLimiter();
 
-// ---- Configuration ----
+// ==========================================================================
+// Configuration
+// ==========================================================================
 
-const OPENCODE_API_BASE = process.env.OPENCODE_API_BASE || 'https://opencode.ai/zen/v1';
+const OPENCODE_API_BASE =
+  process.env.OPENCODE_API_BASE || 'https://opencode.ai/zen/v1';
 
-// Ordered preference list — `big-pickle` is first because it's been
-// consistently available as a stealth model. New free models go here
-// as upstream releases them.
+/**
+ * Preferred models (explicit, ordered by priority).
+ * `big-pickle` is first — stealth free model, consistently available,
+ * large context window.
+ *
+ * Models whose id contains `-free` are *also* auto-discovered from
+ * the `/v1/models` endpoint at client init, so adding a new free model
+ * here just bumps its priority.  Removing a model from this list does
+ * NOT prevent it from being auto-discovered — it just drops in priority
+ * behind explicitly-listed candidates.
+ */
 const PREFERRED_MODELS: readonly string[] = [
-  'big-pickle',
-  'deepseek-v4-flash-free',
-  'mimo-v2.5-free',
-  'nemotron-3-ultra-free',
-  'north-mini-code-free',
+  'big-pickle',               // stealth free, large context, user's preference
+  'deepseek-v4-flash-free',   // code-specialised, large context
+  'laguna-s-2.1-free',        // fast, clean JSON
+  'ling-3.0-flash-free',      // fast, JSON-capable
+  'mimo-v2.5-free',           // well-known fallback
+  'nemotron-3-ultra-free',    // NVIDIA model fallback
+  'north-mini-code-free',     // tiny code model, last resort
 ];
 
-// Path to the probe script (relative to repo root). Absolute path can
-// override for testing outside the project tree.
-const PROBE_SCRIPT =
-  process.env.OPENCODE_PROBE_SCRIPT ||
-  // Resolve from this file's location:
-  //   server/utils/openCodeClient.ts -> ../../docs/hermes-loop/opencode-model-probe.sh
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  (() => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const path = require('path') as typeof import('path');
-    return path.resolve(__dirname, '..', '..', 'docs', 'hermes-loop', 'opencode-model-probe.sh');
-  })();
+/**
+ * "Stealth" free models — models that are free to use but whose id
+ * does NOT contain the substring `-free` (or just `free`).  The
+ * `/v1/models` endpoint won't auto-classify these, so they must be
+ * listed explicitly.
+ */
+const STEALTH_FREE: readonly string[] = ['big-pickle'];
 
-// Live model list, populated by `refreshModelList()`. Updated in
-// place on every probe run, so the next request after a model
-// rotates will pick up the new model automatically.
+// Live model list — populated by `refreshModelList()`.
 let LIVE_MODELS: string[] = [...PREFERRED_MODELS];
 let lastProbeAt = 0;
-const PROBE_MIN_INTERVAL_MS = 5 * 60 * 1000; // re-probe at most every 5 minutes
+const PROBE_MIN_INTERVAL_MS = 5 * 60 * 1000; // re-probe at most every 5 min
 
 const DEFAULT_MODEL = process.env.OPENCODE_MODEL || PREFERRED_MODELS[0];
 
-// ---- Types ----
+// Per-model daily cooldown — a model is skipped until the next UTC
+// midnight after it hits a quota error.
+const MODEL_COOLDOWN_MAP = new Map<string, number>();
+
+// ==========================================================================
+// Types
+// ==========================================================================
 
 export interface OpenCodeMessage {
   role: 'system' | 'user' | 'assistant';
@@ -99,7 +134,9 @@ export interface OpenCodeResponse {
   json: () => Promise<any>;
 }
 
-// ---- Internal HTTP ----
+// ==========================================================================
+// Internal HTTP
+// ==========================================================================
 
 async function doOpenCodeRequest(body: OpenCodeRequestBody): Promise<OpenCodeResponse> {
   const res = await fetch(`${OPENCODE_API_BASE}/chat/completions`, {
@@ -116,15 +153,50 @@ async function doOpenCodeRequest(body: OpenCodeRequestBody): Promise<OpenCodeRes
   };
 }
 
-// ---- Model discovery ----
+// ==========================================================================
+// Model discovery
+// ==========================================================================
 
 /**
- * Probe a single model with a 1-token chat completion. Returns true
+ * Query the upstream `/v1/models` endpoint to discover all models whose
+ * id contains `-free`, plus any stealth models listed in `STEALTH_FREE`.
+ * Returns deduplicated array.
+ */
+async function discoverFromModelsEndpoint(): Promise<string[]> {
+  try {
+    const res = await fetch(`${OPENCODE_API_BASE}/models`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { data?: Array<{ id: string }> };
+    const all = data?.data ?? [];
+    const discovered = new Set<string>();
+
+    // Add known stealth-free models
+    for (const s of STEALTH_FREE) discovered.add(s);
+
+    // Add all models whose id contains "-free" (case-insensitive)
+    for (const m of all) {
+      if (
+        (m.id && m.id.toLowerCase().includes('-free')) ||
+        m.id.toLowerCase().includes('free')
+      ) {
+        discovered.add(m.id);
+      }
+    }
+    return Array.from(discovered);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Probe a single model with a 1-token chat completion.  Returns true
  * if it returns 200 with a `choices` array.
  */
 async function probeModel(model: string, timeoutMs = 8000): Promise<boolean> {
-  const ctrl = new AbortController();
-  const tid = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch(`${OPENCODE_API_BASE}/chat/completions`, {
       method: 'POST',
@@ -134,23 +206,54 @@ async function probeModel(model: string, timeoutMs = 8000): Promise<boolean> {
         messages: [{ role: 'user', content: 'hi' }],
         max_tokens: 3,
       }),
-      signal: ctrl.signal,
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) return false;
-    const data = await res.json().catch(() => null);
+    const data = (await res.json()) as { choices?: unknown[] };
     return Boolean(data && Array.isArray(data.choices) && data.choices.length > 0);
   } catch {
     return false;
-  } finally {
-    clearTimeout(tid);
   }
 }
 
+// ---- Daily-cooldown helpers ----
+
+/** Return the epoch-millis of the next UTC midnight. */
+function nextUtcMidnight(): number {
+  const now = new Date();
+  const mid = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0);
+  return mid;
+}
+
+/** Check if a model is currently cooldowned. */
+function isCooldowned(model: string): boolean {
+  const until = MODEL_COOLDOWN_MAP.get(model);
+  if (until === undefined) return false;
+  if (Date.now() >= until) {
+    MODEL_COOLDOWN_MAP.delete(model);
+    return false;
+  }
+  return true;
+}
+
+/** Cooldown a model until the next UTC midnight. */
+function cooldownModel(model: string): void {
+  const until = nextUtcMidnight();
+  MODEL_COOLDOWN_MAP.set(model, until);
+  // eslint-disable-next-line no-console
+  console.warn(`[OpenCode] ${model} cooldowned until ${new Date(until).toISOString().slice(0, 19)}Z`);
+}
+
+// ==========================================================================
+
 /**
- * Refresh `LIVE_MODELS` by probing each candidate in parallel. Updates
- * the live set in place so callers see the new ordering immediately.
+ * Refresh `LIVE_MODELS` by:
+ *   1. Querying `/v1/models` for all `-free` + stealth models
+ *   2. Probing each candidate in parallel
+ *   3. Pruning cooldowned models
+ *   4. Ordering by PREFERRED_MODELS priority, then newly-discovered models
  *
- * Called automatically on client init and (lazily) whenever a
+ * Called automatically at client init and (lazily) whenever a
  * request fails on its current model.
  */
 export async function refreshModelList(force = false): Promise<string[]> {
@@ -160,67 +263,76 @@ export async function refreshModelList(force = false): Promise<string[]> {
   }
   lastProbeAt = now;
 
-  // Probe all preferred models in parallel
-  const results = await Promise.all(
-    PREFERRED_MODELS.map(async (m) => ({ model: m, alive: await probeModel(m) }))
-  );
+  // --- Build candidate list: preferred first, then discovered ---
+  const preferredSet = new Set(PREFERRED_MODELS);
+  const discovered = await discoverFromModelsEndpoint();
+  const candidateSet = new Set<string>();
 
-  const live = results.filter((r) => r.alive).map((r) => r.model);
-  if (live.length > 0) {
-    LIVE_MODELS = live;
+  // Preferred models first, in order
+  for (const m of PREFERRED_MODELS) candidateSet.add(m);
+  // Then any discovered model not already covered
+  for (const m of discovered) {
+    if (!candidateSet.has(m)) candidateSet.add(m);
+  }
+
+  // --- Probe all candidates in parallel ---
+  const candidates = Array.from(candidateSet);
+  const prober = candidates.map((m) => probeModel(m).then((alive) => ({ model: m, alive })));
+  const results = await Promise.all(prober);
+
+  // Cooldowned models are excluded even if alive
+  const live = results
+    .filter((r) => r.alive && !isCooldowned(r.model))
+    .map((r) => r.model);
+
+  // --- Order: preferred order first, then discovered, preserving relative order ---
+  const ordered: string[] = [];
+  const added = new Set<string>();
+  for (const m of PREFERRED_MODELS) {
+    if (live.includes(m) && !added.has(m)) {
+      ordered.push(m);
+      added.add(m);
+    }
+  }
+  for (const m of live) {
+    if (!added.has(m)) {
+      ordered.push(m);
+      added.add(m);
+    }
+  }
+
+  if (ordered.length > 0) {
+    LIVE_MODELS = ordered;
     // eslint-disable-next-line no-console
-    console.log(`[OpenCode] Live models (${live.length}/${PREFERRED_MODELS.length}): ${live.join(', ')}`);
+    console.log(
+      `[OpenCode] Live models (${ordered.length}/${candidates.length}): ${ordered.join(', ')}`
+    );
   } else {
-    // Nothing alive — keep the static list and warn. The next
-    // request will still try, in case upstream just came back up.
     // eslint-disable-next-line no-console
-    console.warn('[OpenCode] All preferred models appear down; will still try on next request.');
+    console.warn('[OpenCode] All candidates appear down or cooldowned; will retry on next request.');
   }
 
   return LIVE_MODELS;
 }
 
-/**
- * Best-effort: also shell out to the standalone probe script if it
- * exists, to pick up any *additional* models the script discovers
- * via the `/v1/models` endpoint. These get appended to LIVE_MODELS.
- */
-async function extendFromProbeScript(): Promise<void> {
-  if (!PROBE_SCRIPT) return;
-  try {
-    const { execFile } = await import('child_process');
-    const { promisify } = await import('util');
-    const run = promisify(execFile);
-    const { stdout } = await run(PROBE_SCRIPT, [], { timeout: 30000 });
-    const candidates = stdout
-      .split('\n')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    for (const c of candidates) {
-      if (!LIVE_MODELS.includes(c) && PREFERRED_MODELS.includes(c)) {
-        // Only add if it's in our preferred list (don't blindly trust
-        // the probe script to avoid junk / typos)
-        LIVE_MODELS = [...LIVE_MODELS, c];
-      }
-    }
-  } catch {
-    // Probe script not present or failed — non-fatal, we already
-    // probed inline above.
+// Kick off the first probe at module-load time.
+refreshModelList().catch(() => undefined);
+
+// ==========================================================================
+// Should-retry helpers
+// ==========================================================================
+
+/** Check if the response body indicates a quota hit — if so, cooldown. */
+function checkQuotaBody(model: string, bodyText: string): boolean {
+  if (bodyText.includes('FreeUsageLimitError') || bodyText.includes('insufficient_quota')) {
+    cooldownModel(model);
+    return true;
   }
+  return false;
 }
 
-// Kick off the first probe at module-load time. The result is
-// available by the time the first real request fires (the rate
-// limiter + retry absorbs the in-flight latency).
-refreshModelList().then(extendFromProbeScript).catch(() => undefined);
-
-// ---- Should-retry helper ----
-
-function isRetryableStatus(status: number, bodyText: string): boolean {
-  if (status === 429 || status === 502 || status === 503 || status === 504) return true;
-  if (bodyText.includes('FreeUsageLimitError')) return true;
-  if (bodyText.includes('model is not supported')) return true;
-  return false;
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || status === 502 || status === 503 || status === 504;
 }
 
 function isRetryableError(err: unknown): boolean {
@@ -229,49 +341,65 @@ function isRetryableError(err: unknown): boolean {
   return msg.includes('abort') || msg.includes('ECONNRESET') || msg.includes('fetch failed');
 }
 
-// ---- Public API ----
+// ==========================================================================
+// Public API
+// ==========================================================================
 
 /**
  * Call the OpenCode Zen chat completions API (key-less).
  *
+ * Walks the live model chain:
+ *   1. `options.model` (explicit override) or `DEFAULT_MODEL`
+ *   2. Remaining live models not yet tried
+ *   3. On quota hits, cooldowns the failing model until UTC midnight
+ *   4. When all live models are exhausted, forces a fresh probe
+ *
  * @param messages  Array of chat messages (system/user/assistant)
  * @param options   Override model, temperature, max_tokens
  * @returns The response text content
- *
- * Model selection:
- *   1. Use the explicit `options.model` if provided.
- *   2. Otherwise try `DEFAULT_MODEL` first; if it fails retryably,
- *      walk the live model chain in order.
- *
- * Auto-rotation:
- *   On a retryable failure, the live list is re-probed (in case
- *   upstream just released a new model), then the request is retried
- *   on the next-best live model.
  */
 export async function callOpenCode(
   messages: OpenCodeMessage[],
   options: Partial<OpenCodeRequestBody> = {}
 ): Promise<string> {
-  // Make sure we have an up-to-date live list (cheap if recent).
   if (LIVE_MODELS.length === 0) await refreshModelList(true);
 
   const explicitModel = options.model;
-  const candidates = explicitModel
-    ? [explicitModel, ...LIVE_MODELS.filter((m) => m !== explicitModel)]
-    : [DEFAULT_MODEL, ...LIVE_MODELS.filter((m) => m !== DEFAULT_MODEL)];
+
+  // Build candidate chain: explicit → default → remaining
+  const candidates: string[] = [];
+  const added = new Set<string>();
+
+  if (explicitModel) {
+    candidates.push(explicitModel);
+    added.add(explicitModel);
+  }
+  // Add default if different
+  if (!added.has(DEFAULT_MODEL)) {
+    candidates.push(DEFAULT_MODEL);
+    added.add(DEFAULT_MODEL);
+  }
+  // Add remaining live models
+  for (const m of LIVE_MODELS) {
+    if (!added.has(m)) {
+      candidates.push(m);
+      added.add(m);
+    }
+  }
 
   let lastError: Error | null = null;
-  let attemptedModels = new Set<string>();
+  let reasoningCount = 0;
 
   for (const model of candidates) {
-    if (attemptedModels.has(model)) continue; // don't retry the same model twice in one call
-    attemptedModels.add(model);
+    if (isCooldowned(model)) continue;
+
+    const maxTokens = options.max_tokens ?? 1024;
 
     const body: OpenCodeRequestBody = {
       model,
       messages,
       temperature: options.temperature ?? 0.3,
-      max_tokens: options.max_tokens ?? 1024,
+      max_tokens: maxTokens,
       stream: false,
       ...options,
     };
@@ -281,45 +409,80 @@ export async function callOpenCode(
         () => doOpenCodeRequest(body),
         {
           model,
-          maxRetries: 3, // single-model retries are cheaper than switching models
+          maxRetries: 3,
           baseBackoffMs: 2_000,
           maxBackoffMs: 20_000,
-          shouldRetry: (status: number) => status === 429 || status === 502 || status === 503 || status === 504,
+          shouldRetry: (status: number) => isRetryableStatus(status),
         }
       );
 
-      const content = result?.choices?.[0]?.message?.content ?? '';
+      const content = (result?.choices?.[0]?.message?.content ?? '').trim();
       const reasoning = result?.choices?.[0]?.message?.reasoning_content;
       const usage = result?.usage || {};
+
+      // --- Quota detection in response body ---
+      if (result?.error?.message) {
+        const errMsg: string = result.error.message;
+        if (checkQuotaBody(model, errMsg)) continue;
+      }
+
+      // --- Normal logging ---
       // eslint-disable-next-line no-console
       console.log(
         `[OpenCode] ${content.length} chars, ${usage.total_tokens ?? '?'} tokens (model: ${model})`
       );
 
-      // If the model only emitted reasoning and no content, retry on
-      // the next live model — caller wants the answer, not the
-      // scratchpad.
-      if (!content && reasoning) {
+      // --- Reasoning-only guard: skip only when the model burned its
+      //     budget on reasoning for short prompts; but for long
+      //     prompts (maxTokens >= 256) reasoning + content is
+      //     expected and we can still use the model.
+      if (!content && reasoning && maxTokens < 256) {
+        reasoningCount++;
+        if (reasoningCount <= 2) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[OpenCode] ${model} returned reasoning-only (maxTokens=${maxTokens}); trying next live model.`
+          );
+          continue;
+        }
+      }
+
+      if (!content) {
+        // Empty response — maybe a quota edge case
         // eslint-disable-next-line no-console
-        console.warn(`[OpenCode] ${model} returned reasoning-only; trying next live model.`);
+        console.warn(`[OpenCode] ${model} returned empty content; trying next.`);
         continue;
       }
 
       return content;
     } catch (err) {
       lastError = err as Error;
-      if (isRetryableError(err) || (err && isRetryableStatus(0, String((err as Error).message)))) {
-        // eslint-disable-next-line no-console
-        console.warn(`[OpenCode] ${model} failed (${(err as Error).message?.slice(0, 80)}); trying next.`);
+
+      // --- Cooldown on quota hits ---
+      if (err && typeof (err as any).status === 'number' && (err as any).status === 429) {
+        cooldownModel(model);
         continue;
       }
+
+      // --- Check error message for quota/free-limit ---
+      if (err && (err as Error).message) {
+        if (checkQuotaBody(model, (err as Error).message)) continue;
+      }
+
+      if (isRetryableError(err)) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[OpenCode] ${model} network error (${(err as Error).message?.slice(0, 80)}); trying next.`
+        );
+        continue;
+      }
+
       // Non-retryable — rethrow immediately
       throw err;
     }
   }
 
-  // Exhausted all live candidates. Force a fresh probe in case
-  // upstream rotated since last check, then give up.
+  // Exhausted all candidates. Force a fresh probe and give up.
   await refreshModelList(true);
   throw lastError ?? new Error('[OpenCode] No live model could complete the request.');
 }
