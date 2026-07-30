@@ -696,7 +696,15 @@ app.get('/api/sailing/:id', async (c) => {
            s.booking_label,
            s.history,
            s.itinerary,
+           s.ai_insider_summary,
+           s.ai_cabin_strategy,
+           s.ai_excursion_strategy,
+           s.ai_deal_score_narrative,
+           s.ai_score,
+           s.ai_generated_at,
            sh.name AS ship, cl.name AS cruise_line,
+           sh.year_built AS ship_launched_year,
+           sh.class AS ship_class,
            d.name AS destination
     FROM sailings s
     JOIN ships sh ON s.ship_id = sh.id
@@ -846,6 +854,15 @@ app.get('/api/sailing/:id', async (c) => {
       originalPrice: Number(row.original_price) || 0,
       dropPercent,
       history: prices,
+      // AI-generated content (may be null if not yet enriched)
+      aiInsiderSummary: row.ai_insider_summary || null,
+      aiCabinStrategy: row.ai_cabin_strategy || null,
+      aiExcursionStrategy: row.ai_excursion_strategy || null,
+      aiDealScoreNarrative: row.ai_deal_score_narrative || null,
+      aiScore: row.ai_score ?? null,
+      aiGeneratedAt: row.ai_generated_at || null,
+      shipClass: row.ship_class || null,
+      shipLaunchedYear: row.ship_launched_year || null,
     },
     cabinBreakdown,
     priceHistory,

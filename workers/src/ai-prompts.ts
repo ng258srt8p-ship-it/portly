@@ -97,6 +97,7 @@ Return a JSON object inside a \`\`\`json fence with these keys:
 2. "cabinStrategy": 75-120 words. Pick a specific cabin tier from the CABIN TIERS list above. Reference the line's typical cabin approach (from LINE PROFILE) but tailor it to THIS sailing's actual prices. Skip generic advice.
 3. "excursionStrategy": 75-120 words. Shore-ex booking strategy directly informed by the LINE PROFILE excursion_strategy and the specific ports listed — name at least one port from the PORTS OF CALL list. Don't reuse generic Caribbean advice if this isn't a Caribbean sailing.
 4. "dealScoreNarrative": 2-3 sentences. Why this sailing is or isn't a buy now, anchored to the ${ctx.pricing.drop_pct}% drop from peak. No fluff. Mention the ship's fleet position if relevant.
+5. "shipPersonality": A JSON-formatted string with three sub-keys (escape inner quotes properly): \`atmosphere\` (2-4 words like \"High-energy family\", \"Casual value\"), \`bestFor\` (one phrase like \"Families with teens\", \"Budget couples\"), \`standoutAmenities\` (an array of 2-4 short phrases like [\"Havana Bar & Pool\", \"Guy's Burger Joint\"]). Reference the LINE PROFILE personality vocabulary and the ship context above.
 
 Hard constraints:
 - Every numeric claim must match the input. Do NOT invent prices, deck numbers, or percentages.
@@ -130,7 +131,7 @@ export function isValidEnrichmentOutput(
 ): parsed is Record<string, string> {
   if (!parsed || typeof parsed !== 'object') return false;
   const p = parsed as Record<string, unknown>;
-  const required = ['insiderSummary', 'cabinStrategy', 'excursionStrategy', 'dealScoreNarrative'];
+  const required = ['insiderSummary', 'cabinStrategy', 'excursionStrategy', 'dealScoreNarrative', 'shipPersonality'];
   for (const key of required) {
     if (typeof p[key] !== 'string') return false;
     if ((p[key] as string).length === 0) continue; // empty allowed

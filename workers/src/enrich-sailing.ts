@@ -184,6 +184,20 @@ export async function enrichSailing(env: EnrichmentEnv, sailingId: string, opts?
   const ctx = toContext({ ...row, history_len: historyLen }, { cabins, lineGuide: guideRow });
 
   let parsed: Record<string, string> | null = null;
+
+  // Defensive: ensure ai_ship_personality column exists (added in 2026-Q3
+  // overhaul; idempotent CREATE no-ops if already present).
+  try {
+    await env.DB.prepare(
+      `ALTER TABLE sailings ADD COLUMN ai_ship_personality TEXT`
+    ).run();
+  } catch (e: any) {
+    // Ignore "duplicate column" errors — column already exists.
+    if (!/duplicate column|already exists/i.test(String(e?.message || ''))) {
+      // Surface other errors via the ai-call-failed path
+    }
+  }
+
   try {
     const aiResponse = (await env.AI.run(model as any, {
       messages: [
@@ -207,6 +221,7 @@ export async function enrichSailing(env: EnrichmentEnv, sailingId: string, opts?
   await env.DB.prepare(
     `UPDATE sailings
        SET ai_insider_summary = ?, ai_cabin_strategy = ?, ai_excursion_strategy = ?, ai_deal_score_narrative = ?,
+           ai_ship_personality = ?,
            ai_generated_at = ?, ai_model = ?, ai_score = ?
        WHERE id = ?`
   ).bind(
@@ -214,6 +229,7 @@ export async function enrichSailing(env: EnrichmentEnv, sailingId: string, opts?
     parsed.cabinStrategy,
     parsed.excursionStrategy,
     parsed.dealScoreNarrative,
+    parsed.shipPersonality,
     now,
     model,
     Math.min(100, Math.max(0, 60 + (100 - ctx.pricing.drop_pct) / 4)),

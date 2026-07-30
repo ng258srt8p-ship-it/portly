@@ -13,6 +13,7 @@ import PriceHistoryPanel from '@/components/sailing/PriceHistoryPanel';
 import EnhancedDealAnalysis from '@/components/sailing/EnhancedDealAnalysis';
 import EnhancedPriceForecast from '@/components/sailing/EnhancedPriceForecast';
 import SailingInfoPanel from '@/components/sailing/SailingInfoPanel';
+import SailingKeyTakeaways from '@/components/sailing/SailingKeyTakeaways';
 
 interface SailingData {
   sailing: {
@@ -30,6 +31,15 @@ interface SailingData {
     originalPrice: number;
     dropPercent: number;
     history: number[];
+    // AI-generated content (null if not yet enriched)
+    aiInsiderSummary?: string | null;
+    aiCabinStrategy?: string | null;
+    aiExcursionStrategy?: string | null;
+    aiDealScoreNarrative?: string | null;
+    aiScore?: number | null;
+    aiGeneratedAt?: string | null;
+    shipClass?: string | null;
+    shipLaunchedYear?: number | null;
   };
   cabinBreakdown: any[];
   priceHistory: any[];
@@ -142,7 +152,28 @@ export default function SailingDetailPage() {
                   })()}
                   bookingUrl={data.sailing.bookingUrl || ''}
                 />
-             </section>
+                {/* AI-driven key takeaways callout — placed immediately below hero */}
+                <SailingKeyTakeaways
+                  price={data.sailing.price || 0}
+                  originalPrice={data.sailing.originalPrice || 0}
+                  dropPercent={data.sailing.dropPercent || 0}
+                  perNight={
+                    data.sailing.days > 0
+                      ? Math.round((data.sailing.price || 0) / data.sailing.days)
+                      : data.sailing.price || 0
+                  }
+                  days={data.sailing.days}
+                  route={data.sailing.route || []}
+                  line={data.sailing.line}
+                  ship={data.sailing.ship}
+                  cabinBreakdown={data.cabinBreakdown}
+                  aiScore={data.sailing.aiScore ?? null}
+                  aiDealScoreNarrative={data.sailing.aiDealScoreNarrative ?? null}
+                  aiCabinStrategy={data.sailing.aiCabinStrategy ?? null}
+                  aiExcursionStrategy={data.sailing.aiExcursionStrategy ?? null}
+                  aiInsiderSummary={data.sailing.aiInsiderSummary ?? null}
+                />
+              </section>
 
               {/* Itinerary + Info 2-col on desktop */}
               <section id="itinerary" className="grid grid-cols-1 gap-6 lg:grid-cols-3 scroll-mt-40">
