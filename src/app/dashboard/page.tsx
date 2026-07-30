@@ -90,7 +90,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [tickResult, setTickResult] = useState<string | null>(null);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://portly-api.vqh9mnrdbp.workers.dev';
 
   const fetchMetrics = async () => {
     try {

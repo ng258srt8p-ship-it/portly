@@ -254,6 +254,66 @@ The `itinerary` column was already populated correctly by the expander/ingestion
 |- The "View Deal / Book" CTA fix unblocks the conversion funnel for the hero card — the bottom CTA was already correct, so previously the user had to scroll past the broken hero to find a working link. Now the hero CTA works on first render.
 |- Cycle #25 follow-up about checking other Worker endpoints for PK coercion still applies — `/api/solo-friendly` and `/api/enhanced/*` haven't been audited yet
 |- Class of bug recurring: "Worker has the data, frontend doesn't pass it through" — seen 4 times now (Cycles #25, #26, #27 + the earlier `bookingUrl` gap). Consider a contract test that asserts every API response field is read by at least one component, with a min coverage threshold
-|- Next opportunity: Cycle #28 — pick one of: (a) hunt for other instances of fabricated/derived price math in the frontend, (b) audit `/api/enhanced/*` endpoints for the PK coercion bug, (c) wire `data-testid` onto the bottom CTA so we can also regression-test that path
+|✅ Cycle #27 Complete
 
-✅ Cycle #27 Complete
+## Cycle #28
+|**Feature / Fix:** Wire the missing `GET /api/metrics` Worker endpoint and fix the `/dashboard` route's broken production fetch — the admin dashboard was permanently stuck on "Could not load metrics."
+
+|**Root cause (two related bugs on the same call path):**
+|1. **Worker had no `/api/metrics` endpoint.** The aggregator `getMetricsSnapshot()` was already implemented in `workers/src/metrics-analytics.ts` and the import was already in `workers/src/index.ts` line 7 — but the actual route handler `app.get('/api/metrics', ...)` was never defined. Every fetch from the dashboard returned 404.
+|2. **Dashboard's `API_BASE` defaulted to empty string `''`.** The static-export production build has no Next.js API proxy (rewrites are stripped under `output: 'export'`), so `fetch(API_BASE + '/api/metrics')` resolved to `https://portly-1i0.pages.dev/api/metrics` (404 on Pages) rather than the Worker. In dev mode the rewrite proxy handled it, masking the bug. The `sailing/[id]/page.tsx` had already adopted the correct pattern: `process.env.NEXT_PUBLIC_API_URL || 'https://portly-api.vqh9mnrdbp.workers.dev'`.
+
+|**Phase 1 — Audit findings:**
+|- `curl https://portly-api.vqh9mnrdbp.workers.dev/api/metrics` → `404 Not Found` (Worker endpoint missing)
+|- `curl https://portly-1i0.pages.dev/dashboard` → 200 HTML, but page is a `'use client'` component that fetches at runtime → permanent error state on prod
+|- Read `src/app/dashboard/page.tsx` lines 87-159 — confirmed error branch with `error` state never reaches the metrics grid
+|- The dashboard's `MetricsSnapshot` interface exactly matches `workers/src/metrics-analytics.ts`'s `MetricsSnapshot` return type — confirmed field-for-field contract compatibility
+|- Pre-existing KV cache keys `ingest:last_tick`, `alerts:last_eval_tick`, `alerts:last_dispatch_tick` are already populated by the enrichment/alert pipeline — dashboard's `recent.*` timestamps will show real data immediately
+
+|**Phase 2 — Implementation:**
+|1. `workers/src/index.ts` — added new route handler after `/api/sync-status`:
+|   ```ts
+|   app.get('/api/metrics', async (c) => {
+|     try {
+|       const snapshot = await getMetricsSnapshot({ DB: c.env.DB, CACHE: c.env.CACHE });
+|       return c.json(snapshot);
+|     } catch (err: any) {
+|       return c.json({ error: 'metrics_failed', message: err?.message || 'unknown' }, 500);
+|     }
+|   });
+|   ```
+|   Reuses the existing `getMetricsSnapshot` import (line 7) — no new imports needed
+|2. `src/app/dashboard/page.tsx` line 93 — changed `API_BASE = process.env.NEXT_PUBLIC_API_URL || ''` → `API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://portly-api.vqh9mnrdbp.workers.dev'`. Matches the convention from `sailing/[id]/page.tsx`.
+|3. New regression spec `e2e/dashboard-metrics.spec.ts` (5 tests, 5 browser projects = 25 test runs):
+|   - **GET /api/metrics returns 200 with expected shape** — validates `alerts`, `enrichment`, `sailings`, `ingest`, `recent` sub-objects all present with correct numeric types
+|   - **GET /api/metrics numeric fields > 0** — guards against the aggregator silently returning zeros (which would happen if any sub-query misnames a column); asserts `activeSubscriptions > 0`, `totalSailings > 0`, `linesTracked > 0`, `baseSailings > 0`, min/max prices not null
+|   - **/dashboard renders metrics grid (not error state)** — `Could not load metrics.` must NOT appear in `<main>`, H1 `Analytics Dashboard` must render, all 4 StatCard labels must be visible (`Total Sailings`, `Active Alert Subscribers`, `AI Coverage`, `Price Range`)
+|   - **/dashboard StatCards show real numbers** — body text contains digits, no `NaN` substring, the "Total Sailings" card text matches `\d+`
+|   - **/dashboard fetches from Worker URL (not relative path)** — `page.waitForResponse` catches the `/api/metrics` request and asserts `resp.url()` host contains `portly-api` (Worker), not `portly-1i0.pages.dev` (Pages — no proxy)
+
+|**Phase 3 — Local verification + Build + Deploy:**
+|- `npx tsc --noEmit` (root): ✅ exit 0
+|- `cd workers && npx tsc --noEmit`: ✅ exit 0
+|- `cd workers && npx wrangler deploy --dry-run --outdir /tmp/wrangler-out`: ✅ 126.74 KiB bundle compiled clean (the only check that catches escape-sequence breakage in regex/SQL literals)
+|- `cd workers && npx wrangler deploy`: ✅ → https://portly-api.vqh9mnrdbp.workers.dev (Current Version ID: `2f27986a-90cf-470e-95f9-737d04bc6787`)
+|- `BUILD_TARGET=export npx next build`: ✅ 520 pages generated (500 sailing IDs)
+|- `npx wrangler pages deploy out --project-name=portly --branch=main`: ✅ → https://1a866c1e.portly-1i0.pages.dev
+|- **Live Worker verification** — `curl https://portly-api.vqh9mnrdbp.workers.dev/api/metrics` returns 200 with real data:
+|  - `alerts.activeSubscriptions: 213` (real, from D1 `alerts` table)
+|  - `enrichment.enrichedSailings: 344` of `totalSailings: 1781` (19.3% coverage, real)
+|  - `ingest.expansionRatio: 21` (1700 synthetic × 81 base)
+|  - `sailings.medianPrice: 887.74` (real AVG, label is misleading — see follow-ups)
+|  - `recent.lastAlertEvalTick: "2026-07-28T18:01:54.519Z"` (KV cache populated by prior tick)
+
+|**Phase 4 — Live E2E verification (against production https://portly-1i0.pages.dev):**
+|`BASE_URL=https://portly-1i0.pages.dev/ npx playwright test e2e/dashboard-metrics.spec.ts --workers=2`: **25/25 passed** across all 5 browser projects (chromium, firefox, webkit, Mobile Chrome, Mobile Safari) in 19.2s
+|Combined regression run with Cycle #27 spec: `e2e/sailing-hero-otd.spec.ts e2e/dashboard-metrics.spec.ts`: **45/45 passed** in 41.5s — no regressions in any prior test, the OTD fix continues to hold and the new dashboard tests all pass
+
+|**Phase 5 — Notes / follow-ups for next cycle:**
+|- **Class of bug recurring: "Worker endpoint exists in code but never wired."** The aggregator `getMetricsSnapshot()` sat idle with its import sitting in `index.ts` for an unknown number of cycles. Worth a `grep` audit: find every exported `get*Snapshot`, `get*Stats`, `compute*Report` function in `workers/src/` and verify each has a corresponding `app.get('/api/...')` route handler. This is structurally similar to the recurring "Worker has the data, frontend doesn't pass it through" class but on the Worker side instead of the frontend side.
+|- **Misleading label bug (separate issue):** `metrics.sailings.medianPrice` actually returns `AVG(price)`, not the median. The SQL in `metrics-analytics.ts` line 86 computes `ROUND(AVG(s.price), 2)` and maps it to `medianPrice` in the return shape. The dashboard card label says "Price Range" with a single number — the median label is hidden. Either rename the SQL to `medianPrice` (using `PERCENTILE_CONT` or app-side median calculation) or relabel the dashboard card to "Avg. Price". This is a 1-line fix.
+|- **`shipClasses.deck: "0% Caribbean"` is wrong.** The SQL counts `LIKE '%Carib%'` on `s.departure_region` but the data uses different casing or naming (e.g., `Caribbean` vs `Carribean`, or `Western Caribbean` vs `Caribbean Western`). The dashboard doesn't read `shipClasses` at all (it's not in the dashboard's `MetricsSnapshot` interface), so the bug is silent. Either fix the SQL pattern or drop the field from the API response.
+|- **Dashboard's `runAlertTick` button calls `/api/admin/alert-eval-tick` and `/api/admin/alert-dispatch-tick`** which require the `SCRAPER_SECRET` Bearer auth header (line 1273 of index.ts). From a browser with no auth header, those calls return 401. The button shows the JSON error in a `<pre>` block, so the UX is confusing — clicking "Run Alert Tick" always produces "Unauthorized" output. Either gate the button in dev mode, or add a public non-admin alert-stats endpoint.
+|- **Next opportunity:** pick one of: (a) fix the misleading `medianPrice` label, (b) audit other un-wired Worker endpoints like the `getMetricsSnapshot` case, (c) extend the contract test pattern to verify all Worker response fields are actually read by some frontend component.
+
+✅ Cycle #28 Complete

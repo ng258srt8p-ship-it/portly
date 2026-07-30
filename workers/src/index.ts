@@ -1072,6 +1072,19 @@ app.get('/api/sync-status', async (c) => {
   });
 });
 
+// GET /api/metrics — aggregate snapshot for the admin /dashboard route.
+// Powers both the JSON consumer (Dashboard page) and any future ops tooling.
+// Reuses the shared aggregator in ./metrics-analytics so the shape stays in
+// lock-step with the enrichment /alert/ingest dashboards elsewhere.
+app.get('/api/metrics', async (c) => {
+  try {
+    const snapshot = await getMetricsSnapshot({ DB: c.env.DB, CACHE: c.env.CACHE });
+    return c.json(snapshot);
+  } catch (err: any) {
+    return c.json({ error: 'metrics_failed', message: err?.message || 'unknown' }, 500);
+  }
+});
+
 // GET /api/enhanced/deal-analysis/:id — stub heuristic deal analysis
 app.get('/api/enhanced/deal-analysis/:id', async (c) => {
   const id = c.req.param('id');
