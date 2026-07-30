@@ -115,3 +115,48 @@
 - Other diagnostic specs in `e2e/_diag_*.spec.ts` are intentionally not committed (one-shot debugging tools)
 - Remaining full-suite timeout issue (1270 tests) — consider splitting into targeted runs with `--workers=3`
 ✅ Cycle #24 Complete
+
+## Cycle #25
+**Feature / Fix:** Fix sailing detail API contract — string PK `id` coercion to 0, garbage `port` ("lisbon") instead of itinerary[0] ("Miami"), synthetic 3-element `route` instead of real 5-port itinerary from `itinerary` JSON column
+
+**Root cause (class of bug #17 re-occurred):** The GET `/api/sailing/:id` handler in `workers/src/index.ts` had three defects on the same call path:
+1. `id: Number(row.id) || 0` coerced the TEXT primary key (e.g., `carnival_horizon_2026-03-08_miami_6__big_31__v4m`) to `0` — breaking in-page navigation between sailings that used `data.sailing.id`
+2. `port: row.departure_port` used the raw text column (some rows had garbage like "lisbon" for a Miami cruise) instead of the first port from the `itinerary` JSON array
+3. `route` was synthesized as `[dep_port, destination, dep_port]` (3 elements) instead of parsing the existing `itinerary` JSON column which has 5+ real ports (e.g., `["Miami","Amber Cove","Grand Turk","Half Moon Cay","Miami"]`)
+
+The `itinerary` column was already populated correctly by the expander/ingestion pipeline — the sailing detail endpoint just never used it (unlike the deals endpoint which did). This is the exact same class of bug documented in Pitfall #17 ("Itinerary data requires a D1 column + JSON parse in the GET handler") where the fix was deployed to one endpoint but missed the sibling.
+
+**Phase 1 — Audit findings (live site):**
+- `curl https://portly-1i0.pages.dev/api/sailing/carnival_horizon_2026-03-08_miami_6__big_31__v4m` returned `sailing.id: 0`, `port: "lisbon"`, `route: ["lisbon","Eastern Caribbean","lisbon"]`
+- Frontend `SailingDetailClient.tsx` reads `data.sailing.id`, `data.sailing.port`, `data.sailing.route` for hero, itinerary timeline, and subnav scroll-spy anchors
+- The SSG `generateStaticParams` in `sailing/[id]/page.tsx` already fetches live API for IDs, so the static export had correct pages but the client-side hydration got broken data
+
+**Phase 2 — Implementation (`workers/src/index.ts`):**
+- Added `s.itinerary` to the SELECT
+- Parse `row.itinerary` JSON → if array length ≥ 2, use as `route` and set `port = parsed[0]`
+- Fall back to synthetic `[dep_port, destination, dep_port]` only when itinerary missing/empty
+- Changed `id: Number(row.id) || 0` → `id: row.id` (preserve string PK)
+
+**Phase 3 — Build, Deploy, Verify:**
+- `cd workers && npx tsc --noEmit`: ✅
+- `cd workers && npx wrangler deploy --dry-run --outdir /tmp/wrangler-out`: ✅
+- `cd workers && npx wrangler deploy`: ✅ → https://portly-api.vqh9mnrdbp.workers.dev
+- Live worker verification:
+  - `id: "carnival_horizon_2026-03-08_miami_6__big_31__v4m"` (string preserved)
+  - `port: "Miami"` (from itinerary[0], was "lisbon")
+  - `route: ["Miami","Amber Cove","Grand Turk","Half Moon Cay","Miami"]` (5 real ports, was 3 garbage)
+- `BUILD_TARGET=export npx next build`: ✅ 520 pages (500 sailing IDs)
+- `npx wrangler pages deploy out --project-name=portly --branch=main`: ✅ https://2ef34979.portly-1i0.pages.dev
+- Production Pages propagation verified (same correct payload)
+
+**Phase 4 — Live E2E verification:**
+- `BASE_URL=https://portly-1i0.pages.dev/ npx playwright test e2e/_smoke.spec.ts e2e/button-size.spec.ts --workers=1`: **35/35 passed** (5 projects × 7 smoke + 5 button-size)
+- New regression spec `e2e/sailing-api-contract.spec.ts` validates the exact contract: string PK, real port from itinerary, multi-port route, round-trip endpoint matching
+
+**Phase 5 — Notes / follow-ups:**
+- The cabinBreakdown zeros are a separate data-pipeline issue (no cabin_prices rows for these sailings) — not in scope for this fix
+- This is the second time the "synthetic route vs. real itinerary" bug has appeared on different endpoints — consider a shared helper `parseItinerary(row)` used by both `/api/deals` and `/api/sailing/:id`
+- Check if any other Worker endpoints (enhanced/forecast, enrich-tick) have similar PK coercion or synthetic data patterns
+- The `e2e/sailing-api-contract.spec.ts` was already committed in 3676ad9; no new commit needed for the spec
+
+✅ Cycle #25 Complete
