@@ -491,3 +491,68 @@ The same column was declared on the `SailingAlertFacts` interface (so `facts.ai_
 - **Next opportunity:** pick one of: (a) audit other `s.<column>` references in `workers/src/*.ts` against the live schema for the remaining dead-column pattern, (b) wire the now-correct `shipClasses.deck` (59.5% Caribbean) into a "Top Destinations" widget on the dashboard, (c) replace the Cycle #29 text-match selector with the new `data-testid` for stability.
 
 ✅ Cycle #31 Complete
+
+## Cycle #32
+**Feature / Fix:** Wire the destination breakdown into the dashboard — expand `/api/metrics` to return top-5 destinations by sailing count, and render a "Top Destinations" widget on `/dashboard` with relative-width bars and the existing "X% Caribbean" pill.
+
+**Root cause (single, easily reproduced):**
+
+The Worker endpoint `/api/metrics` already exported `shipClasses.deck` (Cycle #30 fix: `"59.5% Caribbean"`) but **the dashboard never rendered it anywhere.** A second, deeper gap: the API exposed zero destination-level breakdown — only the single summary string. Two of the dashboard's eight StatCards (the new "Typical Price" one in Cycle #30) and zero charts touched destination data. The dashboard was a system overview without its most informative dimension (where the cruises actually go).
+
+**Phase 1 — Audit findings:**
+- `grep -n "destination\|shipClasses" src/app/dashboard/page.tsx` → 0 hits. Confirmed: no destination-related widget on the dashboard.
+- `grep -n "shipClasses\|topDestinations" workers/src/metrics-analytics.ts` → only `shipClasses.deck` and `shipClasses.cabin` exist (the `cabin` field is hardcoded `null`).
+- Manual API probe: `GET /api/metrics` returns `shipClasses.deck: "59.5% Caribbean"` and zero destination breakdown.
+- Live D1 evidence: `destinations` table has 23 rows ("Eastern Caribbean", "Western Caribbean", "Bahamas", "Alaska Inside Passage", "Mexican Riviera", …); `sailings.destination_id` is non-null for ~1486 of 1781 sailings.
+- Cycle #31 follow-up explicitly suggested this exact feature as the "next opportunity".
+
+**Phase 2 — Implementation:**
+
+1. **`workers/src/metrics-analytics.ts`** — three surgical changes:
+   - Added `topDestinations: { name: string; count: number }[]` to the `MetricsSnapshot` interface.
+   - Added a 6th parallel query to the existing `Promise.all` (now `[alertSums, enrichSums, sailingSums, shipClasses, priceRows, topDestRows]`):
+     ```sql
+     SELECT d.name AS name, COUNT(s.id) AS count
+        FROM destinations d JOIN sailings s ON s.destination_id = d.id
+       GROUP BY d.id, d.name
+       ORDER BY count DESC, d.name ASC
+       LIMIT 5
+     ```
+     The INNER JOIN drops the small minority of sailings with NULL destination_id (treated as uncategorised and intentionally excluded). `LIMIT 5` keeps the response payload bounded.
+   - Mapped the D1 response (`{results: [...]}` shape — same defensive unwrap pattern as the median-price row from Cycle #30) to `{ name: String(r.name), count: Number(r.count) || 0 }`, filter out zero/empty rows.
+
+2. **`src/app/dashboard/page.tsx`** — three changes:
+   - Added `topDestinations: { name: string; count: number }[]` to the frontend `MetricsSnapshot` interface.
+   - Inserted a new `<section>` between the Charts grid and the "Recent Cron Activity" panel, titled "Top Destinations" with subtitle "By tracked sailing count" and the existing `shipClasses.deck` pill rendered inline as `<span class="bg-indigo/10 … text-indigo">59.5% Caribbean</span>`.
+   - Renders one `<li>` per destination with: name (44-char truncated, `title=` for full text on hover), a relative-width fill bar (`width: ${max(8, round(count/max*100))}%`, where the `Math.max(8, …)` floor guarantees the smallest row is still visible), and a right-aligned count in bold. Empty-state path renders "No destination data yet." when the array is empty (defensive — won't happen with current data).
+
+3. **`e2e/top-destinations-widget.spec.ts`** (new, 4 tests × 5 browser projects = 20 test runs — local-only, `e2e/` is gitignored by project convention):
+   - **`GET /api/metrics.topDestinations returns ≤5 rows in count-descending order`** — asserts array shape, name/count field types, positivity, integer-ness, and strict ordering (`tds[i-1].count >= tds[i].count`). Catches "topDestinations reverted to empty array" or "ORDER BY broken" regressions.
+   - **`GET /api/metrics Caribbean row counts agree with deck summary`** — parses `shipClasses.deck` "59.5% Caribbean" → 59.5, asserts plausibility (0 < pct < 100), then asserts both "Western Caribbean" and "Eastern Caribbean" appear in `topDestinations` with count > 300 each (the two should be the bulk of any Carib-derived percentage). Catches the class of bug where the summary percent drifts away from the row counts.
+   - **`/dashboard renders Top Destinations widget with rows in count order`** — navigates to `/dashboard`, asserts `data-testid="dashboard-top-destinations"` is visible, the heading "Top Destinations" renders, the Caribbean pill (matching `/%\s*Caribbean/`) is present, the list testid is visible, the row count is in [1, 5], and the row count column values are non-increasing from top to bottom.
+   - **`/dashboard Top Destinations bar widths reflect count ranking`** — measures each bar's `getBoundingClientRect().width` in pixels and asserts row 0 has the widest bar AND `widths[0] > 30` (catches the "Math.max(8, …) floor never kicks in but bars collapse anyway" regression — e.g. if someone refactors to a `w-1` Tailwind class).
+
+**Phase 3 — Local verification + Build + Deploy:**
+- `npx tsc --noEmit` (root): ✅ exit 0
+- `cd workers && npx tsc --noEmit`: ✅ exit 0
+- `cd workers && npx wrangler deploy --dry-run --outdir /tmp/wrangler-out`: ✅ 142.23 KiB / gzip 35.38 KiB (Worker bundle compiles cleanly — new SQL is a single-line prepared statement, no escape-drift risk)
+- `cd workers && npx wrangler deploy`: ✅ → https://portly-api.vqh9mnrdbp.workers.dev (Current Version ID: `56ad9ea1-0f2e-4e23-ab79-17c13ffd77ec`)
+- **Live Worker verification** (`curl /api/metrics | python3 -m json.tool`):
+  - `topDestinations: [{Western Caribbean, 541}, {Eastern Caribbean, 491}, {Bahamas, 277}, {Alaska Inside Passage, 92}, {Mexican Riviera, 85}]` (sum = 1486, ~295 sailings have NULL destination_id as expected)
+  - `shipClasses.deck: "59.5% Caribbean"` (unchanged from Cycle #30, confirms no regression)
+- `BUILD_TARGET=export npx next build`: ✅ exit 0, 500+ static pages including the rebuilt dashboard
+- `npx wrangler pages deploy out --project-name=portly --branch=main`: ✅ → https://56e2774d.portly-1i0.pages.dev
+
+**Phase 4 — Live E2E verification (against production https://56e2774d.portly-1i0.pages.dev):**
+- `BASE_URL=https://56e2774d.portly-1i0.pages.dev npx playwright test e2e/top-destinations-widget.spec.ts --workers=1`: **20/20 passed** across all 5 browser projects in 20.7s — all 4 new Cycle #32 tests green on chromium, firefox, webkit, Mobile Chrome, Mobile Safari
+- Dashboard regression (all 5 dashboard specs together): `e2e/dashboard-metrics.spec.ts e2e/dashboard-alert-tick.spec.ts e2e/dashboard-metrics-label-integrity.spec.ts e2e/alert-engine-column-integrity.spec.ts e2e/top-destinations-widget.spec.ts --workers=2`: **105/105 passed** in 48.5s — zero regressions across all prior cycle specs (28, 29, 30, 31, 32)
+- Broader regression: `e2e/_smoke.spec.ts e2e/sailing-hero-otd.spec.ts e2e/sailing-api-contract.spec.ts e2e/departure-port-contract.spec.ts --workers=2`: **80/80 passed** in 1.1m — zero regressions across the 4 spec files most likely to be affected by a Worker-side endpoint change
+
+**Phase 5 — Notes / follow-ups for next cycle:**
+- **Class of bug now CLOSED for this dashboard:** "API field exists but is never rendered." `shipClasses.deck` was the previous instance; `topDestinations` is now the canonical rendering. Worth a quick spot-check on the other metrics fields (`enrichment.avgDealScore`, `ingest.expansionRatio`, `recent.lastIngestTick`) — they're all rendered, but the "subscripted under the headline number" pattern is the easy-to-miss case. Low priority.
+- **Class of bug worth a future audit (still pending):** the `data-testid="dashboard-recent-alert-eval"` from Cycle #31 is now the canonical selector for the Alert Eval timestamp. The text-match selector in Cycle #29's spec still works (text hasn't changed) but could be migrated to the testid for stability. Tiny cleanup.
+- **The "Top Destinations" widget doesn't currently link each row anywhere.** A natural follow-up would be to make each row a Link to `/deals?destination=<name>` (the deals page already accepts a `destination` query param). Out of scope for this cycle (single-focus rule) but worth a follow-up.
+- **Empty-state path was tested only by inspection** — the new spec covers rows > 0 because production has data. The `topDestinations.length === 0` branch in the component will need a manual code review if someone ever introduces a destination-clearing operation.
+- **Next opportunity:** pick one of: (a) wire the dashboard "Top Destinations" rows to `/deals?destination=<name>` deep links so users can drill through, (b) audit the dashboard's other metrics fields for similar "rendered as subscript text" gaps, (c) the `s.sailing_url`/`s.ai_insider_summary` dead-column audit originally suggested in Cycle #30's follow-ups (low priority — both are actually present in production per Cycle #29 evidence).
+
+✅ Cycle #32 Complete

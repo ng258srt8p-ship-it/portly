@@ -47,6 +47,8 @@ interface MetricsSnapshot {
     syntheticSailings: number;
     expansionRatio: number;
   };
+  shipClasses: { deck: string | null; cabin: string | null };
+  topDestinations: { name: string; count: number }[];
   recent: {
     lastIngestTick: string | null;
     lastAlertEvalTick: string | null;
@@ -287,6 +289,44 @@ export default function DashboardPage() {
                 />
               </div>
             </div>
+          </div>
+
+          {/* Top Destinations */}
+          <div className="mt-8 rounded-2xl border border-black/[0.06] bg-white p-6 shadow-sm" data-testid="dashboard-top-destinations">
+            <h2 className="font-display text-lg font-bold text-ink">Top Destinations</h2>
+            <p className="mt-1 text-xs text-ink-soft">
+              By tracked sailing count
+              {metrics.shipClasses.deck && (
+                <span className="ml-2 inline-flex items-center rounded-full bg-indigo/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo">
+                  {metrics.shipClasses.deck}
+                </span>
+              )}
+            </p>
+            {metrics.topDestinations.length === 0 ? (
+              <p className="mt-4 text-sm text-ink-soft">No destination data yet.</p>
+            ) : (
+              <ul className="mt-4 space-y-3" data-testid="dashboard-top-destinations-list">
+                {metrics.topDestinations.map((d) => {
+                  const max = Math.max(...metrics.topDestinations.map((x) => x.count));
+                  const pct = max > 0 ? Math.max(8, Math.round((d.count / max) * 100)) : 0;
+                  return (
+                    <li key={d.name} data-testid="dashboard-top-destination-row" className="flex items-center gap-3">
+                      <span className="w-44 shrink-0 truncate text-sm text-ink" title={d.name}>{d.name}</span>
+                      <div className="h-5 flex-1 overflow-hidden rounded-full bg-gray-100">
+                        <div
+                          className="h-full rounded-full bg-indigo/80"
+                          style={{ width: `${pct}%` }}
+                          data-testid="dashboard-top-destination-bar"
+                        />
+                      </div>
+                      <span className="w-16 shrink-0 text-right text-sm font-semibold text-ink" data-testid="dashboard-top-destination-count">
+                        {d.count.toLocaleString()}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
 
           {/* Recent activity */}

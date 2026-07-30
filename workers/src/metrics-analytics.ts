@@ -45,6 +45,7 @@ export interface MetricsSnapshot {
     minPrice: number | null;
   };
   shipClasses: { deck: string | null; cabin: string | null };
+  topDestinations: { name: string; count: number }[];
   recent: {
     lastIngestTick: string | null;
     lastAlertEvalTick: string | null;
@@ -56,7 +57,7 @@ export interface MetricsSnapshot {
 export async function getMetricsSnapshot(env: MetricsEnv): Promise<MetricsSnapshot> {
   // Single batched read using SELECTs against relatively small tables.
   // Each statement returns one row; D1 prepares these once per call.
-  const [alertSums, enrichSums, sailingSums, shipClasses, priceRows] = await Promise.all([
+  const [alertSums, enrichSums, sailingSums, shipClasses, priceRows, topDestRows] = await Promise.all([
     env.DB.prepare(
       `SELECT
          (SELECT COUNT(*) FROM alerts WHERE is_active = 1) AS active_subs,
@@ -101,6 +102,16 @@ export async function getMetricsSnapshot(env: MetricsEnv): Promise<MetricsSnapsh
     // count query to pick `n = count/2`. The dataset is bounded (~1781 rows)
     // so pulling the full sorted list is cheaper than two round trips.
     env.DB.prepare(`SELECT price FROM sailings WHERE price IS NOT NULL ORDER BY price ASC`).all(),
+    // Top-N destinations by sailing count. INNER JOIN drops the small
+    // minority of sailings with NULL destination_id (treated as uncategorised
+    // and intentionally excluded from this breakdown).
+    env.DB.prepare(
+      `SELECT d.name AS name, COUNT(s.id) AS count
+         FROM destinations d JOIN sailings s ON s.destination_id = d.id
+        GROUP BY d.id, d.name
+        ORDER BY count DESC, d.name ASC
+        LIMIT 5`
+    ).all(),
   ]);
 
   const lastIngest = await env.CACHE.get('ingest:last_tick');
@@ -161,6 +172,9 @@ export async function getMetricsSnapshot(env: MetricsEnv): Promise<MetricsSnapsh
       deck: caribbeanPct > 0 ? `${caribbeanPct.toFixed(1)}% Caribbean` : null,
       cabin: null,
     },
+    topDestinations: ((topDestRows as unknown as { results?: { name: string; count: number }[] })?.results || [])
+      .map((r) => ({ name: String(r.name), count: Number(r.count) || 0 }))
+      .filter((r) => r.name && r.count > 0),
     recent: {
       lastIngestTick: lastIngest ? ((JSON.parse(lastIngest) as { ts: string }).ts as string) : null,
       lastAlertEvalTick: lastEval ? ((JSON.parse(lastEval) as { ts: string }).ts as string) : null,
