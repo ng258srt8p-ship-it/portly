@@ -297,7 +297,7 @@ export default function DashboardPage() {
                 <span className="text-ink-faint">Ingest: </span>
                 {timeAgo(metrics.recent.lastIngestTick)}
               </div>
-              <div>
+              <div data-testid="dashboard-recent-alert-eval">
                 <span className="text-ink-faint">Alert Eval: </span>
                 {timeAgo(metrics.recent.lastAlertEvalTick)}
               </div>

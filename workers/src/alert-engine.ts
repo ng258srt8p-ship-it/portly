@@ -44,7 +44,6 @@ export interface SailingAlertFacts {
   destination: string | null;
   ai_score: number | null;
   ai_insider_summary: string | null;
-  ai_verdict: string | null;
   booking_url: string | null;
   booking_label: string | null;
   badge_text: string | null;
@@ -106,7 +105,7 @@ export function renderAlertEmail(opts: {
   const savings = facts.original_price - facts.current_price;
   const deadPrice = facts.original_price || facts.current_price;
   const scoreBadge = facts.ai_score
-    ? `<div style="margin-top:8px;font-size:13px;color:#475569;"><strong style="color:#1e40af;font-size:14px;">AI Deal Score: ${Math.round(facts.ai_score)}/100</strong>${facts.ai_verdict ? ' — ' + escapeHtml(facts.ai_verdict) : ''}</div>`
+    ? `<div style="margin-top:8px;font-size:13px;color:#475569;"><strong style="color:#1e40af;font-size:14px;">AI Deal Score: ${Math.round(facts.ai_score)}/100</strong></div>`
     : '';
   const insider = facts.ai_insider_summary
     ? `<div style="margin-top:14px;padding:14px 16px;background:#f8fafc;border-left:3px solid #2A44E7;border-radius:6px;font-size:13px;line-height:1.55;color:#1e293b;"><strong style="color:#2A44E7;">Insider read</strong><br/>${escapeHtml(facts.ai_insider_summary)}</div>`
@@ -185,7 +184,7 @@ export async function runAlertEvaluationTick(env: AlertEnv, opts?: { maxPerTick?
       const facts = await env.DB.prepare(
         `SELECT s.id, s.sail_date, s.nights, s.price AS current_price, s.original_price,
                 s.departure_port, s.itinerary, s.badge_text, s.booking_url, s.booking_label,
-                s.ai_score, s.ai_insider_summary, s.ai_verdict,
+                s.ai_score, s.ai_insider_summary,
                 sh.name AS ship, cl.name AS cruise_line, d.name AS destination
            FROM sailings s
            JOIN ships sh       ON s.ship_id = sh.id
