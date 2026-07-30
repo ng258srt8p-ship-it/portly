@@ -746,7 +746,7 @@ app.get('/api/sailing/:id', async (c) => {
     Balcony: 1.35,
     Suite: 1.75,
   };
-  const synthesizeTiers = function(): Array<{ cabinType: string; totalOutTheDoor: number; perNight: number }> {
+  const synthesizeTiers = function(): Array<{ cabinType: string; totalOutTheDoor: number; perNight: number; multiplier: number }> {
     const nights = Number(row.nights) || 7;
     // Use the most recent 5 history points to estimate Inside base fare
     const recent = prices.slice(-5);
@@ -761,6 +761,7 @@ app.get('/api/sailing/:id', async (c) => {
         cabinType,
         totalOutTheDoor: total,
         perNight: Math.round(total / nights),
+        multiplier: mult,
       };
     });
   };
@@ -802,6 +803,7 @@ app.get('/api/sailing/:id', async (c) => {
         nights,
         // 'estimated' flag tells UI this is synthesized, not real cabin_prices row
         estimated: true,
+        multiplier: s.multiplier,
         raw: {
           cabinType: s.cabinType,
           baseFarePerPerson: baseFare,
@@ -823,6 +825,12 @@ app.get('/api/sailing/:id', async (c) => {
       // (base + port tax + gratuity*7 nights default). Prefer column if present;
       // fall back to derivation.
       const totalOutTheDoor = totalPerPerson || (baseFare + portTax + gratuity * 7);
+      // Multiplier: derive from tier name (Inside=1.0, others use known ratios)
+      const nameLower = String(c.cabinType || '').toLowerCase();
+      const mult =
+        nameLower.includes('suite') ? 1.75 :
+        nameLower.includes('balcony') ? 1.35 :
+        nameLower.includes('oceanview') || nameLower.includes('ocean view') ? 1.18 : 1.0;
       const raw = {
         cabinType: c.cabinType,
         baseFarePerPerson: baseFare,
@@ -840,6 +848,7 @@ app.get('/api/sailing/:id', async (c) => {
         gratuityPerPersonPerNight: gratuity,
         totalPerPerson,
         totalOutTheDoor,
+        multiplier: mult,
         // Legacy snake_case keys (still consumed elsewhere)
         base: baseFare,
         portTax,

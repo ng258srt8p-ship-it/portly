@@ -23,6 +23,10 @@ interface CabinBreakdownEntry {
   gratuities: string;
   total: string;
   perPersonPerDay: string;
+  /** Upgrade multiplier over Inside (e.g. Balcony=1.35, Suite=1.75) — used
+   *  to synthesize price-history lines for cabin tiers without their own
+   *  history rows. Frontend falls back to multiplying Inside history. */
+  multiplier?: number;
   raw: {
     totalOutTheDoor: number;
     perPersonPerDay: number;
@@ -49,14 +53,15 @@ function SparklineChart({ data, dates, cabinType }: { data: number[]; dates: str
     );
   }
 
-  const w = 520;
-  const h = 130;
-  const padLeft = 70;
-  const padRight = 20;
-  const padTop = 20;
-  const padBottom = 40;
+  // ── Sleeker dimensions: smaller viewBox + tighter padding ──
+  const w = 480;
+  const h = 110;
+  const padLeft = 44;
+  const padRight = 12;
+  const padTop = 14;
+  const padBottom = 26;
   // Extra buffer zone below chart area for tooltip rendering — prevents clipping at peak data points
-  const tooltipBuffer = 56;
+  const tooltipBuffer = 48;
   const chartW = w - padLeft - padRight;
   const chartH = h - padTop - padBottom;
   const totalH = h + tooltipBuffer;
@@ -64,7 +69,8 @@ function SparklineChart({ data, dates, cabinType }: { data: number[]; dates: str
   const max = Math.max(...data);
   const range = max - min || 1;
   const step = chartW / (data.length - 1);
-  const positive = data[data.length - 1] >= data[0];
+  // Phase 3: inverted color logic — falling prices (good for buyer) = mint, rising = coral
+  const isFalling = data[data.length - 1] < data[0];
 
   const pts = data.map((v, i) => ({
     x: padLeft + i * step,
@@ -95,29 +101,25 @@ function SparklineChart({ data, dates, cabinType }: { data: number[]; dates: str
 
   const linePath = catmullRomToBezier(pts);
   const areaPath = `${linePath} L${padLeft + chartW},${padTop + chartH} L${padLeft},${padTop + chartH} Z`;
-  const color = positive ? '#0B6B57' : '#2A44E7';
-  const hoverColor = positive ? '#065F46' : '#1E3A8A';
+  // Phase 3: inverted color logic — mint for falling (good), coral for rising (warning)
+  const color = isFalling ? '#0B6B57' : '#E76E50';
+  const hoverColor = isFalling ? '#065F46' : '#B8442A';
 
-  // Y-axis: price labels
-  const yMin = Math.floor(min / 200) * 200;
-  const yMax = Math.ceil(max / 200) * 200;
-  const yStep = Math.max(200, Math.round((yMax - yMin) / 4 / 100) * 100);
-  const yLabels: { label: string; y: number }[] = [];
-  for (let v = yMin; v <= yMax; v += yStep) {
-    yLabels.push({ label: `$${v.toLocaleString()}`, y: padTop + chartH - ((v - min) / range) * chartH });
-  }
+  // Y-axis: only 3 labels (min / median / max) — was 5
+  const yMin = Math.floor(min / 100) * 100;
+  const yMax = Math.ceil(max / 100) * 100;
+  const yMid = Math.round((yMin + yMax) / 2);
+  const yLabels: { label: string; y: number }[] = [
+    { label: '$' + yMin.toLocaleString(), y: padTop + chartH - ((yMin - min) / range) * chartH },
+    { label: '$' + yMid.toLocaleString(), y: padTop + chartH - ((yMid - min) / range) * chartH },
+    { label: '$' + yMax.toLocaleString(), y: padTop + chartH - ((yMax - min) / range) * chartH },
+  ];
 
-  // X-axis: date labels (up to 5)
-  const xLabelCount = Math.min(5, data.length);
-  const xIndices: number[] = [];
-  if (data.length <= xLabelCount) {
-    for (let i = 0; i < data.length; i++) xIndices.push(i);
-  } else {
-    const gap = Math.floor(data.length / xLabelCount);
-    for (let i = 0; i < data.length; i += gap) xIndices.push(i);
-    if (xIndices[xIndices.length - 1] !== data.length - 1) xIndices.push(data.length - 1);
-  }
-  const xLabels: { date: string; x: number }[] = xIndices.map(i => ({
+  // X-axis: only 3 labels (first / middle / last) — was 5
+  const xLabelIndices = data.length <= 3
+    ? data.map((_, i) => i)
+    : [0, Math.floor((data.length - 1) / 2), data.length - 1];
+  const xLabels: { date: string; x: number }[] = xLabelIndices.map((i) => ({
     date: dates[i] ? new Date(dates[i]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
     x: padLeft + i * step,
   }));
@@ -126,13 +128,13 @@ function SparklineChart({ data, dates, cabinType }: { data: number[]; dates: str
   const tooltipX = hoveredIdx !== null ? pts[hoveredIdx].x : -100;
   const tooltipY = hoveredIdx !== null ? pts[hoveredIdx].y + tooltipBuffer : -100;
   const tooltipDate = hoveredIdx !== null && dates[hoveredIdx]
-    ? new Date(dates[hoveredIdx]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? new Date(dates[hoveredIdx]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '';
 
   return (
-    <svg viewBox={`0 0 ${w} ${totalH}`} className="w-full" preserveAspectRatio="xMidYMid meet" data-testid="price-history-svg">
+    <svg viewBox={`0 0 ${w} ${totalH}`} className="mx-auto w-full max-w-2xl" preserveAspectRatio="xMidYMid meet" data-testid="price-history-chart">
       <defs>
-        <linearGradient id={`hist-grad-${positive ? 'up' : 'down'}`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`hist-grad-${isFalling ? 'fall' : 'rise'}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.18" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
@@ -145,9 +147,9 @@ function SparklineChart({ data, dates, cabinType }: { data: number[]; dates: str
         <line key={`grid-${i}`} x1={padLeft} y1={yl.y} x2={padLeft + chartW} y2={yl.y} stroke="#000" strokeOpacity="0.06" strokeWidth="1" />
       ))}
       {/* Area fill */}
-      <path d={areaPath} fill={`url(#hist-grad-${positive ? 'up' : 'down'})`} stroke="none" />
+      <path d={areaPath} fill={`url(#hist-grad-${isFalling ? 'fall' : 'rise'})`} stroke="none" />
       {/* Smooth curve line */}
-      <path d={linePath} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={linePath} fill="none" stroke={color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
       {/* Invisible hover targets + data points */}
       {pts.map((pt, i) => (
         <g key={i}>
@@ -166,7 +168,7 @@ function SparklineChart({ data, dates, cabinType }: { data: number[]; dates: str
           <circle
             cx={pt.x}
             cy={pt.y}
-            r={hoveredIdx === i ? 5 : 3}
+            r={hoveredIdx === i ? 4 : 2.5}
             fill={hoveredIdx === i ? hoverColor : color}
             className="transition-all"
             pointerEvents="none"
@@ -222,21 +224,17 @@ function SparklineChart({ data, dates, cabinType }: { data: number[]; dates: str
       )}
       {/* Y-axis labels */}
       {yLabels.map((yl, i) => (
-        <text key={`yl-${i}`} x={padLeft - 8} y={yl.y + 4} textAnchor="end" fontSize="10" fill="#6B7280">
+        <text key={`yl-${i}`} x={padLeft - 8} y={yl.y + 3} textAnchor="end" fontSize="10" fill="#94A3B8" fontWeight="500">
           {yl.label}
-        </text>
+      </text>
       ))}
       {/* X-axis labels */}
       {xLabels.map((xl, i) => (
-        <text key={`xl-${i}`} x={xl.x} y={h - 6} textAnchor="middle" fontSize="10" fill="#6B7280">
+        <text key={`xl-${i}`} x={xl.x} y={h - 8} textAnchor="middle" fontSize="10" fill="#94A3B8" fontWeight="500">
           {xl.date}
-        </text>
-      ))}
-      {/* Y-axis title */}
-      <text x={14} y={h / 2} textAnchor="middle" fontSize="10" fill="#9CA3AF" fontWeight="500" transform={`rotate(-90, 14, ${h / 2})`}>
-        Price (USD)
       </text>
-    </svg>
+      ))}
+   </svg>
   );
 }
 function fmtPrice(n: number): string {
@@ -276,9 +274,28 @@ export default function PriceHistoryPanel({
       : cabinTypes[0]) || '';
 
   // --- Sparkline: filter to selected cabin type + standard 2-passenger count ---
-  const sorted = [...priceHistory]
+  // When no history rows exist for the selected cabin tier, fall back to
+  // Inside history scaled by the tier's multiplier (from cabinBreakdown).
+  // This ensures every cabin button produces a real chart, not an empty state.
+  const insideHistory = [...priceHistory]
+    .filter((s) => s.cabin_type === 'Inside' && Number(s.passenger_count) === 2)
+    .sort((a, b) => new Date(a.recorded_date).getTime() - new Date(b.recorded_date).getTime());
+
+  const selectedMultiplier = (cabinBreakdown ?? []).find(
+    (cb: any) => (cb.cabinType || cb.cabin_type) === selectedCabinType
+  )?.multiplier ?? 1.0;
+
+  const directSorted = [...priceHistory]
     .filter((s) => s.cabin_type === selectedCabinType && Number(s.passenger_count) === 2)
     .sort((a, b) => new Date(a.recorded_date).getTime() - new Date(b.recorded_date).getTime());
+  const usingSynthesis = directSorted.length < 2 && insideHistory.length >= 2 && selectedMultiplier !== 1.0;
+  const sorted = usingSynthesis
+    ? insideHistory.map((s) => ({
+        ...s,
+        total_usd: String(Math.round(parseFloat(s.total_usd) * selectedMultiplier)),
+        cabin_type: selectedCabinType,
+      }))
+    : directSorted;
   const sparkValues = sorted.map((s) => parseFloat(s.total_usd)).filter((v) => !isNaN(v));
 
   // --- Cabin price table: use cabinBreakdown if available, otherwise extract from priceHistory ---
