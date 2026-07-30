@@ -98,7 +98,7 @@ export default function SailingSubNav({ sections }: SailingSubNavProps) {
       className="sticky top-[var(--header-height)] z-30 flex justify-center px-4 pt-2 sm:px-6"
       aria-label="Section navigation"
     >
-      <div className={"md:hidden " + pillBase}>
+      <div className={"md:hidden " + pillBase + " has-[[open]]:rounded-2xl"}>
         <details data-sailing-subnav-popover className="group">
           <summary
             className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-2 text-sm font-semibold text-ink-soft [&::-webkit-details-marker]:hidden"
