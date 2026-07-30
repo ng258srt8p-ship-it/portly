@@ -128,8 +128,8 @@
   --header-height: 6.125rem;     /* 98px */
 
   /* SailingSubNav sticky pill bar — sits below header at top-[var(--header-height)]
-     with pt-2 (8px) + inner py-2 (16px) + content height ~50px ≈ 66px total. */
-  --subnav-height: 4.125rem;     /* 66px */
+     with pt-2 (8px) + inner py-1.5 (6+6=12px) + content min-h-[32px] ≈ 52px total. */
+  --subnav-height: 3.25rem;     /* 52px */
 }
 
 /* ============================================================

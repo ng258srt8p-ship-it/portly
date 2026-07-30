@@ -79,7 +79,7 @@ export default function SailingDetailPage() {
         property in globals.css.
       */}
       {/* Section anchors preserved via scroll-mt-* on each <section> below */}
-      <main className="min-h-screen scroll-pt-28 pt-[calc(var(--header-height)+var(--subnav-height))] pb-12 px-4 sm:px-6">
+      <main className="min-h-screen scroll-pt-28 pt-[var(--header-height)] pb-12 px-4 sm:px-6">
         <div className="mx-auto max-w-7xl">
           {loading && (
             <div className="space-y-6">
@@ -103,7 +103,7 @@ export default function SailingDetailPage() {
           )}
 
           {data && (
-            <div className="space-y-8 sm:space-y-12">
+            <div className="space-y-2 sm:space-y-3">
               {/* SailingSubNav - sticky sub-nav pill below header */}
               <SailingSubNav
                 sections={[
@@ -117,7 +117,7 @@ export default function SailingDetailPage() {
                 ]}
               />
               {/* Hero */}
-              <section id="overview" className="scroll-mt-32">
+              <section id="overview" className="scroll-mt-40">
                 <SailingHero
                   ship={data.sailing.ship}
                   line={data.sailing.line}
@@ -145,7 +145,7 @@ export default function SailingDetailPage() {
              </section>
 
               {/* Itinerary + Info 2-col on desktop */}
-              <section id="itinerary" className="grid grid-cols-1 gap-6 lg:grid-cols-3 scroll-mt-32">
+              <section id="itinerary" className="grid grid-cols-1 gap-6 lg:grid-cols-3 scroll-mt-40">
                 <div className="lg:col-span-2">
                   <ItineraryTimeline
                     ports={data.sailing.route}
@@ -168,7 +168,7 @@ export default function SailingDetailPage() {
              </section>
 
               {/* Price History */}
-              <section id="price-history" className="scroll-mt-32">
+              <section id="price-history" className="scroll-mt-40">
                 <PriceHistoryPanel
                   priceHistory={data.priceHistory}
                   currentPrice={data.sailing.price || 0}
@@ -177,7 +177,7 @@ export default function SailingDetailPage() {
              </section>
 
               {/* Enhanced Deal Analysis (Phase 2) */}
-              <section id="deal-analysis" className="scroll-mt-32">
+              <section id="deal-analysis" className="scroll-mt-40">
                 <EnhancedDealAnalysis
                   sailingId={data.sailing.sailing_id}
                   bookingUrl={data.sailing.bookingUrl}
@@ -197,7 +197,7 @@ export default function SailingDetailPage() {
              </section>
 
               {/* Cabin Pricing */}
-              <section id="cabins" className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-xs sm:p-6 scroll-mt-32">
+              <section id="cabins" className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-xs sm:p-6 scroll-mt-40">
                 <div className="mb-5 flex items-center justify-between">
                   <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">Cabin Pricing</h2>
                   <span className="text-xs font-medium text-ink-soft">Per cabin, taxes & gratuities included</span>
@@ -206,12 +206,12 @@ export default function SailingDetailPage() {
              </section>
 
               {/* Enhanced Price Forecast (Phase 2) */}
-              <section id="forecast" className="scroll-mt-32">
+              <section id="forecast" className="scroll-mt-40">
                 <EnhancedPriceForecast sailingId={data.sailing.sailing_id} />
              </section>
 
               {/* Ship Info (sourced from SailingInfoPanel data — collapse if same) */}
-              <section id="ship-info" className="scroll-mt-32">
+              <section id="ship-info" className="scroll-mt-40">
                 <SailingInfoPanel
                   ship={data.sailing.ship}
                   line={data.sailing.line}

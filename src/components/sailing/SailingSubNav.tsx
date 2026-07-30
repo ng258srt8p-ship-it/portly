@@ -95,7 +95,7 @@ export default function SailingSubNav({ sections }: SailingSubNavProps) {
   return (
     <div
       data-testid="sailing-subnav"
-      className="sticky top-[var(--header-height)] z-30 flex justify-center px-4 pt-2 sm:px-6 mb-3"
+      className="sticky top-[var(--header-height)] z-30 flex justify-center px-4 pt-2 sm:px-6"
       aria-label="Section navigation"
     >
       <div className={"md:hidden " + pillBase}>
@@ -134,7 +134,7 @@ export default function SailingSubNav({ sections }: SailingSubNavProps) {
        </details>
      </div>
 
-      <div className={"hidden md:flex " + pillBase + " items-center gap-1 px-2 py-2"}>
+      <div className={"hidden md:flex " + pillBase + " items-center gap-1 px-2 py-1.5"}>
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo/10 text-indigo">
           <MaterialIcon name="directions_boat_filled" size="xs" />
        </span>
@@ -147,7 +147,7 @@ export default function SailingSubNav({ sections }: SailingSubNavProps) {
               aria-current={active === sec.id ? "true" : undefined}
               onClick={() => handleNavigate(sec.id)}
               className={
-                "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full min-h-[36px] px-4 py-2 text-sm font-medium transition-colors hover:bg-black/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 " +
+                "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full min-h-[32px] px-4 py-1.5 text-sm font-medium transition-colors hover:bg-black/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 " +
                 (active === sec.id ? "bg-indigo/10 text-indigo" : "text-ink-soft")
               }
             >
