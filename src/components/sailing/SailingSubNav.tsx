@@ -95,7 +95,7 @@ export default function SailingSubNav({ sections }: SailingSubNavProps) {
   return (
     <div
       data-testid="sailing-subnav"
-      className="sticky top-[var(--header-height)] z-30 flex justify-center px-4 pt-2 sm:px-6"
+      className="sticky top-[var(--header-height)] z-30 flex justify-center px-4 pt-2 sm:px-6 mb-3"
       aria-label="Section navigation"
     >
       <div className={"md:hidden " + pillBase}>
