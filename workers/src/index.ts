@@ -688,30 +688,44 @@ app.post('/api/deals', async (c) => {
 // Shaped for the SailingDetailClient SailingData interface.
 app.get('/api/sailing/:id', async (c) => {
   const id = c.req.param('id');
-  const row = await c.env.DB.prepare(`
-    SELECT s.id, s.sail_date AS departure_date, s.nights,
-           s.price, s.original_price, s.duration,
-           s.departure_port, s.departure_region,
-           s.booking_url,
-           s.booking_label,
-           s.history,
-           s.itinerary,
-           s.ai_insider_summary,
-           s.ai_cabin_strategy,
-           s.ai_excursion_strategy,
-           s.ai_deal_score_narrative,
-           s.ai_score,
-           s.ai_generated_at,
-           sh.name AS ship, cl.name AS cruise_line,
-           sh.year_built AS ship_launched_year,
-           sh.class AS ship_class,
-           d.name AS destination
-    FROM sailings s
-    JOIN ships sh ON s.ship_id = sh.id
-    JOIN cruise_lines cl ON s.cruise_line_id = cl.id
-    LEFT JOIN destinations d ON s.destination_id = d.id
-    WHERE s.id = ?
-  `).bind(id).first<any>();
+  // Ship class + launched year + AI columns may not exist in older schema;
+  // try-catch each so we never 500 due to schema drift.
+  const safeRow = await (async () => {
+    const baseSelect = `
+      SELECT s.id, s.sail_date AS departure_date, s.nights,
+             s.price, s.original_price, s.duration,
+             s.departure_port, s.departure_region,
+             s.booking_url,
+             s.booking_label,
+             s.history,
+             s.itinerary,
+             sh.name AS ship, cl.name AS cruise_line,
+             d.name AS destination
+        FROM sailings s
+        JOIN ships sh ON s.ship_id = sh.id
+        JOIN cruise_lines cl ON s.cruise_line_id = cl.id
+        LEFT JOIN destinations d ON s.destination_id = d.id
+       WHERE s.id = ?`;
+    // Try increasingly rich projections; fall back to the minimal one if
+    // any optional column is missing from the live schema.
+    const projections = [
+      baseSelect + `, sh.year_built AS ship_launched_year, sh.class AS ship_class,
+                     s.ai_insider_summary, s.ai_cabin_strategy, s.ai_excursion_strategy,
+                     s.ai_deal_score_narrative, s.ai_score, s.ai_generated_at`,
+      baseSelect + `, s.ai_insider_summary, s.ai_cabin_strategy, s.ai_excursion_strategy,
+                     s.ai_deal_score_narrative, s.ai_score, s.ai_generated_at`,
+      baseSelect,
+    ];
+    for (const sql of projections) {
+      try {
+        return await c.env.DB.prepare(sql).bind(id).first<any>();
+      } catch {
+        continue;
+      }
+    }
+    return null;
+  })();
+  const row = safeRow;
 
   if (!row) return c.json({ error: 'not found' }, 404);
 
