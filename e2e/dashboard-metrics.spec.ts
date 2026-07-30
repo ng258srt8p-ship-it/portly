@@ -112,12 +112,14 @@ test.describe("Dashboard /api/metrics (Cycle #28)", () => {
       page.getByRole("heading", { name: "Analytics Dashboard" })
     ).toBeVisible({ timeout: 10_000 });
 
-    // All 4 StatCard labels must render.
+    // All 4 StatCard labels must render. (Cycle #30 relabeled the headline
+    // value card from "Price Range" → "Typical Price" so the median number
+    // is honestly labelled; the min/max is still in the small text below.)
     const expectedLabels = [
       "Total Sailings",
       "Active Alert Subscribers",
       "AI Coverage",
-      "Price Range",
+      "Typical Price",
     ];
     for (const label of expectedLabels) {
       await expect(

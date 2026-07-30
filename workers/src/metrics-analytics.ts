@@ -56,7 +56,7 @@ export interface MetricsSnapshot {
 export async function getMetricsSnapshot(env: MetricsEnv): Promise<MetricsSnapshot> {
   // Single batched read using SELECTs against relatively small tables.
   // Each statement returns one row; D1 prepares these once per call.
-  const [alertSums, enrichSums, sailingSums, shipClasses] = await Promise.all([
+  const [alertSums, enrichSums, sailingSums, shipClasses, priceRows] = await Promise.all([
     env.DB.prepare(
       `SELECT
          (SELECT COUNT(*) FROM alerts WHERE is_active = 1) AS active_subs,
@@ -85,16 +85,43 @@ export async function getMetricsSnapshot(env: MetricsEnv): Promise<MetricsSnapsh
          (SELECT ROUND(MAX(s.price), 2) FROM sailings s WHERE s.price IS NOT NULL) AS max_p,
          (SELECT ROUND(AVG(s.price), 2) FROM sailings s WHERE s.price IS NOT NULL) AS avg_p`
     ).first(),
+    // Caribbean share is destination-derived (the destinations table holds
+    // "Eastern Caribbean", "Western Caribbean", etc.); the previous query
+    // scanned departure_region which is a US-state field and never matches,
+    // so the card silently reported "0% Caribbean".
     env.DB.prepare(
       `SELECT
-         (SELECT ROUND(SUM(CASE WHEN s.departure_region LIKE '%Carib%' THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0), 1)
-            FROM sailings s WHERE s.departure_region IS NOT NULL) AS caribbean_pct`
+         (SELECT COUNT(*) FROM sailings s JOIN destinations d ON s.destination_id = d.id
+            WHERE d.name LIKE '%Carib%') AS carib_sailings,
+         (SELECT COUNT(*) FROM sailings s WHERE s.destination_id IS NOT NULL) AS total_with_dest`
     ).first(),
+    // Median price — fetched as a sorted list of all non-null prices so we can
+    // pick the middle element in app code. SQLite has no PERCENTILE_CONT, and
+    // a single ORDER BY ... LIMIT 1 OFFSET n subquery would require a separate
+    // count query to pick `n = count/2`. The dataset is bounded (~1781 rows)
+    // so pulling the full sorted list is cheaper than two round trips.
+    env.DB.prepare(`SELECT price FROM sailings WHERE price IS NOT NULL ORDER BY price ASC`).all(),
   ]);
 
   const lastIngest = await env.CACHE.get('ingest:last_tick');
   const lastEval = await env.CACHE.get('alerts:last_eval_tick');
   const lastDispatch = await env.CACHE.get('alerts:last_dispatch_tick');
+
+  // True median: pick the middle element of the sorted price list.
+  const prices = ((priceRows as unknown as { results?: { price: number }[] })?.results || []).map(
+    (r) => Number(r.price),
+  );
+  let medianPrice: number | null = null;
+  if (prices.length > 0) {
+    const mid = Math.floor(prices.length / 2);
+    medianPrice = prices.length % 2 === 1 ? prices[mid] : Math.round((prices[mid - 1] + prices[mid]) / 2);
+  }
+
+  // Caribbean share: divide destination-matched sailings by total sailings
+  // (excluding the small minority with NULL destination_id). Round to 1 dp.
+  const caribSailings = Number(shipClasses?.carib_sailings) || 0;
+  const totalWithDest = Number(shipClasses?.total_with_dest) || 0;
+  const caribbeanPct = totalWithDest > 0 ? Math.round((caribSailings * 1000) / totalWithDest) / 10 : 0;
 
   const total = Number(enrichSums?.total) || 0;
   const enriched = Number(enrichSums?.enriched) || 0;
@@ -126,12 +153,12 @@ export async function getMetricsSnapshot(env: MetricsEnv): Promise<MetricsSnapsh
     sailings: {
       totalSailings: total,
       linesTracked: Number(sailingSums?.lines) || 0,
-      medianPrice: sailingSums?.avg_p != null ? Number(sailingSums.avg_p) : null,
+      medianPrice,
       maxPrice: sailingSums?.max_p != null ? Number(sailingSums.max_p) : null,
       minPrice: sailingSums?.min_p != null ? Number(sailingSums.min_p) : null,
     },
     shipClasses: {
-      deck: shipClasses?.caribbean_pct != null ? `${shipClasses.caribbean_pct}% Caribbean` : null,
+      deck: caribbeanPct > 0 ? `${caribbeanPct.toFixed(1)}% Caribbean` : null,
       cabin: null,
     },
     recent: {

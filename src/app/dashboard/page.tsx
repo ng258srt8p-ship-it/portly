@@ -249,9 +249,9 @@ export default function DashboardPage() {
               <div className="mt-1 font-display text-2xl font-bold text-ink">{fmtPct(metrics.enrichment.enrichmentCoveragePct)}</div>
               <div className="mt-1 text-xs text-ink-soft">Avg score {metrics.enrichment.avgDealScore ?? '-'}</div>
             </div>
-            <div className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-sm">
-              <div className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Price Range</div>
-              <div className="mt-1 font-display text-2xl font-bold text-ink">{metrics.sailings.medianPrice ? fmtPrice(metrics.sailings.medianPrice) : '-'}</div>
+            <div className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-sm" data-testid="dashboard-stat-card-price-range">
+              <div className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Typical Price</div>
+              <div className="mt-1 font-display text-2xl font-bold text-ink" data-testid="dashboard-stat-median-price">{metrics.sailings.medianPrice ? fmtPrice(metrics.sailings.medianPrice) : '-'}</div>
               <div className="mt-1 text-xs text-ink-soft">{metrics.sailings.minPrice ? fmtPrice(metrics.sailings.minPrice) : ''} – {metrics.sailings.maxPrice ? fmtPrice(metrics.sailings.maxPrice) : ''}</div>
             </div>
           </div>

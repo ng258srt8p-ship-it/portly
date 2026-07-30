@@ -380,3 +380,63 @@ The `itinerary` column was already populated correctly by the expander/ingestion
 - The `runAlertEvaluationTick` returned `errors: 10` because the alert-engine.ts SQL selects `s.sailing_url` and `s.ai_insider_summary` columns that don't exist on the schema. Worth a follow-up to either add those columns or remove them from the SELECT.
 
 ✅ Cycle #29 Complete
+## Cycle #30
+**Feature / Fix:** Fix silent data-integrity bugs in `/api/metrics` — replace AVG-as-median with true median; replace wrong-field Caribbean scan with destination JOIN; relabel dashboard card "Price Range" → "Typical Price" to honestly reflect the median value it displays
+
+**Root cause (two parallel silent bugs in `workers/src/metrics-analytics.ts` — both inherited from Cycle #28 follow-ups):**
+
+1. **`sailings.medianPrice` was actually `AVG(price)` aliased to a misleading field name.** The SQL computed `ROUND(AVG(s.price), 2)` and mapped the result to `medianPrice` in the return shape. AVG($887.74) was being rendered under a "Price Range" label on the dashboard, with the actual min/max in a smaller line below — making the headline number neither median nor range. Manually computing the true median from D1 (1781 non-null prices, sorted) gives $670 — a 33% gap from the AVG that was being shown.
+
+2. **`shipClasses.deck` always returned `"0% Caribbean"`.** The SQL scanned `s.departure_region LIKE '%Carib%'`, but `departure_region` is a US-state field (`Florida` 859, `Texas` 435, `Europe` 98, `California` 85, `Maryland` 64, etc.) with no Caribbean entries. The actual Caribbean destinations live in the `destinations` table (`Eastern Caribbean`, `Western Caribbean`, `Southern Caribbean`, `Halloween Caribbean`). Live D1 count: 1060 / 1781 = 59.5% of sailings. The dashboard doesn't render this field today, but the API was silently exporting wrong data — a future "Ship Classes" widget would have shown "0% Caribbean" forever.
+
+**Phase 1 — Audit findings (live site):**
+- `curl https://portly-api.vqh9mnrdbp.workers.dev/api/metrics` → confirmed:
+  - `sailings.medianPrice: 887.74` (actually AVG, not median — true median is $670)
+  - `shipClasses.deck: "0% Caribbean"` (always-zero from wrong column scan)
+- Manual D1 median computation: `SELECT price FROM sailings WHERE price IS NOT NULL ORDER BY price ASC` → 1781 rows, sorted → middle element `prices[890] = 670`
+- `SELECT COUNT(*) FROM sailings s JOIN destinations d ON s.destination_id = d.id WHERE d.name LIKE '%Carib%'` → 1060 of 1781 (59.5%)
+- Dashboard markup confirmed: card label was `"Price Range"` but headline value was the median (mislabeled)
+
+**Phase 2 — Implementation:**
+
+1. **`workers/src/metrics-analytics.ts`** — three changes:
+   - Added a 5th parallel query to the existing `Promise.all`: `SELECT price FROM sailings WHERE price IS NOT NULL ORDER BY price ASC`. SQLite has no `PERCENTILE_CONT`, so we pull the sorted list (~1781 rows bounded) and pick the middle in app code. Comment explains the alternative `OFFSET n` approach and why it's more expensive (extra count round trip).
+   - Fixed the shipClasses query: changed from `LIKE '%Carib%' ON departure_region` to a destinations JOIN counting sailings whose destination name contains "Carib". Now returns `59.5% Caribbean` (real).
+   - Replaced `sailings.medianPrice: sailingSums.avg_p` (which was AVG) with a true-median computed from the sorted list: `prices[mid]` for odd length, `Math.round((prices[mid-1] + prices[mid]) / 2)` for even length.
+
+2. **`src/app/dashboard/page.tsx`** — relabeled the headline card from `"Price Range"` to `"Typical Price"` so the displayed median value is honestly labeled. The actual min/max range remains in the small text line below. Added `data-testid="dashboard-stat-card-price-range"` and `data-testid="dashboard-stat-median-price"` for stable test selectors (the testid for the card stayed "price-range" because that's what the component is conceptually about, even though the label changed).
+
+3. **`e2e/dashboard-metrics-label-integrity.spec.ts`** (new, 4 tests × 5 browser projects = 20 test runs):
+   - **`GET /api/metrics.sailings.medianPrice is the true median, not AVG`** — asserts medianPrice is within ±5% of $670 AND closer to $670 than to the old AVG ($887.74). If the SQL bug regresses, this test catches it.
+   - **`GET /api/metrics.shipClasses.deck reports real Caribbean share`** — asserts the deck string does NOT start with "0%" (the silent-failure pattern) AND the % is in 30-90% range.
+   - **`/dashboard shows 'Typical Price' card with median value matching API`** — fetches the API in parallel via `page.request`, navigates to `/dashboard`, asserts the `data-testid="dashboard-stat-card-price-range"` card is visible, the new label "Typical Price" renders, the headline number (via `data-testid="dashboard-stat-median-price"`) parses to the same number as the API median, and the min-max line below still has a $ value + en-dash.
+   - **`/dashboard no longer renders the misleading 'Price Range' headline label`** — pure negative assertion on the card text. Even if someone re-renames the card later, this catches the specific old label.
+
+4. **`e2e/dashboard-metrics.spec.ts`** (Cycle #28) — updated the `expectedLabels` array to include `"Typical Price"` instead of `"Price Range"`. Without this, the existing spec would have failed on the relabel.
+
+**Phase 3 — Local verification + Build + Deploy:**
+- `npx tsc --noEmit` (root): ✅ exit 0
+- `cd workers && npx tsc --noEmit`: ✅ exit 0
+- `cd workers && npx wrangler deploy --dry-run --outdir /tmp/wrangler-out`: ✅ 141.69 KiB / gzip 35.17 KiB (caught the `.all()` shape bug — first deploy produced 500 `(priceRows || []).map is not a function` because the actual D1 return shape is `{results: [...]}` not a bare array. Fixed by destructuring `?.results` and re-deployed.)
+- `cd workers && npx wrangler deploy`: ✅ → https://portly-api.vqh9mnrdbp.workers.dev (Current Version ID: `74d54273-674b-4ec0-babf-ad302ebf4a79`)
+- **Live Worker verification**:
+  - `curl /api/metrics` returns 200 with the fixed values:
+    - `sailings.medianPrice: 670` (was 887.74)
+    - `shipClasses.deck: "59.5% Caribbean"` (was "0% Caribbean")
+    - `sailings.minPrice/maxPrice: 141/7066` (unchanged, still real)
+- `BUILD_TARGET=export npx next build`: ✅ exit 0, 1000+ pages
+- `npx wrangler pages deploy out --project-name=portly --branch=main`: ✅ → https://ae3a5e48.portly-1i0.pages.dev
+
+**Phase 4 — Live E2E verification (against production https://portly-1i0.pages.dev):**
+- `BASE_URL=https://portly-1i0.pages.dev npx playwright test e2e/dashboard-metrics-label-integrity.spec.ts --workers=1`: **20/20 passed** across all 5 browser projects in 25.4s — all 4 new Cycle #30 tests green on chromium, firefox, webkit, Mobile Chrome, Mobile Safari
+- Dashboard regression after label-update: `e2e/dashboard-metrics.spec.ts e2e/dashboard-metrics-label-integrity.spec.ts --workers=2`: **45/45 passed** in 28.8s (cycle-28 spec now asserts "Typical Price", cycle-30 spec verifies the median value matches API)
+- Broader regression: `e2e/_smoke.spec.ts e2e/sailing-hero-otd.spec.ts e2e/dashboard-alert-tick.spec.ts e2e/sailing-api-contract.spec.ts e2e/departure-port-contract.spec.ts`: **95/95 passed** in 1.2m — zero regressions across all prior cycles
+
+**Phase 5 — Notes / follow-ups for next cycle:**
+- **Class of bug re-occurring: "Field name lies about what it actually computes."** The `medianPrice` field was a SQL alias that nobody verified against the label. Worth a small audit: search `workers/src/` for every field name that semantically claims one computation (median, average, count, sum, max, min, percentile, rate, ratio) and verify the SQL actually computes that operation. The dashboard consumed `medianPrice` without ever checking the value against the raw min/max pair.
+- **Class of bug re-occurring: "Column used in WHERE doesn't match the semantic concept."** The Caribbean scan used `departure_region` instead of joining `destinations`. Same class as Cycle #26's `departurePort` contract drift. Next time a metric has a "natural" field name, audit which column is actually the source of truth by sampling distinct values before writing the WHERE clause.
+- **The dashboard doesn't render `shipClasses.deck` anywhere yet.** Now that the value is correct, this could be wired into a future "destination breakdown" widget. Low priority since the field is exported correctly and ready for any consumer.
+- **The other Cycle #28 follow-up is still pending:** `runAlertEvaluationTick` returns `errors: 10` because the alert-engine SQL references `s.sailing_url`/`s.ai_insider_summary` columns that don't exist on older rows. Worth a one-line audit: `grep -E "s\.(sailing_url|ai_insider_summary|aiScore|aiModel)" workers/src/alert-engine.ts` to identify all references, then either add the missing columns to D1 schema or remove the references from the SELECT.
+- **Next opportunity:** pick one of: (a) fix the alert-engine SQL column references for the last remaining cycle-28 follow-up, (b) audit other `medianPrice`/`avgPrice`/`p95Latency`-style field-name mismatches in `metrics-analytics.ts` and other Worker endpoints, (c) wire the now-correct `shipClasses.deck` into a "Top Destinations" widget on the dashboard.
+
+✅ Cycle #30 Complete
