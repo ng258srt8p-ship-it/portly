@@ -1,14 +1,16 @@
-**Objective:** Complete Phase 2 (batch regeneration) and Phase 3 (enhanced features) so that all active sailings have unique, high-quality deal analysis and price forecast content generated via OpenCode AI — then verify with Playwright tests.
+**Objective:** Complete Phase 2 (batch regeneration) and Phase 3 (enhanced features) so that all active sailings have unique, high-quality deal analysis and price forecast content generated via **OpenCode Zen key-less AI** — then verify with Playwright tests.
 
 **Read first:**
 - `server/services/enhancedAnalytics.ts` (full source — deal analysis + price forecast generation)
 - `server/utils/formatter.ts`, `server/utils/contentFormatter.ts` (formatters)
 - `scripts/regenerate-deal-analysis.ts` (existing Phase 2 regeneration script)
+- `server/utils/openCodeClient.ts` (key-less OpenCode Zen client with auto-rotating model discovery)
 
 **Constraints:**
 - No changes to public API contracts (deal card shape, sailing detail response)
 - All content must be unique and specific to each cruise — no generic text
-- Use OpenCode AI (`callOpenRouter` from `server/lib/openRouterClient`) for generation
+- Use OpenCode Zen AI (`callOpenCode` from `server/utils/openCodeClient`) for generation
+- Default model: `big-pickle`; auto-rotating fallback chain: `deepseek-v4-flash-free`, `mimo-v2.5-free`, `nemotron-3-ultra-free`, `north-mini-code-free`
 - Fix format issues: sanitize em dashes, enforce capitalization, eliminate robotic patterns
 - All 585 active sailings should produce quality content
 - Do not delete, skip, weaken, or narrow tests to make gates pass

@@ -640,6 +640,7 @@ app.get('/api/sailing/:id', async (c) => {
            s.booking_url,
            s.booking_label,
            s.history,
+           s.itinerary,
            sh.name AS ship, cl.name AS cruise_line,
            d.name AS destination
     FROM sailings s
@@ -767,20 +768,42 @@ app.get('/api/sailing/:id', async (c) => {
     ? Math.round(((row.original_price - row.price) / row.original_price) * 100)
     : 0;
 
-  // No `itinerary` table exists — synthesize a route from what we know
+  // Parse itinerary JSON → route array (preferred), fall back to synthetic
   const destination = row.destination || 'Caribbean';
-  const route = row.departure_port
-    ? [row.departure_port, destination, row.departure_port]
-    : [destination];
+  let route: string[];
+  let port = row.departure_port || '';
+  if (row.itinerary) {
+    try {
+      const parsed = JSON.parse(row.itinerary);
+      if (Array.isArray(parsed) && parsed.length >= 2) {
+        route = parsed;
+        // Use the first port of the itinerary as the departure port
+        // (itinerary is always [departure, ...ports, return])
+        port = parsed[0] || port;
+      } else {
+        route = row.departure_port
+          ? [row.departure_port, destination, row.departure_port]
+          : [destination];
+      }
+    } catch {
+      route = row.departure_port
+        ? [row.departure_port, destination, row.departure_port]
+        : [destination];
+    }
+  } else {
+    route = row.departure_port
+      ? [row.departure_port, destination, row.departure_port]
+      : [destination];
+  }
 
   return c.json({
     sailing: {
-      id: Number(row.id) || 0,            // legacy type was number; coerced
-      sailing_id: row.id,                  // string ID for any newer consumers
+      id: row.id,                           // string PK (TEXT)
+      sailing_id: row.id,
       line: row.cruise_line,
       ship: row.ship,
       days: Number(row.nights),
-      port: row.departure_port || '',
+      port,
       route,
       region: row.departure_region || destination,
       departureDate: row.departure_date,

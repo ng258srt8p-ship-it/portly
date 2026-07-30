@@ -11,7 +11,7 @@
  */
 
 import { getPool } from '../db/pool';
-import { callOpenRouter } from '../lib/openRouterClient';
+import { callOpenCode } from '../utils/openCodeClient';
 import { getGratuityRate } from "../utils/cruiseConstants";
 import {
   formatJustification,
@@ -376,7 +376,7 @@ export async function generateEnhancedDealAnalysis(
   try {
     const userPrompt = ENHANCED_DEAL_USER_TEMPLATE(sailingContext);
 
-    const result = await callOpenRouter(
+    const result = await callOpenCode(
       [
         { role: 'system', content: ENHANCED_DEAL_SYSTEM_PROMPT },
         { role: 'user', content: userPrompt },
@@ -891,7 +891,7 @@ export async function generateEnhancedPriceForecast(
   try {
     const userPrompt = ENHANCED_FORECAST_USER_TEMPLATE(sailingContext, competitors);
 
-    const result = await callOpenRouter(
+    const result = await callOpenCode(
       [
         { role: 'system', content: ENHANCED_FORECAST_SYSTEM_PROMPT },
         { role: 'user', content: userPrompt },

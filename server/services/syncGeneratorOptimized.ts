@@ -8,7 +8,7 @@
 
 import { getPool } from '../db/pool';
 import { getGlobalLimiter } from '../utils/nimRateLimiter';
-import { callOpenRouter } from '../lib/openRouterClient';
+import { callOpenCode } from '../utils/openCodeClient';
 
 // ---- Types ----
 
@@ -396,7 +396,7 @@ class PrioritizedWorker {
         const { count } = payload;
         const prompt = UNIFIED_SYNC_PROMPT.replace('{COUNT}', String(count));
         
-        return callOpenRouter([
+        return callOpenCode([
           { role: 'system', content: 'You are a cruise data provider API. Return only valid JSON arrays with no formatting, no markdown, no commentary.' },
           { role: 'user', content: prompt }
         ], { max_tokens: 16384, temperature: 0.5 });
@@ -419,7 +419,7 @@ class PrioritizedWorker {
         }
 
         try {
-          const content = await callOpenRouter([
+          const content = await callOpenCode([
             { role: 'system', content: "You are TripTide's deal analyst. Output ONLY the JSON object specified. No markdown, no commentary." },
             { role: 'user', content: prompt }
           ], { max_tokens: 1024, temperature: 0.2 });
@@ -473,7 +473,7 @@ class PrioritizedWorker {
           .replace('{cabinSummaries}', cabinSummaries);
 
         try {
-          const content = await callOpenRouter([
+          const content = await callOpenCode([
             { role: 'system', content: "You are TripTide's price forecasting analyst. Output only valid JSON. No markdown." },
             { role: 'user', content: prompt }
           ], { max_tokens: 1200, temperature: 0.2 });

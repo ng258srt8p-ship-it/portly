@@ -1,6 +1,17 @@
 # Enhanced AI Plan — Goal Loop
 
-## Goal
+> **CURRENT STATE (2026-07-29):** This plan describes an OpenRouter migration
+> that was attempted and reverted. The 1000-req/day OpenRouter free-tier
+> quota became unsustainable, so the data layer now uses
+> `callOpenCode()` (in `server/utils/openCodeClient.ts`) against
+> `https://opencode.ai/zen/v1` — key-less, no daily cap, default model
+> `big-pickle`, with auto-rotating fallback to
+> `deepseek-v4-flash-free`, `mimo-v2.5-free`, `nemotron-3-ultra-free`,
+> `north-mini-code-free`. The plan below is preserved for historical
+> context. See `.hermes/plans/2026-07-29-portly-openrouter-to-opencode-migration.md`
+> for the current implementation.
+
+## Goal (original)
 Replace OpenCode (Big Pickle) AI calls with OpenRouter + a working model (as in SaastainedNumbers) so that **AI-generated content** (Deal Analysis, Price Forecast, EnhancdeDealAnalysis) renders correctly on sailing pages with **no garbled content**.
 
 ## Why

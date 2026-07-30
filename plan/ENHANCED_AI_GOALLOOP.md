@@ -1,6 +1,17 @@
 # Enhanced AI Integration — Goal Loop
 
-## Goal Statement
+> **CURRENT STATE (2026-07-29):** This plan describes an OpenRouter migration
+> that was attempted and reverted. The 1000-req/day OpenRouter free-tier
+> quota became unsustainable, so the data layer now uses
+> `callOpenCode()` (in `server/utils/openCodeClient.ts`) against
+> `https://opencode.ai/zen/v1` — key-less, no daily cap, default model
+> `big-pickle`, with auto-rotating fallback to
+> `deepseek-v4-flash-free`, `mimo-v2.5-free`, `nemotron-3-ultra-free`,
+> `north-mini-code-free`. The plan below is preserved for historical
+> context. See `.hermes/plans/2026-07-29-portly-openrouter-to-opencode-migration.md`
+> for the current implementation.
+
+## Goal Statement (original)
 Replace OpenCode (`mimo-v2.5-free` via `opencode.ai/zen/v1`) with **OpenRouter** + **Llama-3.2-3B-Free** (the model used in SaastainedNumbers) across all AI-integrated services. Then ensure content/formatting never garbles — validate JSON integrity, sanitize strings, render defensively on the frontend.
 
 ## Task List (execute in goal-loop order)
