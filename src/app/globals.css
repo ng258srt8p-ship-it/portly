@@ -126,6 +126,10 @@
   /* Header is `fixed top-0` with `pt-4` (16px) + inner rounded-full div
      with `py-2.5` (20px total) + `min-h-[44px]` button content = 98px. */
   --header-height: 6.125rem;     /* 98px */
+
+  /* SailingSubNav sticky pill bar — sits below header at top-[var(--header-height)]
+     with pt-2 (8px) + inner py-2 (16px) + content height ~50px ≈ 66px total. */
+  --subnav-height: 4.125rem;     /* 66px */
 }
 
 /* ============================================================
