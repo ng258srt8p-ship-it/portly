@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/Footer';
 import {
@@ -49,6 +50,7 @@ interface MetricsSnapshot {
   };
   shipClasses: { deck: string | null; cabin: string | null };
   topDestinations: { name: string; count: number }[];
+  caribbeanDestinations: string[];
   recent: {
     lastIngestTick: string | null;
     lastAlertEvalTick: string | null;
@@ -296,7 +298,16 @@ export default function DashboardPage() {
             <h2 className="font-display text-lg font-bold text-ink">Top Destinations</h2>
             <p className="mt-1 text-xs text-ink-soft">
               By tracked sailing count
-              {metrics.shipClasses.deck && (
+              {metrics.shipClasses.deck && metrics.caribbeanDestinations.length > 0 && (
+                <Link
+                  href={`/deals?destination=${metrics.caribbeanDestinations.map(encodeURIComponent).join(',')}`}
+                  className="ml-2 inline-flex items-center rounded-full bg-indigo/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo transition-colors hover:bg-indigo/20"
+                  aria-label={`View Caribbean deals (${metrics.caribbeanDestinations.join(', ')})`}
+                >
+                  {metrics.shipClasses.deck}
+                </Link>
+              )}
+              {metrics.shipClasses.deck && metrics.caribbeanDestinations.length === 0 && (
                 <span className="ml-2 inline-flex items-center rounded-full bg-indigo/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo">
                   {metrics.shipClasses.deck}
                 </span>
@@ -310,18 +321,24 @@ export default function DashboardPage() {
                   const max = Math.max(...metrics.topDestinations.map((x) => x.count));
                   const pct = max > 0 ? Math.max(8, Math.round((d.count / max) * 100)) : 0;
                   return (
-                    <li key={d.name} data-testid="dashboard-top-destination-row" className="flex items-center gap-3">
-                      <span className="w-44 shrink-0 truncate text-sm text-ink" title={d.name}>{d.name}</span>
-                      <div className="h-5 flex-1 overflow-hidden rounded-full bg-gray-100">
-                        <div
-                          className="h-full rounded-full bg-indigo/80"
-                          style={{ width: `${pct}%` }}
-                          data-testid="dashboard-top-destination-bar"
-                        />
-                      </div>
-                      <span className="w-16 shrink-0 text-right text-sm font-semibold text-ink" data-testid="dashboard-top-destination-count">
-                        {d.count.toLocaleString()}
-                      </span>
+                    <li key={d.name} data-testid="dashboard-top-destination-row">
+                      <Link
+                        href={`/deals?destination=${encodeURIComponent(d.name)}`}
+                        className="flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-indigo/[0.04]"
+                        aria-label={`View deals for ${d.name}`}
+                      >
+                        <span className="w-44 shrink-0 truncate text-sm text-ink" title={d.name}>{d.name}</span>
+                        <div className="h-5 flex-1 overflow-hidden rounded-full bg-gray-100">
+                          <div
+                            className="h-full rounded-full bg-indigo/80"
+                            style={{ width: `${pct}%` }}
+                            data-testid="dashboard-top-destination-bar"
+                          />
+                        </div>
+                        <span className="w-16 shrink-0 text-right text-sm font-semibold text-ink" data-testid="dashboard-top-destination-count">
+                          {d.count.toLocaleString()}
+                        </span>
+                      </Link>
                     </li>
                   );
                 })}

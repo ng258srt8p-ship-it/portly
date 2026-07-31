@@ -46,6 +46,7 @@ export interface MetricsSnapshot {
   };
   shipClasses: { deck: string | null; cabin: string | null };
   topDestinations: { name: string; count: number }[];
+  caribbeanDestinations: string[];
   recent: {
     lastIngestTick: string | null;
     lastAlertEvalTick: string | null;
@@ -57,7 +58,7 @@ export interface MetricsSnapshot {
 export async function getMetricsSnapshot(env: MetricsEnv): Promise<MetricsSnapshot> {
   // Single batched read using SELECTs against relatively small tables.
   // Each statement returns one row; D1 prepares these once per call.
-  const [alertSums, enrichSums, sailingSums, shipClasses, priceRows, topDestRows] = await Promise.all([
+  const [alertSums, enrichSums, sailingSums, shipClasses, priceRows, topDestRows, caribDestRows] = await Promise.all([
     env.DB.prepare(
       `SELECT
          (SELECT COUNT(*) FROM alerts WHERE is_active = 1) AS active_subs,
@@ -111,6 +112,12 @@ export async function getMetricsSnapshot(env: MetricsEnv): Promise<MetricsSnapsh
         GROUP BY d.id, d.name
         ORDER BY count DESC, d.name ASC
         LIMIT 5`
+    ).all(),
+    // Caribbean destinations — list every destination name containing "Carib"
+    // (matches the LIKE '%Carib%' used by Caribbean share percentage).
+    // Used by the frontend to build a deep link from the pill to /deals?destination=….
+    env.DB.prepare(
+      `SELECT name FROM destinations WHERE name LIKE '%Carib%' ORDER BY name ASC`
     ).all(),
   ]);
 
@@ -175,6 +182,9 @@ export async function getMetricsSnapshot(env: MetricsEnv): Promise<MetricsSnapsh
     topDestinations: ((topDestRows as unknown as { results?: { name: string; count: number }[] })?.results || [])
       .map((r) => ({ name: String(r.name), count: Number(r.count) || 0 }))
       .filter((r) => r.name && r.count > 0),
+    caribbeanDestinations: ((caribDestRows as unknown as { results?: { name: string }[] })?.results || [])
+      .map((r) => String(r.name))
+      .filter(Boolean),
     recent: {
       lastIngestTick: lastIngest ? ((JSON.parse(lastIngest) as { ts: string }).ts as string) : null,
       lastAlertEvalTick: lastEval ? ((JSON.parse(lastEval) as { ts: string }).ts as string) : null,

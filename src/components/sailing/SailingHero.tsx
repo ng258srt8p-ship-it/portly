@@ -53,12 +53,17 @@ export default function SailingHero({
   bookingUrl,
 }: SailingHeroProps) {
   const hasDrop = dropPercent && dropPercent > 0;
-  const formattedDate = new Date(departureDate).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  const formattedDate = (() => {
+    const d = new Date(departureDate + 'T12:00:00');
+    // Force US Eastern timezone display to avoid UTC→local off-by-one-day
+    return d.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'America/New_York',
+    });
+  })();
 
   const roundedPrice = Math.round(price);
   const priceLabel = cabinType
