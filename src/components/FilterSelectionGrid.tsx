@@ -144,15 +144,12 @@ function MultiSelectDropdown({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      // Use requestAnimationFrame to allow click events to process before closing
-      requestAnimationFrame(() => {
-        if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-          setOpen(false);
-        }
-      });
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
     }
-    document.addEventListener('pointerdown', handleClickOutside);
-    return () => document.removeEventListener('pointerdown', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const toggleOption = (value: string) => {
@@ -601,7 +598,6 @@ export default function FilterSelectionGrid({
 }: FilterSelectionGridProps) {
   // Mobile collapse state
   const [expanded, setExpanded] = useState(defaultExpanded);
-  console.log('FilterSelectionGrid expanded state:', expanded, 'defaultExpanded:', defaultExpanded);
 
   // Count active filters for badge
   const activeCount = [
