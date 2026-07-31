@@ -259,9 +259,11 @@ export default function DealsGrid({
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm font-medium text-ink-soft">
                 {deals && !loading
-                  ? `${totalDeals} deal${totalDeals !== 1 ? 's' : ''} available`
+                  ? totalDeals > pageSize
+                    ? `${totalDeals.toLocaleString()} deal${totalDeals !== 1 ? 's' : ''} match your filters`
+                    : `${totalDeals} deal${totalDeals !== 1 ? 's' : ''} available`
                   : 'Loading...'}
-             </p>
+              </p>
               <div className="flex items-center gap-2 rounded-lg border border-black/[0.06] bg-white p-1 shadow-xs">
                 <span className="mr-1 pl-1 text-[11px] font-semibold text-ink-soft">Show</span>
                 {LIMIT_OPTIONS.map((n) => (

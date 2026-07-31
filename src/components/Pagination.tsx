@@ -19,10 +19,16 @@ interface PaginationProps {
  */
 function buildPaginationRange(current: number, total: number): (number | '…')[] {
   if (total <= 1) return [];
+  // Small total — always render every page so the user can jump directly.
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
   const delta = 1; // siblings on each side of current
   const range: (number | '…')[] = [];
   const left = Math.max(2, current - delta);
-  const right = Math.min(total - 1, current + delta);
+  // Ensure `right` covers at least current+1 so the immediate next page is
+  // always reachable from page 1 (fixes R2-003: Page 3 missing on small sets).
+  const right = Math.min(total - 1, Math.max(current + delta, current + 1));
 
   range.push(1);
   if (left > 2) range.push('…');
