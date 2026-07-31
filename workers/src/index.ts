@@ -33,6 +33,9 @@ const ALLOWED_SORTS: Record<string, string> = {
   'date-asc': 's.sail_date ASC',
   'date-desc': 's.sail_date DESC',
   'drop-desc': 's.drop_percent DESC',
+  // Diverse — round-robins sailings by cruise_line_id so the visible deals
+  // surface multiple lines on page 1 instead of one dominant line.
+  'diverse': 's.cruise_line_id, s.drop_percent DESC',
 };
 
 // CORS guard: if anything in this app escapes without the cors() middleware
@@ -146,7 +149,7 @@ app.get('/api/deals', async (c) => {
     }
   }
   const offset = Math.min(Math.max(Number(c.req.query('offset') || 0), 0), 50_000);
-  const sort = c.req.query('sort') || 'drop-desc';
+  const sort = c.req.query('sort') || 'diverse';
 
   // Reject unknown sort values loudly instead of silently falling back — this
   // is the contract every frontend filter bar relies on.
@@ -158,7 +161,7 @@ app.get('/api/deals', async (c) => {
     );
   }
 
-  let where = 'WHERE s.price IS NOT NULL';
+  let where = "WHERE s.price IS NOT NULL AND s.sail_date >= date('now')";
   const binds: any[] = [];
 
   const cruiseLine = c.req.query('cruiseLine');

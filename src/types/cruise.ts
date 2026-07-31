@@ -106,7 +106,7 @@ export interface DealFilters {
   minPrice?: number;
   maxPrice?: number;
   badgeType?: ('drop' | 'solo' | 'gold')[];
-  sort?: 'price-asc' | 'price-desc' | 'nights-asc' | 'nights-desc' | 'date-asc' | 'date-desc' | 'drop-desc';
+  sort?: 'price-asc' | 'price-desc' | 'nights-asc' | 'nights-desc' | 'date-asc' | 'date-desc' | 'drop-desc' | 'diverse';
   cabinType?: ('Inside' | 'Oceanview' | 'Balcony' | 'Suite')[];
   adults?: number;           // 1-8, default 2
   children?: number;         // 0-6, default 0

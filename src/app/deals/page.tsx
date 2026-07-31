@@ -80,7 +80,7 @@ function parseFiltersFromURL(): { filters: DealFilters; page: number; limit: num
 }
 
 const SORT_OPTIONS = [
-  { value: '', label: 'Featured / Best Value' },
+  { value: '', label: 'Diverse Mix' },
   { value: 'price-asc', label: 'Price: Low to High' },
   { value: 'price-desc', label: 'Price: High to Low' },
   { value: 'date-asc', label: 'Departure: Earliest First' },
