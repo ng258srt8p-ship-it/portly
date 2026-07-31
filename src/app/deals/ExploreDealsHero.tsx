@@ -67,7 +67,8 @@ export default function ExploreDealsHero({ filters, onFilterChange }: ExploreDea
 
           {/* Subtitle */}
           <p className="mt-4 text-base text-ink-soft sm:text-lg">
-            Compare out-the-door pricing across {stats ? stats.trackedSailings.toLocaleString() : 'hundreds of'} sailings.
+            Compare out-the-door pricing across {stats ? stats.trackedSailings.toLocaleString() : 'hundreds of'} tracked sailings —
+            our live polling surfaces only the ones with a genuine fare drop right now.
             Base fare, port taxes, and mandatory gratuities — all in one transparent price.
           </p>
 
