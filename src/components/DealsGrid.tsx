@@ -347,6 +347,7 @@ function renderGridContent(
     <article
       key={deal.id}
       data-testid="deal-card"
+      data-sailing-id={deal.id}
       className="group flex h-full flex-col overflow-hidden rounded-xl border border-black/[0.06] bg-card text-ink shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-black/[0.12] hover:shadow-md"
     >
       {/* Card Header: cruise line + ship + badge */}
