@@ -82,7 +82,7 @@ export function PriceComparisonTable({
     [sailingId]
   );
 
-  const { data: apiPrices, loading } = useLiveData(fetcher);
+  const { data: apiPrices, loading, error, refresh } = useLiveData(fetcher);
 
   // Use prop prices if provided, otherwise transform API response
   const cabinPrices: CabinPrice[] = propPrices && propPrices.length > 0
@@ -116,6 +116,26 @@ export function PriceComparisonTable({
   const sorted = [...cabinPrices].sort(
     (a, b) => tierOrder.indexOf(a.tier as any) - tierOrder.indexOf(b.tier as any)
   );
+
+  // Show error retry state if fetch failed (don't trap user in loading skeleton)
+  if (error && !loading && (!propPrices || propPrices.length === 0)) {
+    return (
+      <div className="w-full rounded-xl border border-coral-ink/20 bg-coral-soft/30 p-6 text-center">
+        <p className="text-sm font-semibold text-coral-ink">Pricing temporarily unavailable</p>
+        <p className="mt-1 text-xs text-coral-ink/70">
+          We couldn&apos;t load cabin pricing for this sailing.
+        </p>
+        <button
+          type="button"
+          onClick={refresh}
+          className="mt-3 rounded-full border-2 border-coral-ink/40 px-4 py-2 text-xs font-bold text-coral-ink hover:bg-coral-ink/5"
+          data-testid="price-comparison-retry"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   // Show loading state if no data yet
   if (loading || (!propPrices && !apiPrices)) {

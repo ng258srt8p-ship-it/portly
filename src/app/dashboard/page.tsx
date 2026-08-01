@@ -206,7 +206,7 @@ export default function DashboardPage() {
       {
         label: 'Enrichment coverage',
         data: [metrics.enrichment.enrichedSailings, metrics.enrichment.totalSailings - metrics.enrichment.enrichedSailings],
-        backgroundColor: ['#2A44E7', '#e2e8f0'],
+        backgroundColor: ['#2A44E7', '#cbd5e1'], // slate-300 for "Not enriched" — more visible on gray-100 bg
         borderWidth: 0,
       },
     ],
@@ -264,7 +264,7 @@ export default function DashboardPage() {
           <div className="mt-8 grid gap-6 md:grid-cols-2">
             <div className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-sm">
               <h2 className="font-display text-lg font-bold text-ink">Alert Pipeline</h2>
-              <div className="mt-4 h-64" data-testid="dashboard-alert-chart">
+              <div className="mt-4 min-h-[12rem] md:h-64" data-testid="dashboard-alert-chart" aria-label="Alert pipeline chart: showing active subscriptions, pending alerts, sent alerts, and failed alerts">
                 <Bar
                   data={alertChartData}
                   options={{
@@ -278,7 +278,7 @@ export default function DashboardPage() {
             </div>
             <div className="rounded-2xl border border-black/[0.06] bg-white p-6 shadow-sm">
               <h2 className="font-display text-lg font-bold text-ink">Enrichment Coverage</h2>
-              <div className="mt-4 h-64" data-testid="dashboard-enrichment-chart">
+              <div className="mt-4 min-h-[12rem] md:h-64" data-testid="dashboard-enrichment-chart" aria-label={`Enrichment coverage: ${metrics.enrichment.enrichedSailings} of ${metrics.enrichment.totalSailings} sailings enriched`}>
                 <Doughnut
                   data={enrichmentChartData}
                   options={{

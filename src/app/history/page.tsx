@@ -389,7 +389,7 @@ export default function HistoryPage() {
           {/* Header */}
           <div className="mb-6 flex items-center justify-between gap-4">
             <div>
-              <h1 className="font-display text-4xl font-extrabold text-ink sm:text-5xl">Price History Maps</h1>
+              <h1 className="font-display text-4xl font-extrabold text-ink sm:text-5xl">Cruise Line Price History</h1>
               <p className="mt-4 max-w-2xl text-lg text-ink-soft">
                 Track how cruise fares have moved over time across every major line and destination.
               </p>

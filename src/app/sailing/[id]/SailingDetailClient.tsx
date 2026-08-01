@@ -14,6 +14,7 @@ import EnhancedDealAnalysis from '@/components/sailing/EnhancedDealAnalysis';
 import EnhancedPriceForecast from '@/components/sailing/EnhancedPriceForecast';
 import SailingInfoPanel from '@/components/sailing/SailingInfoPanel';
 import SailingKeyTakeaways from '@/components/sailing/SailingKeyTakeaways';
+import CabinUpgradeTracker from '@/components/sailing/CabinUpgradeTracker';
 
 interface SailingData {
   sailing: {
@@ -236,12 +237,24 @@ export default function SailingDetailPage() {
                 <div className="mb-5 flex items-center justify-between">
                   <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">Cabin Pricing</h2>
                   <span className="text-xs font-medium text-ink-soft">Per cabin, taxes & gratuities included</span>
-               </div>
-                <PriceComparisonTable sailingId={data.sailing.sailing_id} />
-             </section>
+                </div>
+                <div data-testid="price-comparison-table">
+                  <PriceComparisonTable sailingId={data.sailing.sailing_id} />
+                </div>
+                {/* Upgrade cost tracker — uses cabinBreakdown tiers to show price gap between categories */}
+                <CabinUpgradeTracker
+                  currentPricing={Object.fromEntries(
+                    (data.cabinBreakdown || []).map((cb: any) => [
+                      cb.cabinType,
+                      cb.raw?.totalOutTheDoor ?? cb.totalOutTheDoor ?? 0,
+                    ])
+                  )}
+                  signals={[]}
+                />
+              </section>
 
-              {/* Enhanced Price Forecast (Phase 2) */}
-              <section id="forecast" className="scroll-mt-40">
+              {/* Enhanced Deal Analysis (Phase 2) */}
+              <section id="deal-analysis" className="scroll-mt-40" data-testid="enhanced-deal-analysis">
                 <EnhancedPriceForecast sailingId={data.sailing.sailing_id} />
              </section>
 

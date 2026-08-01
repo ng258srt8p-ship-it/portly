@@ -1,22 +1,58 @@
 "use client";
 
+import { useId } from "react";
+
 interface SparklineProps {
   data: number[];
   positive?: boolean;
   width?: number;
   height?: number;
+  /** Accessible label — if omitted, derived from data */
+  ariaLabel?: string;
 }
 
-export default function Sparkline({ data, positive = true, width = 140, height = 44 }: SparklineProps) {
-  // Guard: single-element or empty data — render a flat baseline instead of NaN
+export default function Sparkline({ data, positive = true, width = 140, height = 44, ariaLabel }: SparklineProps) {
+  // Unique gradient ID per instance — required by SVG spec (id must be unique per document)
+  const reactId = useId();
+  const gradId = `grad-${positive ? "mint" : "indigo"}-${reactId}`;
+  const color = positive ? "#0B6B57" : "#2A44E7";
+
+  // Build accessible label from data if not provided
+  const buildLabel = (): string => {
+    if (ariaLabel) return ariaLabel;
+    if (!data || data.length === 0) return "Price trend: no data available";
+    if (data.length < 2) return `Price trend: $${Math.round(data[0])} (single data point)`;
+    const start = Math.round(data[0]);
+    const end = Math.round(data[data.length - 1]);
+    const direction = end < start ? "falling" : end > start ? "rising" : "flat";
+    return `Price trend over ${data.length} points: $${start} to $${end} (${direction})`;
+  };
+
+  // Guard: single-element or empty data — show explicit placeholder instead of misleading flat line
   if (!data || data.length < 2) {
-    const val = data?.[0] ?? 0;
-    const y = height / 2;
-    const color = positive ? "#0B6B57" : "#2A44E7";
     return (
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
-        <line x1="0" y1={y} x2={width} y2={y} stroke={color} strokeWidth="2" strokeLinecap="round" opacity="0.4" />
-        <circle cx={width - 4} cy={y} r="3" fill={color} />
+      <svg
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        className="overflow-visible"
+        role="img"
+        aria-label={buildLabel()}
+      >
+        {data && data.length === 1 && (
+          <circle cx={width / 2} cy={height / 2} r="3" fill={color} aria-hidden="true" />
+        )}
+        <text
+          x={width / 2}
+          y={height / 2 + 4}
+          textAnchor="middle"
+          fontSize="9"
+          fill="#94A3B8"
+          fontWeight="500"
+          aria-hidden="true"
+        >
+          {data && data.length === 1 ? "single point" : "no history"}
+        </text>
       </svg>
     );
   }
@@ -49,18 +85,25 @@ export default function Sparkline({ data, positive = true, width = 140, height =
   }
   const path = catmullRomToBezier(points.map(p => ({x: p[0], y: p[1]})));
   const areaPath = `${path} L${width},${height} L0,${height} Z`;
-  const color = positive ? "#0B6B57" : "#2A44E7";
   const last = points[points.length - 1];
 
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      className="overflow-visible"
+      role="img"
+      aria-label={buildLabel()}
+    >
+      <title>{buildLabel()}</title>
       <defs>
-        <linearGradient id={`grad-${positive ? "mint" : "indigo"}`} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.18" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d={areaPath} fill={`url(#grad-${positive ? "mint" : "indigo"})`} stroke="none" />
+      <path d={areaPath} fill={`url(#${gradId})`} stroke="none" />
       <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx={last[0]} cy={last[1]} r="3" fill={color} />
     </svg>

@@ -105,20 +105,33 @@ function SparklineChart({ data, dates, cabinType }: { data: number[]; dates: str
   const color = isFalling ? '#0B6B57' : '#E76E50';
   const hoverColor = isFalling ? '#065F46' : '#B8442A';
 
-  // Y-axis: only 3 labels (min / median / max) — was 5
+  // Y-axis: 5 labels (5-quintile) when range > $200, fallback to 3 (min/mid/max) for narrow ranges
   const yMin = Math.floor(min / 100) * 100;
   const yMax = Math.ceil(max / 100) * 100;
-  const yMid = Math.round((yMin + yMax) / 2);
-  const yLabels: { label: string; y: number }[] = [
-    { label: '$' + yMin.toLocaleString(), y: padTop + chartH - ((yMin - min) / range) * chartH },
-    { label: '$' + yMid.toLocaleString(), y: padTop + chartH - ((yMid - min) / range) * chartH },
-    { label: '$' + yMax.toLocaleString(), y: padTop + chartH - ((yMax - min) / range) * chartH },
-  ];
+  const isWideRange = (yMax - yMin) > 200;
+  const yLabels: { label: string; y: number }[] = isWideRange
+    ? [0, 0.25, 0.5, 0.75, 1].map((p) => {
+        const val = Math.round(yMin + (yMax - yMin) * p);
+        return {
+          label: '$' + val.toLocaleString(),
+          y: padTop + chartH - ((val - min) / range) * chartH,
+        };
+      })
+    : (() => {
+        const yMid = Math.round((yMin + yMax) / 2);
+        return [
+          { label: '$' + yMin.toLocaleString(), y: padTop + chartH - ((yMin - min) / range) * chartH },
+          { label: '$' + yMid.toLocaleString(), y: padTop + chartH - ((yMid - min) / range) * chartH },
+          { label: '$' + yMax.toLocaleString(), y: padTop + chartH - ((yMax - min) / range) * chartH },
+        ];
+      })();
 
-  // X-axis: only 3 labels (first / middle / last) — was 5
+  // X-axis: 5 labels (every 25th percentile) when data.length >= 6, else first/middle/last
   const xLabelIndices = data.length <= 3
     ? data.map((_, i) => i)
-    : [0, Math.floor((data.length - 1) / 2), data.length - 1];
+    : data.length >= 6
+      ? [0, Math.floor((data.length - 1) * 0.25), Math.floor((data.length - 1) * 0.5), Math.floor((data.length - 1) * 0.75), data.length - 1]
+      : [0, Math.floor((data.length - 1) / 2), data.length - 1];
   const xLabels: { date: string; x: number }[] = xLabelIndices.map((i) => ({
     date: dates[i] ? new Date(dates[i]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '',
     x: padLeft + i * step,
@@ -132,7 +145,14 @@ function SparklineChart({ data, dates, cabinType }: { data: number[]; dates: str
     : '';
 
   return (
-    <svg viewBox={`0 0 ${w} ${totalH}`} className="mx-auto w-full max-w-2xl" preserveAspectRatio="xMidYMid meet" data-testid="price-history-chart">
+    <svg
+      viewBox={`0 0 ${w} ${totalH}`}
+      className="mx-auto w-full max-w-2xl"
+      preserveAspectRatio="xMidYMid meet"
+      data-testid="price-history-chart"
+      role="img"
+      aria-label={`Price history chart for ${cabinType || 'selected cabin'}: ${Math.round(min)} to ${Math.round(max)}`}
+    >
       <defs>
         <linearGradient id={`hist-grad-${isFalling ? 'fall' : 'rise'}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.18" />
@@ -348,6 +368,7 @@ export default function PriceHistoryPanel({
               key={row.label}
               type="button"
               onClick={() => setSelectedCabinType(row.label)}
+              aria-current={isSelected ? 'true' : undefined}
               className={`rounded-xl border p-3 text-left transition-all ${
                 isSelected
                   ? 'border-mint-ink/20 bg-mint-soft ring-1 ring-mint-ink/20'
