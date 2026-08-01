@@ -67,7 +67,7 @@ function CabinForecastCard({ forecast }: { forecast: CabinForecast }) {
   return (
     <div
       data-testid={`cabin-forecast-${forecast.cabinType.toLowerCase()}`}
-      className={`rounded-xl border-2 p-4 ${cabinColors[forecast.cabinType] || 'border-gray-300 bg-gray-50'}`}
+      className={`rounded-xl border-2 p-3 ${cabinColors[forecast.cabinType] || 'border-gray-300 bg-gray-50'}`}
     >
       <div className="mb-3 flex items-center justify-between">
         <h4 className="font-bold text-ink">{forecast.cabinType}</h4>
@@ -78,7 +78,7 @@ function CabinForecastCard({ forecast }: { forecast: CabinForecast }) {
         </span>
       </div>
 
-      <div className="space-y-2.5">
+      <div className="space-y-1.5">
         {/* Current price */}
         <div className="flex justify-between text-sm">
           <span className="text-ink-faint">Current</span>
@@ -260,7 +260,7 @@ export default function EnhancedPriceForecast({ sailingId }: EnhancedPriceForeca
 
       {/* Per-Cabin Forecasts Grid */}
       {data.cabinForecasts && data.cabinForecasts.length > 0 && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="cabin-forecasts-grid">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" data-testid="cabin-forecasts-grid">
           {data.cabinForecasts.map(forecast => (
             <CabinForecastCard key={forecast.cabinType} forecast={forecast} />
           ))}

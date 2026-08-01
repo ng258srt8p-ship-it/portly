@@ -53,18 +53,16 @@ function SparklineChart({ data, dates, cabinType, synthesized }: { data: number[
     );
   }
 
-  // ── Sleeker dimensions: smaller viewBox + tighter padding ──
+  // ── Larger viewBox for better visual density ──
   const w = 480;
-  const h = 110;
+  const h = 160;
   const padLeft = 44;
   const padRight = 12;
   const padTop = 14;
   const padBottom = 26;
-  // Extra buffer zone below chart area for tooltip rendering — prevents clipping at peak data points
-  const tooltipBuffer = 48;
   const chartW = w - padLeft - padRight;
   const chartH = h - padTop - padBottom;
-  const totalH = h + tooltipBuffer;
+  const totalH = h;
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
@@ -137,9 +135,9 @@ function SparklineChart({ data, dates, cabinType, synthesized }: { data: number[
     x: padLeft + i * step,
   }));
 
-  // Tooltip positioning — render BELOW data point with buffer to avoid top-edge clipping
+  // Tooltip positioning — renders below data point, SVG overflow visible handles clipping
   const tooltipX = hoveredIdx !== null ? pts[hoveredIdx].x : -100;
-  const tooltipY = hoveredIdx !== null ? pts[hoveredIdx].y + tooltipBuffer : -100;
+  const tooltipY = hoveredIdx !== null ? pts[hoveredIdx].y + 20 : -100;
   const tooltipDate = hoveredIdx !== null && dates[hoveredIdx]
     ? new Date(dates[hoveredIdx]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '';
@@ -147,8 +145,9 @@ function SparklineChart({ data, dates, cabinType, synthesized }: { data: number[
   return (
     <svg
       viewBox={`0 0 ${w} ${totalH}`}
-      className="mx-auto w-full max-w-2xl"
+      className="mx-auto w-full"
       preserveAspectRatio="xMidYMid meet"
+      style={{ overflow: 'visible' }}
       data-testid="price-history-chart"
       data-synthesized={synthesized ? 'true' : 'false'}
       role="img"
@@ -379,7 +378,7 @@ export default function PriceHistoryPanel({
       </p>
 
       {/* Sparkline */}
-      <div className="rounded-2xl bg-canvas p-4">
+      <div className="rounded-2xl bg-canvas p-3">
       <SparklineChart
                 data={sparkValues}
                 dates={sorted.map((s) => s.recorded_date)}

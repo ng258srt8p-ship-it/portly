@@ -22,8 +22,8 @@ interface PriceTrajectoryChartProps {
 
 const CHART_CONFIG = {
   width: 700,
-  height: 280,
-  padding: { top: 20, right: 20, bottom: 40, left: 70 },
+  height: 240,
+  padding: { top: 16, right: 16, bottom: 32, left: 55 },
   yTicks: 6,
 };
 
@@ -202,8 +202,8 @@ export default function PriceTrajectoryChart({ cabinForecasts }: PriceTrajectory
           );
         })}
 
-        {/* Legend */}
-        <g transform={`translate(${padding.left}, ${height - 16})`}>
+        {/* Legend — top-right inside chart area */}
+        <g transform={`translate(${width - padding.right - 280}, ${padding.top - 2})`}>
           {cabinForecasts.map((cf, i) => (
             <g key={`legend-${cf.cabinType}`} transform={`translate(${i * 90}, 0)`}>
               <circle cx={8} cy={0} r={4} fill={cabinColors[cf.cabinType] || '#94a3b8'} />

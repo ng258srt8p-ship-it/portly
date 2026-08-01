@@ -178,10 +178,30 @@ export default function SailingDetailPage() {
                   aiExcursionStrategy={data.sailing.aiExcursionStrategy ?? null}
                   aiInsiderSummary={data.sailing.aiInsiderSummary ?? null}
                 />
-              </section>
+                </section>
 
-              {/* Itinerary + Info 2-col on desktop */}
-              <section id="itinerary" className="grid grid-cols-1 gap-6 lg:grid-cols-3 scroll-mt-40">
+                {/* ===== INSIDER CONTENT - Most Prominent Position ===== */}
+                <section id="deal-analysis" className="scroll-mt-40">
+                <EnhancedDealAnalysis
+                  sailingId={data.sailing.sailing_id}
+                  bookingUrl={data.sailing.bookingUrl}
+                  bookingLabel={data.sailing.line}
+                  context={{
+                    line: data.sailing.line,
+                    ship: data.sailing.ship,
+                    days: data.sailing.days,
+                    region: data.sailing.region,
+                    port: data.sailing.port,
+                    route: data.sailing.route,
+                    price: data.sailing.price || 0,
+                    originalPrice: data.sailing.originalPrice || 0,
+                    dropPercent: data.sailing.dropPercent || 0
+                  }}
+                />
+                </section>
+
+                {/* Itinerary + Info 2-col on desktop */}
+              <section id="itinerary" className="grid grid-cols-1 gap-4 lg:grid-cols-3 scroll-mt-40">
                 <div className="lg:col-span-2">
                   <ItineraryTimeline
                     ports={data.sailing.route}
@@ -210,30 +230,8 @@ export default function SailingDetailPage() {
                   currentPrice={data.sailing.price || 0}
                   cabinBreakdown={data.cabinBreakdown}
                 />
-             </section>
-
-              {/* Enhanced Deal Analysis (Phase 2) */}
-              <section id="deal-analysis" className="scroll-mt-40">
-                <EnhancedDealAnalysis
-                  sailingId={data.sailing.sailing_id}
-                  bookingUrl={data.sailing.bookingUrl}
-                  bookingLabel={data.sailing.line}
-                  context={{
-                    line: data.sailing.line,
-                    ship: data.sailing.ship,
-                    days: data.sailing.days,
-                    region: data.sailing.region,
-                    port: data.sailing.port,
-                    route: data.sailing.route,
-                    price: data.sailing.price || 0,
-                    originalPrice: data.sailing.originalPrice || 0,
-                    dropPercent: data.sailing.dropPercent || 0
-                  }}
-                />
-             </section>
-
-              {/* Cabin Pricing */}
-              <section id="cabins" className="rounded-2xl border border-black/[0.06] bg-white p-5 shadow-xs sm:p-6 scroll-mt-40">
+              </section>
+              <section id="cabins" className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-xs sm:p-5 scroll-mt-40">
                 <div className="mb-5 flex items-center justify-between">
                   <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">Cabin Pricing</h2>
                   <span className="text-xs font-medium text-ink-soft">Per cabin, taxes & gratuities included</span>
