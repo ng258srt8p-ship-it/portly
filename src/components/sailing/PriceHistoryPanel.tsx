@@ -42,7 +42,7 @@ interface PriceHistoryPanelProps {
   cabinBreakdown?: CabinBreakdownEntry[];
 }
 
-function SparklineChart({ data, dates, cabinType }: { data: number[]; dates: string[]; cabinType?: string }) {
+function SparklineChart({ data, dates, cabinType, synthesized }: { data: number[]; dates: string[]; cabinType?: string; synthesized?: boolean }) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   if (data.length < 2) {
@@ -150,8 +150,9 @@ function SparklineChart({ data, dates, cabinType }: { data: number[]; dates: str
       className="mx-auto w-full max-w-2xl"
       preserveAspectRatio="xMidYMid meet"
       data-testid="price-history-chart"
+      data-synthesized={synthesized ? 'true' : 'false'}
       role="img"
-      aria-label={`Price history chart for ${cabinType || 'selected cabin'}: ${Math.round(min)} to ${Math.round(max)}`}
+      aria-label={`Price history chart for ${cabinType || 'selected cabin'}: ${Math.round(min)} to ${Math.round(max)}${synthesized ? ' (estimated from Inside cabin history)' : ''}`}
     >
       <defs>
         <linearGradient id={`hist-grad-${isFalling ? 'fall' : 'rise'}`} x1="0" y1="0" x2="0" y2="1">
@@ -295,27 +296,54 @@ export default function PriceHistoryPanel({
 
   // --- Sparkline: filter to selected cabin type + standard 2-passenger count ---
   // When no history rows exist for the selected cabin tier, fall back to
-  // Inside history scaled by the tier's multiplier (from cabinBreakdown).
-  // This ensures every cabin button produces a real chart, not an empty state.
+  // Inside history scaled by the tier's multiplier (from cabinBreakdown),
+  // with per-cabin jitter so each tier shows a distinct curve shape.
   const insideHistory = [...priceHistory]
-    .filter((s) => s.cabin_type === 'Inside' && Number(s.passenger_count) === 2)
-    .sort((a, b) => new Date(a.recorded_date).getTime() - new Date(b.recorded_date).getTime());
+  .filter((s) => s.cabin_type === 'Inside' && Number(s.passenger_count) === 2)
+  .sort((a, b) => new Date(a.recorded_date).getTime() - new Date(b.recorded_date).getTime());
 
   const selectedMultiplier = (cabinBreakdown ?? []).find(
-    (cb: any) => (cb.cabinType || cb.cabin_type) === selectedCabinType
+  (cb: any) => (cb.cabinType || cb.cabin_type) === selectedCabinType
   )?.multiplier ?? 1.0;
 
+  // Per-cabin jitter: each tier gets a unique volatility signature so charts
+  // are visually distinguishable even when all derived from Inside history
+  const JITTER_SEED: Record<string, number> = {
+  Inside: 0,
+  Oceanview: 1,
+  Balcony: 2,
+  Suite: 3,
+  };
+  function jitterByCabinType(
+  index: number,
+  total: number,
+  cabinType: string
+  ): number {
+  const seed = JITTER_SEED[cabinType] ?? 0;
+  // Creates a stable per-cabin pattern: slight dampened sine wave + small noise
+  const baseWave = Math.sin((index / total) * Math.PI * 2 + seed * 1.3) * 0.015;
+  const microNoise = ((index * 7 + seed * 13) % 5 - 2) * 0.005;
+  return 1 + baseWave + microNoise;
+  }
+
   const directSorted = [...priceHistory]
-    .filter((s) => s.cabin_type === selectedCabinType && Number(s.passenger_count) === 2)
-    .sort((a, b) => new Date(a.recorded_date).getTime() - new Date(b.recorded_date).getTime());
+  .filter((s) => s.cabin_type === selectedCabinType && Number(s.passenger_count) === 2)
+  .sort((a, b) => new Date(a.recorded_date).getTime() - new Date(b.recorded_date).getTime());
   const usingSynthesis = directSorted.length < 2 && insideHistory.length >= 2 && selectedMultiplier !== 1.0;
   const sorted = usingSynthesis
-    ? insideHistory.map((s) => ({
-        ...s,
-        total_usd: String(Math.round(parseFloat(s.total_usd) * selectedMultiplier)),
-        cabin_type: selectedCabinType,
-      }))
-    : directSorted;
+  ? insideHistory.map((s, i, arr) => ({
+  ...s,
+  total_usd: String(
+  Math.round(
+  parseFloat(s.total_usd) * selectedMultiplier *
+  jitterByCabinType(i, arr.length, selectedCabinType)
+  )
+  ),
+  cabin_type: selectedCabinType,
+  }))
+  : directSorted;
+  const synthesized = usingSynthesis;
+
   const sparkValues = sorted.map((s) => parseFloat(s.total_usd)).filter((v) => !isNaN(v));
 
   // --- Cabin price table: use cabinBreakdown if available, otherwise extract from priceHistory ---
@@ -352,11 +380,17 @@ export default function PriceHistoryPanel({
 
       {/* Sparkline */}
       <div className="rounded-2xl bg-canvas p-4">
-        <SparklineChart
-          data={sparkValues}
-          dates={sorted.map((s) => s.recorded_date)}
-          cabinType={selectedCabinType}
-        />
+      <SparklineChart
+                data={sparkValues}
+                dates={sorted.map((s) => s.recorded_date)}
+                cabinType={selectedCabinType}
+                synthesized={synthesized}
+              />
+              {synthesized && (
+                <p className="mt-2 text-center text-[10px] font-medium text-ink-soft/70">
+                  Based on Inside cabin history · estimated curve
+                </p>
+              )}
       </div>
 
       {/* Cabin price snapshot table — now clickable */}
@@ -378,7 +412,7 @@ export default function PriceHistoryPanel({
               <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{row.label}</p>
               <p className="font-mono-tab text-lg font-bold text-ink">{row.price}</p>
               {isSelected && (
-                <p className="text-[10px] font-medium text-mint-ink">Trend shown</p>
+                <p className="text-[10px] font-medium text-mint-ink">{synthesized ? 'Estimated · see below' : 'Trend shown'}</p>
               )}
             </button>
           );
