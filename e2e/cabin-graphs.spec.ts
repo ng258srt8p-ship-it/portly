@@ -129,28 +129,50 @@ test.describe('Cabin Price History Graphs — Synthesis & Visual Differentiation
     });
   });
 
-  test('sparkline chart fills container width (no max-w-2xl cap)', async ({ page }) => {
+  test('sparkline chart uses flex layout with cabin sidebar on desktop', async ({ page }) => {
     await page.goto(SAILING_PAGE, { waitUntil: 'networkidle' });
     await page.waitForSelector('[data-testid="price-history-chart"]', { timeout: 15000 });
     await page.waitForTimeout(1000);
 
-    const dims = await page.evaluate(() => {
+    const layout = await page.evaluate(() => {
       const svg = document.querySelector('[data-testid="price-history-chart"]');
-      const container = svg?.parentElement;
-      if (!svg || !container) return null;
-      const svgRect = svg.getBoundingClientRect();
+      const container = svg?.closest('.flex') as HTMLElement | null;
+      if (!container) return null;
+
       const containerRect = container.getBoundingClientRect();
+      const svgRect = svg!.getBoundingClientRect();
+
+      // Find cabin buttons
+      const cabinBtns = Array.from(container.querySelectorAll('button'))
+        .filter(b => /^(Inside|Oceanview|Balcony|Suite)\$/i.test(b.textContent?.trim() || ''));
+
+      const lastBtn = cabinBtns[cabinBtns.length - 1];
+      const lastBtnRect = lastBtn?.getBoundingClientRect();
+
       return {
         svgWidth: Math.round(svgRect.width),
         containerWidth: Math.round(containerRect.width),
-        fillRatio: Math.round((svgRect.width / containerRect.width) * 100),
+        svgFillRatio: Math.round((svgRect.width / containerRect.width) * 100),
+        isFlexRow: window.getComputedStyle(container).flexDirection === 'row',
+        cabinBtnCount: cabinBtns.length,
+        // Is the first cabin button beside (right of) the chart?
+        btnLeftX: cabinBtns[0] ? Math.round(cabinBtns[0].getBoundingClientRect().left) : null,
+        svgRightX: Math.round(svgRect.right),
       };
     });
 
-    expect(dims).toBeTruthy();
-    console.log(`  Chart fill: ${dims!.svgWidth}px / ${dims!.containerWidth}px = ${dims!.fillRatio}%`);
-    // After removing max-w-2xl, chart should fill >80% of container (was 56%)
-    expect(dims!.fillRatio, `Chart should fill >80% of container, got ${dims!.fillRatio}%`).toBeGreaterThan(80);
+    expect(layout).toBeTruthy();
+    console.log(`  Chart: ${layout!.svgWidth}px / ${layout!.containerWidth}px (${layout!.svgFillRatio}%)`);
+    console.log(`  Flex row: ${layout!.isFlexRow}, cabin btn left: ${layout!.btnLeftX}`);
+
+    // On desktop (1280px), chart should share space with sidebar — not fill full width
+    expect(layout!.svgFillRatio, `Chart + sidebar fills the container, chart alone should be <90% in flex row`).toBeLessThan(90);
+    // Buttons should be to the right of the chart
+    if (layout!.btnLeftX && layout!.svgRightX) {
+      const beside = layout!.btnLeftX >= layout!.svgRightX - 5;
+      expect(beside, `Cabin buttons should be beside chart on desktop`).toBe(true);
+      console.log('  ✓ Cabin buttons beside chart');
+    }
   });
 
   test('forecast cards use 4-column layout on desktop', async ({ page }) => {

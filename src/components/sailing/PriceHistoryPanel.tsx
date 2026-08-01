@@ -372,50 +372,52 @@ export default function PriceHistoryPanel({
         90-day trend for <strong>{selectedCabinType}</strong>
         {cabinRows.length > 1 && (
           <span className="ml-1 text-ink-faint/60">
-            · click a cabin below to switch
+            · click a cabin to switch
           </span>
         )}
       </p>
 
-      {/* Sparkline */}
-      <div className="rounded-2xl bg-canvas p-3">
-      <SparklineChart
-                data={sparkValues}
-                dates={sorted.map((s) => s.recorded_date)}
-                cabinType={selectedCabinType}
-                synthesized={synthesized}
-              />
-              {synthesized && (
-                <p className="mt-2 text-center text-[10px] font-medium text-ink-soft/70">
-                  Based on Inside cabin history · estimated curve
-                </p>
-              )}
-      </div>
+      {/* Sparkline + cabin buttons — side-by-side on lg+, stacked below lg */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:gap-5">
+        <div className="min-w-0 flex-1 rounded-2xl bg-canvas p-3">
+          <SparklineChart
+            data={sparkValues}
+            dates={sorted.map((s) => s.recorded_date)}
+            cabinType={selectedCabinType}
+            synthesized={synthesized}
+          />
+          {synthesized && (
+            <p className="mt-2 text-center text-[10px] font-medium text-ink-soft/70">
+              Based on Inside cabin history · estimated curve
+            </p>
+          )}
+        </div>
 
-      {/* Cabin price snapshot table — now clickable */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {cabinRows.map((row) => {
-          const isSelected = row.label === selectedCabinType;
-          return (
-            <button
-              key={row.label}
-              type="button"
-              onClick={() => setSelectedCabinType(row.label)}
-              aria-current={isSelected ? 'true' : undefined}
-              className={`rounded-xl border p-3 text-left transition-all ${
-                isSelected
-                  ? 'border-mint-ink/20 bg-mint-soft ring-1 ring-mint-ink/20'
-                  : 'border-black/[0.04] bg-canvas hover:border-black/[0.12] hover:bg-black/[0.02] active:scale-[0.97]'
-              }`}
-            >
-              <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">{row.label}</p>
-              <p className="font-mono-tab text-lg font-bold text-ink">{row.price}</p>
-              {isSelected && (
-                <p className="text-[10px] font-medium text-mint-ink">{synthesized ? 'Estimated · see below' : 'Trend shown'}</p>
-              )}
-            </button>
-          );
-        })}
+        {/* Cabin price snapshot table — vertical stack on lg+, 2-col grid on mobile */}
+        <div className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-1 lg:gap-1.5">
+          {cabinRows.map((row) => {
+            const isSelected = row.label === selectedCabinType;
+            return (
+              <button
+                key={row.label}
+                type="button"
+                onClick={() => setSelectedCabinType(row.label)}
+                aria-current={isSelected ? 'true' : undefined}
+                className={`rounded-xl border p-2.5 text-left transition-all lg:p-3 ${
+                  isSelected
+                    ? 'border-mint-ink/20 bg-mint-soft ring-1 ring-mint-ink/20'
+                    : 'border-black/[0.04] bg-canvas hover:border-black/[0.12] hover:bg-black/[0.02] active:scale-[0.97]'
+                }`}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-soft">{row.label}</p>
+                <p className="font-mono-tab text-base font-bold text-ink lg:text-lg">{row.price}</p>
+                {isSelected && (
+                  <p className="text-[10px] font-medium text-mint-ink">{synthesized ? 'Estimated' : 'Trend shown'}</p>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
