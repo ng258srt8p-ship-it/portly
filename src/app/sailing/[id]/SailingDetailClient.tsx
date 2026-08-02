@@ -117,15 +117,16 @@ export default function SailingDetailPage() {
             <div className="space-y-2 sm:space-y-3">
               {/* SailingSubNav - sticky sub-nav pill below header */}
               <SailingSubNav
-                sections={[
-                  { id: "overview", label: "Overview" },
-                  { id: "itinerary", label: "Itinerary" },
-                  { id: "price-history", label: "Price History" },
-                  { id: "deal-analysis", label: "Deal Analysis" },
-                  { id: "cabins", label: "Cabins" },
-                  { id: "forecast", label: "Forecast" },
-                  { id: "ship-info", label: "Ship Info" },
-                ]}
+               sections={[
+               { id: "overview", label: "Overview" },
+               { id: "itinerary", label: "Itinerary" },
+               { id: "price-history", label: "Price History" },
+               { id: "deal-analysis", label: "Deal Analysis" },
+               { id: "cabins", label: "Cabins" },
+               { id: "forecast", label: "Forecast" },
+               { id: "ship-intel", label: "Ship Intel" },
+               { id: "port-playbook", label: "Port Playbook" },
+               ]}
               />
               {/* Hero */}
               <section id="overview" className="scroll-mt-40">
@@ -256,9 +257,9 @@ export default function SailingDetailPage() {
                 <EnhancedPriceForecast sailingId={data.sailing.sailing_id} />
              </section>
 
-              {/* Ship Info (sourced from SailingInfoPanel data — collapse if same) */}
-              <section id="ship-info" className="scroll-mt-40">
-                <SailingInfoPanel
+              {/* Ship Intel (wired to SubNav target + Cruise Insider schema) */}
+              <section id="ship-intel" className="scroll-mt-40">
+              <SailingInfoPanel
                   ship={data.sailing.ship}
                   line={data.sailing.line}
                   region={data.sailing.region}
@@ -269,6 +270,19 @@ export default function SailingDetailPage() {
                   itinerary={data.sailing.route}
                 />
              </section>
+
+              {/* Port Playbook placeholder — wires SubNav target; content routes after enrichment */}
+              <section id="port-playbook" className="scroll-mt-40">
+               <div className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-xs sm:p-5">
+                <div className="mb-5 flex items-center justify-between">
+                 <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">Port Playbook</h2>
+                 <span className="text-xs font-medium text-ink-soft">Tactical guidance for each port of call</span>
+                </div>
+                <p className="text-sm text-ink-soft">
+                 Port-specific insider tips are generated automatically during enrichment cycles.
+                </p>
+               </div>
+              </section>
 
               {/* Book CTA + Track Price Alert — moved into sticky mobile bar (PHASE 5) */}
               <div className="hidden md:flex flex-col sm:flex-row gap-4 justify-center pt-4">

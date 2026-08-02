@@ -662,9 +662,10 @@ app.post('/api/deals', async (c) => {
     // Look up the Inside cabin category ID (don't hardcode 1 — it may not exist after a DB reset)
     const insideCat = await c.env.DB.prepare('SELECT id FROM cabin_categories WHERE name = ?').bind('Inside').first<{ id: number }>();
     const insideCatId = insideCat?.id ?? 1;
-    await c.env.DB.prepare(
-      'INSERT INTO price_history (sailing_id, cabin_category_id, price) VALUES (?, ?, ?)'
-    ).bind(existing.id, insideCatId, body.price).run();
+    // Note: Per-cabin price history is now handled by POST /api/sailing/:id/details endpoint
+    // which receives cabin-class-specific history from the scraper.
+    // The old single-cabin insert here was causing all cabin types to show the same curve.
+    // Removed to allow the details endpoint to write all cabin histories.
     return c.json({ action: 'updated', sailingId: existing.id });
   }
 
@@ -860,33 +861,38 @@ app.get('/api/sailing/:id', async (c) => {
         mandatoryGratuities: gratuity,
         nights: 7,
         raw,
-      };
-    });
-  }
+      }
+      });
+    }
 
-  // History datapoints from cached JSON — shaped for PriceHistoryPanel
-  // (it expects {recorded_date, cabin_type, passenger_count, total_usd}).
-  const priceHistory = prices.map((price, i) => {
-    const daysAgo = prices.length - 1 - i;
-    let date = '';
-    try {
-      const d = new Date(row.departure_date);
-      d.setDate(d.getDate() - daysAgo);
-      date = d.toISOString().split('T')[0];
-    } catch { /* blank date */ }
-    return {
-      price,
-      date,
-      // Aliases consumed by PriceHistoryPanel
-      recorded_date: date,
-      cabin_type: cabinRows[0]?.cabinType || 'Inside',
-      passenger_count: 2,
-      total_usd: String(price),
-      cabinType: cabinRows[0]?.cabinType || 'Inside',
-    };
-  });
+    // Query REAL price_history table instead of synthesizing from cached JSON
+    // This returns actual per-cabin-class history rows
+    const priceHistoryResult = await c.env.DB.prepare(`
+      SELECT ph.price, ph.recorded_at as date,
+             cc.name as cabin_type, cc.name as cabinType,
+             2 as passenger_count,
+             CAST(ph.price AS TEXT) as total_usd
+      FROM price_history ph
+      JOIN cabin_categories cc ON ph.cabin_category_id = cc.id
+      WHERE ph.sailing_id = ?
+      ORDER BY ph.recorded_at
+    `).bind(id).all();
 
-  // Compute dropPercent
+    // Group by cabin type and ensure we have entries for each cabin in cabinBreakdown
+    const priceHistory = (priceHistoryResult.results as Array<{
+      price: number; date: string; cabin_type: string; cabinType: string;
+      passenger_count: number; total_usd: string;
+    }>).map(row => ({
+      price: row.price,
+      date: row.date,
+      recorded_date: row.date,
+      cabin_type: row.cabin_type,
+      cabinType: row.cabinType,
+      passenger_count: row.passenger_count,
+      total_usd: row.total_usd,
+    }));
+
+    // Compute dropPercent
   const dropPercent = row.original_price > 0
     ? Math.round(((row.original_price - row.price) / row.original_price) * 100)
     : 0;

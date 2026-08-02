@@ -3,10 +3,11 @@
 /**
  * TripTide - EnhancedDealAnalysis Component (Redesigned)
  *
- * Renders a comprehensive, insider-level Deal Analysis dashboard by combining
- * pre-computed API data with deterministic, context-aware analysis generated
- * from the sailing's core attributes (price, nights, itinerary, line, ship).
- * This avoids runtime AI calls while delivering cruise-expert commentary.
+ * Renders a comprehensive, INSIDER-LEVEL Deal Analysis dashboard.
+ * 
+ * MISSION: Every word must sound like a cruise director's private briefing.
+ * No generic advice. No clichés. Only specific, numeric, industry secrets.
+ * This is our #1 competitive advantage.
  */
 
 import { useEffect, useState, useMemo } from 'react';
@@ -414,11 +415,14 @@ export default function EnhancedDealAnalysis({
     >
       {/* ===== Header ===== */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <MaterialIcon name="analytics" size="lg" />
+        <div className="flex items-center gap-3">
+          <span className="text-2xl text-amber-600 dark:text-amber-400">🔥</span>
           <h2 className="font-display text-2xl font-bold text-ink dark:text-white">
-            Deal Analysis
+            Cruise Insider Secrets
           </h2>
+          <span className="text-xs text-amber-700 dark:text-amber-300 uppercase tracking-wider hidden sm:inline">
+            Exclusive Analysis
+          </span>
         </div>
         <div className="flex items-center gap-2">
           {d && (
