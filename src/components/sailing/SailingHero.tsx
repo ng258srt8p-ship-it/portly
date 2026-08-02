@@ -122,11 +122,10 @@ export default function SailingHero({
             </span>
           </div>
 
-          {/* Compact cruise meta */}
+          {/* Compact cruise facts — single non-repeating line */}
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-sm text-white/70">
-            <span>{days} {days === 1 ? 'Night' : 'Nights'} · {cabinType || 'All Cabins'}</span>
-            <span>Departs {port} · {region}</span>
-            {formattedDate && <span>{formattedDate}</span>}
+            <span>{days} {days === 1 ? 'Night' : 'Nights'}{cabinType ? ` · ${cabinType}` : ''}</span>
+            <span>{port} · {region}</span>
           </div>
 
           {/* Price label — identifies cabin type context when available */}

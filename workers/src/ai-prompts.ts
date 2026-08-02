@@ -101,8 +101,11 @@ Return a JSON object inside a \`\`\`json fence with these keys:
 
 Hard constraints:
 - Every numeric claim must match the input. Do NOT invent prices, deck numbers, or percentages.
+- CRITICAL: You MUST use the actual nights value (${ctx.dates.nights}) from the context for any per-night or duration calculations. Do NOT substitute a different night count (like 7) — use exactly ${ctx.dates.nights} nights.
 - ONLY mention cabin tiers from the CABIN TIERS list. If only Inside/Oceanview/Balcony are offered, do NOT recommend Suite.
 - Use the LINE PROFILE personality vocabulary — e.g., if the line profile says "Fun Ship" for Carnival, use Carnival's vocabulary; if it says "Edge-class modern luxury" for Celebrity, use that vocabulary.
+- CRITICAL: Only claim amenities, features, or deck facilities documented in the ship context. Do NOT invent a count of "X notable amenities." If ship metadata is "limited data available," keep feature claims vague or skip them entirely.
+- CRITICAL: Compute sea days as (nights - ports_of_call). Never claim negative sea days. If days < 1, say "port-intensive" instead.
 - If a section doesn't apply to this sailing, return empty string "" — no placeholder.
 - Output ONLY the JSON fence. No prose before or after.`;
 }

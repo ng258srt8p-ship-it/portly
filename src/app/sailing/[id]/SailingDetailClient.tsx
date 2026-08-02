@@ -15,6 +15,8 @@ import EnhancedPriceForecast from '@/components/sailing/EnhancedPriceForecast';
 import SailingInfoPanel from '@/components/sailing/SailingInfoPanel';
 import SailingKeyTakeaways from '@/components/sailing/SailingKeyTakeaways';
 import CabinUpgradeTracker from '@/components/sailing/CabinUpgradeTracker';
+import ShipIntelSection from '@/components/sailing/ShipIntelSection';
+import PortPlaybookSection from '@/components/sailing/PortPlaybookSection';
 
 interface SailingData {
   sailing: {
@@ -117,17 +119,18 @@ export default function SailingDetailPage() {
             <div className="space-y-2 sm:space-y-3">
               {/* SailingSubNav - sticky sub-nav pill below header */}
               <SailingSubNav
-               sections={[
-               { id: "overview", label: "Overview" },
-               { id: "itinerary", label: "Itinerary" },
-               { id: "price-history", label: "Price History" },
-               { id: "deal-analysis", label: "Deal Analysis" },
-               { id: "cabins", label: "Cabins" },
-               { id: "forecast", label: "Forecast" },
-               { id: "ship-intel", label: "Ship Intel" },
-               { id: "port-playbook", label: "Port Playbook" },
-               ]}
-              />
+                             sections={[
+                             { id: "overview", label: "Overview" },
+                             { id: "key-takeaways", label: "Key Takeaways" },
+                             { id: "itinerary", label: "Itinerary" },
+                             { id: "price-history", label: "Price History" },
+                             { id: "deal-analysis", label: "Deal Analysis" },
+                             { id: "cabins", label: "Cabins" },
+                             { id: "forecast", label: "Forecast" },
+                             { id: "ship-intel", label: "Ship Specs" },
+                             { id: "port-playbook", label: "Port Playbook" },
+                             ]}
+                            />
               {/* Hero */}
               <section id="overview" className="scroll-mt-40">
                 <SailingHero
@@ -154,7 +157,10 @@ export default function SailingDetailPage() {
                   })()}
                   bookingUrl={data.sailing.bookingUrl || ''}
                 />
-                {/* AI-driven key takeaways callout — placed immediately below hero */}
+                </section>
+
+              {/* Key Takeaways — standalone section above Deal Analysis */}
+              <section id="key-takeaways" className="scroll-mt-40">
                 <SailingKeyTakeaways
                   price={data.sailing.price || 0}
                   originalPrice={data.sailing.originalPrice || 0}
@@ -201,27 +207,13 @@ export default function SailingDetailPage() {
                 />
                 </section>
 
-                {/* Itinerary + Info 2-col on desktop */}
-              <section id="itinerary" className="grid grid-cols-1 gap-4 lg:grid-cols-3 scroll-mt-40">
-                <div className="lg:col-span-2">
+                {/* Itinerary — full-width on desktop, no side panel */}
+              <section id="itinerary" className="scroll-mt-40">
                   <ItineraryTimeline
                     ports={data.sailing.route}
                     days={data.sailing.days}
                     departurePort={data.sailing.port}
                   />
-               </div>
-                <div>
-                  <SailingInfoPanel
-                    ship={data.sailing.ship}
-                    line={data.sailing.line}
-                    region={data.sailing.region}
-                    port={data.sailing.port}
-                    days={data.sailing.days}
-                    totalCabins={data?.cabinBreakdown?.length || undefined}
-                    cabinCategories={data?.cabinBreakdown?.map((c: any) => c.cabinType).filter(Boolean) || undefined}
-                    itinerary={data.sailing.route}
-                  />
-               </div>
              </section>
 
               {/* Price History */}
@@ -252,36 +244,31 @@ export default function SailingDetailPage() {
                 />
               </section>
 
-              {/* Enhanced Deal Analysis (Phase 2) */}
-              <section id="deal-analysis" className="scroll-mt-40" data-testid="enhanced-deal-analysis">
+              {/* Price Forecast */}
+              <section id="forecast" className="scroll-mt-40" data-testid="enhanced-deal-analysis">
                 <EnhancedPriceForecast sailingId={data.sailing.sailing_id} />
              </section>
 
-              {/* Ship Intel (wired to SubNav target + Cruise Insider schema) */}
+              {/* Ship Intel — uses ShipIntelSection with real ship data */}
               <section id="ship-intel" className="scroll-mt-40">
-              <SailingInfoPanel
+              <ShipIntelSection
                   ship={data.sailing.ship}
                   line={data.sailing.line}
-                  region={data.sailing.region}
-                  port={data.sailing.port}
-                  days={data.sailing.days}
-                  totalCabins={data?.cabinBreakdown?.length || undefined}
+                  shipClass={data.sailing.shipClass ?? null}
+                  shipLaunchedYear={data.sailing.shipLaunchedYear ?? null}
+                  aiInsiderSummary={data.sailing.aiInsiderSummary ?? null}
+                  aiCabinStrategy={data.sailing.aiCabinStrategy ?? null}
                   cabinCategories={data?.cabinBreakdown?.map((c: any) => c.cabinType).filter(Boolean) || undefined}
-                  itinerary={data.sailing.route}
+                  totalCabins={data?.cabinBreakdown?.length || undefined}
                 />
              </section>
 
-              {/* Port Playbook placeholder — wires SubNav target; content routes after enrichment */}
+              {/* Port Playbook — per-port tactical guidance */}
               <section id="port-playbook" className="scroll-mt-40">
-               <div className="rounded-2xl border border-black/[0.06] bg-white p-4 shadow-xs sm:p-5">
-                <div className="mb-5 flex items-center justify-between">
-                 <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">Port Playbook</h2>
-                 <span className="text-xs font-medium text-ink-soft">Tactical guidance for each port of call</span>
-                </div>
-                <p className="text-sm text-ink-soft">
-                 Port-specific insider tips are generated automatically during enrichment cycles.
-                </p>
-               </div>
+                <PortPlaybookSection
+                  ports={data.sailing.route || []}
+                  departurePort={data.sailing.port}
+                />
               </section>
 
               {/* Book CTA + Track Price Alert — moved into sticky mobile bar (PHASE 5) */}
