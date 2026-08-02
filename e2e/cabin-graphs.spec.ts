@@ -130,7 +130,8 @@ test.describe('Cabin Price History Graphs — Synthesis & Visual Differentiation
   });
 
   test('sparkline chart uses flex layout with cabin sidebar on desktop', async ({ page }) => {
-    await page.goto(SAILING_PAGE, { waitUntil: 'networkidle' });
+   await page.setViewportSize({ width: 1280, height: 900 });
+   await page.goto(SAILING_PAGE, { waitUntil: 'networkidle' });
     await page.waitForSelector('[data-testid="price-history-chart"]', { timeout: 15000 });
     await page.waitForTimeout(1000);
 
@@ -176,7 +177,8 @@ test.describe('Cabin Price History Graphs — Synthesis & Visual Differentiation
   });
 
   test('forecast cards use 4-column layout on desktop', async ({ page }) => {
-    await page.goto(SAILING_PAGE, { waitUntil: 'networkidle' });
+   await page.setViewportSize({ width: 1280, height: 900 });
+   await page.goto(SAILING_PAGE, { waitUntil: 'networkidle' });
     await page.waitForSelector('[data-testid="cabin-forecasts-grid"]', { timeout: 15000 });
     await page.waitForTimeout(1000);
 
@@ -216,7 +218,8 @@ test.describe('Cabin Price History Graphs — Synthesis & Visual Differentiation
   });
 
   test('page height reduced from visual density improvements', async ({ page }) => {
-    await page.goto(SAILING_PAGE, { waitUntil: 'networkidle' });
+   await page.setViewportSize({ width: 1280, height: 900 });
+   await page.goto(SAILING_PAGE, { waitUntil: 'networkidle' });
     await page.waitForSelector('[data-testid="price-history-chart"]', { timeout: 15000 });
     await page.waitForTimeout(2000);
 
