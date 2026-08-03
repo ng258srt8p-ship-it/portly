@@ -1,4 +1,16 @@
 /**
+ * LEGACY — NOT USED IN PRODUCTION
+ *
+ * This file is from the pre-Worker era when enrichment ran in a Node.js
+ * server process. The active enrichment path is now Cloudflare Workers AI
+ * (see workers/src/enrich-sailing.ts). This file is kept for reference only
+ * and is NOT deployed to Cloudflare.
+ *
+ * Migration history: OpenRouter (1000 req/day cap) → OpenCode Zen (keyless)
+ * → Cloudflare Workers AI (free, 10k neurons/day, no API key needed).
+ */
+
+/**
  * TripTide — OpenCode Zen key-less client with auto-rotating model discovery
  *                and per-model daily-quota tracking
  *
