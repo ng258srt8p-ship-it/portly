@@ -1,12 +1,11 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { getAllSailings, getSailingDetail, makeFingerprint, applyPriceDrift } from './scraper-data';
+import { getAllSailings, getSailingDetail, makeFingerprint } from './scraper-data';
 import { runEnrichmentTick, findCandidatesForEnrichment, enrichSailing } from './enrich-sailing';
-import { runIngestExpansionTick, debugBaseSailingSelect, genHistory } from './ingest-expander';
 import { runAlertEvaluationTick, runAlertDispatchTick } from './alert-engine';
 import { getMetricsSnapshot } from './metrics-analytics';
-import { runBulkImportTick } from './bulk-import';
 import { runExternalLineSyncTick } from './external-line-sync';
+import { ingestRealSailing } from './real-ingest';
 
 export type Env = {
   DB: D1Database;
@@ -1417,6 +1416,21 @@ app.post('/api/admin/alert-dispatch-tick', async (c) => {
     return c.json({ ok: true, ...result });
   } catch (err: any) {
     return c.json({ ok: false, error: 'dispatch_tick_failed', message: err?.message || 'unknown' }, 500);
+  }
+});
+
+// POST /api/admin/ingest-real — accept verified real sailing data from external scrapers
+app.post('/api/admin/ingest-real', async (c) => {
+  const auth = c.req.header('Authorization');
+  if (auth !== `Bearer ${c.env.SCRAPER_SECRET}`) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  try {
+    const body = await c.req.json();
+    const result = await ingestRealSailing(c.env, body);
+    return c.json(result);
+  } catch (err: any) {
+    return c.json({ ok: false, id: '', duplicated: false, error: err?.message || 'unknown' }, 500);
   }
 });
 
