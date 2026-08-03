@@ -65,7 +65,15 @@ export default function SailingDetailPage({ initialData }: SailingDetailPageProp
     [sailingId]
   );
 
-  const { data, loading, error } = useLiveData<SailingData>(fetcher, { initialData });
+  // Guard against stale initialData: when the static export serves the
+  // homepage SPA shell at /sailing/<id>, initialData may belong to the
+  // homepage rather than the requested sailing. Only seed the hook when
+  // the sailing IDs actually match; otherwise fall through to the fetcher.
+  const safeInitialData =
+    initialData?.sailing?.sailing_id && initialData.sailing.sailing_id === sailingId
+      ? initialData
+      : undefined;
+  const { data, loading, error } = useLiveData<SailingData>(fetcher, { initialData: safeInitialData });
 
   if (!sailingId) {
     return (
