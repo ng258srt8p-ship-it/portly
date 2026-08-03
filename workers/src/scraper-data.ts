@@ -1,3 +1,13 @@
+// STUB DATA — NOT REAL SCRAPED DATA
+//
+// This file contains 81 hand-typed sailing records with manually entered
+// prices, dates, and itineraries. No HTTP requests are made to any cruise
+// line. Some data is factually incorrect (e.g., Carnival Horizon listed as
+// departing Miami when it actually sails from Galveston, TX). The expander
+// and bulk-import modules generate variants from these 81 bases.
+//
+// See docs/data-pipeline/real-data-research.md for the replacement plan.
+//
 // Stub cruise data for the scheduled sync handler.
 // Mirrors scrapers/carnival-corp.ts + scrapers/additional-lines.ts but self-contained
 // (no playwright/dotenv deps — safe for Workers runtime).

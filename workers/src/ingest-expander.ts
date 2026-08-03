@@ -1,4 +1,14 @@
 /**
+ * DISABLED 2026-08-03 — SYNTHETIC DATA GENERATOR
+ *
+ * This module generates fake sailing variants by copying base itineraries
+ * with random departure ports and date shifts. It produces physically
+ * impossible routes (e.g., Athens -> Amber Cove -> Grand Turk — a 3-night
+ * cruise from Greece to the Dominican Republic). The downstream scheduled
+ * tick in index.ts was removed; this file exists purely for reference.
+ *
+ * See docs/data-pipeline/real-data-research.md for replacement plan.
+ *
  * Ingest expander — generates dated variants of existing sailings.
  *
  * TripTide's "scrapers" are stubbed static arrays; real ship operations

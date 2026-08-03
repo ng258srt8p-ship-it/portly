@@ -1,4 +1,13 @@
 /**
+ * DISABLED 2026-08-03 — SYNTHETIC DATA GENERATOR
+ *
+ * This module generates fake sailing variants with random departure ports
+ * assigned to fixed itineraries (e.g., Caribbean routes from Athens).
+ * The downstream scheduled handler call was removed; this file exists
+ * purely for reference.
+ *
+ * See docs/data-pipeline/real-data-research.md for replacement plan.
+ *
  * Bulk sailings importer — generates large sailing pools from base itineraries.
  *
  * Unlike the `ingest-expander` (which makes 6 monthly variants of *each* base), this importer
