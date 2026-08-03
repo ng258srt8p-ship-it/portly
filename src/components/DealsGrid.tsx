@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { BadgeType, Deal, DealFilters as Filters } from '@/types/cruise';
 import Sparkline from '@/components/ui/Sparkline';
 import SyncStatus from '@/components/ui/SyncStatus';
@@ -24,7 +25,7 @@ interface DealsGridProps {
 }
 
 const badgeStyles: Record<BadgeType, string> = {
-  drop: 'bg-mint-soft text-mint-ink border-mint-ink/15',
+  drop: 'bg-coral-soft text-coral-ink border-coral-ink/15',
   solo: 'bg-coral-soft text-coral-ink border-coral-ink/15',
   gold: 'bg-coral-soft text-coral-ink border-coral-ink/15',
 };
@@ -424,24 +425,24 @@ function renderGridContent(
       <footer className="flex items-center justify-between gap-2 border-t border-black/[0.04] bg-black/[0.015] p-4 sm:p-5">
         <span className="text-xs font-medium text-ink-faint">Sails {deal.sailDate}</span>
         <div className="flex items-center gap-2">
-          <a
-            href={deal.bookingUrl}
+          <Link
+            href={deal.bookingUrl as string}
             target="_blank"
             rel="noopener noreferrer"
-            className={`inline-flex h-9 min-w-[100px] items-center justify-center gap-1.5 rounded-md px-4 text-xs font-medium text-white shadow-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 ${!deal.bookingUrl ? 'hidden' : 'bg-mint-ink hover:bg-mint hover:text-mint-ink'}`}
+            className={`inline-flex h-11 min-w-[100px] items-center justify-center gap-1.5 rounded-md px-4 text-xs font-medium text-white shadow-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 ${!deal.bookingUrl ? 'hidden' : 'bg-indigo hover:bg-indigo/80'}`}
           >
             <span className="material-symbols-outlined text-[16px] leading-none">link</span>
             <span className="truncate">{deal.bookingLabel || 'Book Now'}</span>
-         </a>
+          </Link>
           <button
             onClick={() => router.push(`/sailing/${deal.id}`)}
             className="inline-flex h-9 min-w-[100px] items-center justify-center gap-1.5 rounded-md bg-ink px-4 text-xs font-medium text-white shadow-xs transition-colors hover:bg-indigo active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
           >
             <span className="material-symbols-outlined text-[16px] leading-none">arrow_forward</span>
             <span className="truncate">View Deal</span>
-         </button>
-       </div>
-     </footer>
+          </button>
+        </div>
+      </footer>
    </article>
   ));
 }

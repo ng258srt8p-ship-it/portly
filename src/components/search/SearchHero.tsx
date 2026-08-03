@@ -97,7 +97,7 @@ export default function Hero() {
           Live price intelligence · {formattedCount} sailings tracked
         </div>
 
-        <h1 className="text-balance font-display text-[2.5rem] font-extrabold leading-[1.15] tracking-tight text-ink sm:text-6xl sm:leading-[1.1] lg:text-[4.1rem] lg:leading-[1.1]">
+        <h1 className="text-balance font-display text-[clamp(2rem,5vw,4.1rem)] font-extrabold leading-[1.15] tracking-tight text-ink sm:leading-[1.1] lg:leading-[1.1]">
           Track the Absolute <span className="text-indigo">Out-the-Door Cost</span> of Your Next Voyage.
         </h1>
 
@@ -121,47 +121,55 @@ export default function Hero() {
             </div>
             <div className="flex shrink-0 items-center gap-3">
               {/* Adults counter */}
-              <div className="flex items-center gap-1" data-testid="adults-counter">
-                <span className="text-xs font-semibold text-ink-soft mr-1">Adults</span>
-                <button
-                  aria-label="Decrease adults"
-                  onClick={() => setAdults((p) => Math.max(1, p - 1))}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
-                  disabled={adults <= 1}
-                >
-                  −
-                </button>
-                <span className="w-5 text-center font-mono-tab text-sm font-semibold">{adults}</span>
-                <button
-                  aria-label="Increase adults"
-                  onClick={() => setAdults((p) => Math.min(8, p + 1))}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
-                  disabled={adults >= 8}
-                >
-                  +
-                </button>
-              </div>
-              {/* Children counter */}
-              <div className="flex items-center gap-1" data-testid="children-counter">
-                <span className="text-xs font-semibold text-ink-soft mr-1">Children</span>
-                <button
-                  aria-label="Decrease children"
-                  onClick={() => setChildren((p) => Math.max(0, p - 1))}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
-                  disabled={children <= 0}
-                >
-                  −
-                </button>
-                <span className="w-5 text-center font-mono-tab text-sm font-semibold">{children}</span>
-                <button
-                  aria-label="Increase children"
-                  onClick={() => setChildren((p) => Math.min(6, p + 1))}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
-                  disabled={children >= 6}
-                >
-                  +
-                </button>
-              </div>
+                      <div className="flex items-center gap-1" data-testid="adults-counter">
+                        <span className="text-xs font-semibold text-ink-soft mr-1">Adults</span>
+                        <span className="flex min-h-[44px] min-w-[44px] items-center justify-center">
+                          <button
+                            aria-label="Decrease adults"
+                            onClick={() => setAdults((p) => Math.max(1, p - 1))}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
+                            disabled={adults <= 1}
+                          >
+                            −
+                          </button>
+                        </span>
+                        <span className="w-5 text-center font-mono-tab text-sm font-semibold">{adults}</span>
+                        <span className="flex min-h-[44px] min-w-[44px] items-center justify-center">
+                          <button
+                            aria-label="Increase adults"
+                            onClick={() => setAdults((p) => Math.min(8, p + 1))}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
+                            disabled={adults >= 8}
+                          >
+                            +
+                          </button>
+                        </span>
+                      </div>
+                      {/* Children counter */}
+                      <div className="flex items-center gap-1" data-testid="children-counter">
+                        <span className="text-xs font-semibold text-ink-soft mr-1">Children</span>
+                        <span className="flex min-h-[44px] min-w-[44px] items-center justify-center">
+                          <button
+                            aria-label="Decrease children"
+                            onClick={() => setChildren((p) => Math.max(0, p - 1))}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
+                            disabled={children <= 0}
+                          >
+                            −
+                          </button>
+                        </span>
+                        <span className="w-5 text-center font-mono-tab text-sm font-semibold">{children}</span>
+                        <span className="flex min-h-[44px] min-w-[44px] items-center justify-center">
+                          <button
+                            aria-label="Increase children"
+                            onClick={() => setChildren((p) => Math.min(6, p + 1))}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-ink shadow-sm hover:text-indigo active:scale-90 disabled:opacity-30"
+                            disabled={children >= 6}
+                          >
+                            +
+                          </button>
+                        </span>
+                      </div>
             </div>
           </div>
 

@@ -62,9 +62,9 @@ function FooterCol({ title, links }: { title: string; links: { label: string; hr
         {links.map((link) => (
           <li key={link.href}>
             <Link
-              href={link.href}
-              className="block min-h-[44px] px-3 py-2 text-sm text-ink-soft hover:text-indigo hover:bg-black/[0.04] rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 focus-visible:ring-offset-2"
-            >
+                          href={link.href}
+                          className="px-3 py-2 text-sm text-ink-soft hover:text-indigo transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 rounded min-h-[44px] inline-flex items-center"
+                        >
               {link.label}
             </Link>
           </li>

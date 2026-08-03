@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import MaterialIcon from "@/components/ui/MaterialIcon";
 
 const navLinks = [
@@ -12,6 +12,7 @@ const navLinks = [
 
 export default function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -67,15 +68,21 @@ export default function Header() {
           </button>
 
           <nav className={"hidden min-w-0 items-center gap-1 rounded-full bg-black/[0.03] p-2 lg:flex"}>
-            {navLinks.map((link) => (
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
+              return (
               <button
                 key={link.label}
+                aria-current={isActive ? 'page' : undefined}
                 onClick={() => navigate(link.href)}
-                className="whitespace-nowrap rounded-full min-h-[44px] flex items-center justify-center px-4 py-2 text-sm font-medium text-ink-soft transition-colors hover:text-ink xl:px-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
+                className={`whitespace-nowrap rounded-full min-h-[44px] flex items-center justify-center px-4 py-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 xl:px-4 ${
+                  isActive ? 'bg-indigo/10 text-indigo font-semibold' : 'text-ink-soft hover:text-ink font-medium'
+                }`}
               >
                 {link.label}
               </button>
-            ))}
+              );
+            })}
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
@@ -106,18 +113,24 @@ export default function Header() {
 
         {menuOpen && (
           <div ref={menuRef} className="mt-2 flex flex-col gap-1 rounded-3xl border border-black/[0.06] bg-white/95 p-2 shadow-float-lg backdrop-blur-xl lg:hidden">
-            {navLinks.map((link) => (
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
+              return (
               <button
                 key={link.label}
+                aria-current={isActive ? 'page' : undefined}
                 onClick={() => {
                   navigate(link.href);
                   setMenuOpen(false);
                 }}
-                className="min-h-[44px] rounded-2xl px-4 py-3 text-left text-sm font-medium text-ink-soft transition-colors hover:bg-black/[0.04] hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50"
+                className={`min-h-[44px] rounded-2xl px-4 py-3 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 ${
+                  isActive ? 'bg-indigo/10 text-indigo font-semibold' : 'text-ink-soft hover:bg-black/[0.04] hover:text-ink font-medium'
+                }`}
               >
                 {link.label}
               </button>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
