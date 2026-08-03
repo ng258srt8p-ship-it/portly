@@ -4,19 +4,19 @@
    TRIPTIDE — SailingHero Component (Refactored)
    Hero banner for the sailing detail page showing ship name,
    cruise line, price with strikethrough, departure info, badges.
-   On lg+: two-column grid (left 2/3: ship/info, right 1/3: price card).
+
+   Pricing fix (2026-08-02):
+   The hero's main price now derives from cabinTier (Inside OTD)
+   instead of `data.sailing.price` (a raw/orphaned per-night rate)
+   so the hero and the Cabin Pricing table always agree. Fallback
+   to raw price only when cabinTier is not loaded yet.
    ============================================================ */
 
 interface CabinTier {
-  /** Display name (e.g. "Inside", "Oceanview", "Balcony", "Suite") */
   cabinType: string;
-  /** Base fare per person (pre-port-tax, pre-gratuity) */
   baseFare: number;
-  /** Port taxes & fees per person */
   portTax: number;
-  /** Mandatory gratuity per person per night */
   gratuityPerNight: number;
-  /** Number of nights the cabin pricing was computed for */
   nights: number;
 }
 
@@ -30,11 +30,8 @@ interface SailingHeroProps {
   price: number;
   originalPrice?: number;
   dropPercent?: number;
-  /** Optional: cabin tier label (e.g. "Oceanview", "Interior") */
   cabinType?: string;
-  /** Optional: full cabin tier with real OTD numbers (overrides fabricated % multipliers) */
   cabinTier?: CabinTier | null;
-  /** Optional: URL the user is sent to when they click "View Deal / Book" */
   bookingUrl?: string;
 }
 
@@ -55,7 +52,6 @@ export default function SailingHero({
   const hasDrop = dropPercent && dropPercent > 0;
   const formattedDate = (() => {
     const d = new Date(departureDate + 'T12:00:00');
-    // Force US Eastern timezone display to avoid UTC→local off-by-one-day
     return d.toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
@@ -65,31 +61,41 @@ export default function SailingHero({
     });
   })();
 
-  const roundedPrice = Math.round(price);
-  const priceLabel = cabinType
-    ? `Starting at $${roundedPrice.toLocaleString()} from ${cabinType}`
-    : `Starting at $${roundedPrice.toLocaleString()}`;
-
-  // ── OTD breakdown derivation ──
-  // Prefer real cabin_prices rows when available. Falls back to legacy %
-  // multipliers (price * 0.6 / 0.25 / 0.15) only when no cabin tier is
-  // supplied so the breakdown is never empty/missing.
+  // ── OTD breakdown derivation (real cabin_tiers preferred, fallback to raw) ──
   const effectiveNights = cabinTier?.nights || days || 7;
   const hasRealTier = !!(cabinTier && (
     (cabinTier.baseFare ?? 0) > 0 ||
     (cabinTier.portTax ?? 0) > 0 ||
     (cabinTier.gratuityPerNight ?? 0) > 0
   ));
-  const otdBaseFare = hasRealTier
-    ? Math.round(cabinTier!.baseFare || 0)
-    : Math.round(price * 0.6);
-  const otdPortTax = hasRealTier
-    ? Math.round(cabinTier!.portTax || 0)
-    : Math.round(price * 0.25);
+
+  // Per-person breakdown as function of effectiveNights
+  const otdBaseFare = hasRealTier ? Math.round(cabinTier!.baseFare || 0) : Math.round(price * 0.6);
+  const otdPortTax = hasRealTier ? Math.round(cabinTier!.portTax || 0) : Math.round(price * 0.25);
   const otdGratuityTotal = hasRealTier
     ? Math.round((cabinTier!.gratuityPerNight || 0) * effectiveNights)
     : Math.round(price * 0.15);
   const otdTotalPerPerson = otdBaseFare + otdPortTax + otdGratuityTotal;
+
+  // ── HERO DISPLAY PRICE (root-cause fix) ──
+  // Use the cabinTier OTD total as the primary hero price so the hero,
+  // OTD breakdown, and Cabin Pricing table all point to the same number.
+  // The `price` prop is a raw per-night/promotional stub that does NOT
+  // appear in the Cabin Pricing table — showing it caused the $321/$714
+  // contradiction reported by users.
+  const heroPrice = hasRealTier ? otdTotalPerPerson : Math.round(price);
+
+  // originalPrice / dropPercent derived from the same heroPrice source
+  const heroOriginalPrice = (cabinTier && (cabinTier as any).originalTotal)
+    ? (cabinTier as any).originalTotal
+    : (originalPrice && originalPrice > heroPrice ? originalPrice : 0);
+  const heroDrop = heroOriginalPrice > heroPrice
+    ? Math.round(((heroOriginalPrice - heroPrice) / heroOriginalPrice) * 100)
+    : (dropPercent || 0);
+  const roundedPrice = Math.round(heroPrice);
+  const priceLabel = hasRealTier
+    ? `${cabinType || 'Cabin'} · out-the-door price`
+    : 'Starting price';
 
   return (
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-ink via-[#1a1b24] to-ink p-6 text-white shadow-float sm:p-7">
@@ -99,27 +105,18 @@ export default function SailingHero({
       <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
         {/* ===== LEFT COLUMN (2/3 width) ===== */}
         <div className="lg:col-span-2 space-y-4">
+
           {/* Breadcrumb line */}
-          <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-ink-faint/80">
-            {line}
-          </p>
+          <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-ink-faint/80">{line}</p>
 
           {/* Ship name */}
-          <h1 className="font-display text-4xl font-extrabold leading-tight sm:text-5xl">
-            {ship}
-          </h1>
+          <h1 className="font-display text-4xl font-extrabold leading-tight sm:text-5xl">{ship}</h1>
 
           {/* Quick facts row */}
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-white/[0.4] px-3 py-1 text-xs font-semibold backdrop-blur-sm">
-              {days} Nights
-            </span>
-            <span className="rounded-full bg-white/[0.4] px-3 py-1 text-xs font-semibold backdrop-blur-sm">
-              Departs {formattedDate}
-            </span>
-            <span className="rounded-full bg-white/[0.4] px-3 py-1 text-xs font-semibold backdrop-blur-sm">
-              {region} · {port}
-            </span>
+            <span className="rounded-full bg-white/[0.4] px-3 py-1 text-xs font-semibold backdrop-blur-sm">{days} Nights</span>
+            <span className="rounded-full bg-white/[0.4] px-3 py-1 text-xs font-semibold backdrop-blur-sm">Departs {formattedDate}</span>
+            <span className="rounded-full bg-white/[0.4] px-3 py-1 text-xs font-semibold backdrop-blur-sm">{region} · {port}</span>
           </div>
 
           {/* Compact cruise facts — single non-repeating line */}
@@ -128,68 +125,50 @@ export default function SailingHero({
             <span>{port} · {region}</span>
           </div>
 
-          {/* Price label — identifies cabin type context when available */}
+          {/* Price label */}
           <p className="mt-3 text-sm text-white/70">{priceLabel}</p>
         </div>
 
         {/* ===== RIGHT COLUMN (1/3 width) — Price Callout Card ===== */}
         <div className="lg:col-span-1">
           <div className="lg:sticky lg:top-[calc(var(--header-height)+1rem)] z-20 flex flex-col items-center gap-4 p-4 bg-black/[0.2] rounded-2xl border border-black/[0.1]">
+
             {/* Large Monospace Fare */}
             <span className="font-mono-tab text-5xl font-black tracking-tight sm:text-6xl">
               ${roundedPrice.toLocaleString()}
             </span>
 
-            {hasDrop && originalPrice && (
+            {hasDrop && heroOriginalPrice > 0 && (
               <>
                 <span className="font-mono-tab text-2xl text-white/60 line-through sm:text-3xl">
-                  ${Math.round(originalPrice).toLocaleString()}
+                  ${heroOriginalPrice.toLocaleString()}
                 </span>
                 <span className="rounded-full bg-coral-ink px-3 py-1 text-sm font-bold text-white">
-                  -{dropPercent}% Drop
+                  -{heroDrop}% Drop
                 </span>
               </>
             )}
 
-            {/* Out-the-door breakdown list — uses real cabin_prices when provided,
-                legacy % multipliers as fallback so the row never disappears. */}
-            <div className="mt-2 space-y-1 text-xs text-white/80 w-full">
-              <div className="flex justify-between w-full">
-                <span className="font-medium">Base Fare</span>
-                <span className="text-right" data-testid="hero-otd-base-fare">${otdBaseFare.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between w-full">
-                <span className="font-medium">Port Taxes & Fees</span>
-                <span className="text-right" data-testid="hero-otd-port-tax">${otdPortTax.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between w-full">
-                <span className="font-medium">Mandatory Gratuities</span>
-                <span className="text-right" data-testid="hero-otd-gratuity">${otdGratuityTotal.toLocaleString()}</span>
-              </div>
-              <div className="flex items-baseline justify-between w-full pt-2 border-t border-black/[0.08]">
+            {/* OTD breakdown (matches cabinTier, not the raw price) */}
+            <div className="mt-2 w-full space-y-1 text-xs text-white/80">
+              <div className="flex justify-between"><span className="font-medium">Base Fare</span><span className="text-right">${otdBaseFare.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="font-medium">Port Taxes & Fees</span><span className="text-right">${otdPortTax.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="font-medium">Mandatory Gratuities</span><span className="text-right">${otdGratuityTotal.toLocaleString()}</span></div>
+              <div className="flex items-baseline justify-between border-t border-black/[0.08] pt-2">
                 <span className="font-bold text-xl">Total Per Person</span>
-                <span className="font-mono-tab text-xl font-bold" data-testid="hero-otd-total">${otdTotalPerPerson.toLocaleString()}</span>
+                <span className="font-mono-tab text-xl font-bold">${otdTotalPerPerson.toLocaleString()}</span>
               </div>
             </div>
 
             {/* Primary Action Buttons */}
-            <div className="mt-4 flex flex-col sm:flex-row gap-3 w-full">
-              {/* Track Price — uses absolute /sailing/<id> path; pathname already
-                  starts with /, so prepend /sailing to /alerts?sailing=. */}
+            <div className="mt-4 flex w-full flex-col gap-3 sm:flex-row">
               <button
-                onClick={() => {
-                  const url = `/alerts?sailing=${window.location.pathname}`;
-                  window.location.href = url;
-                }}
+                onClick={() => { const url = `/alerts?sailing=${window.location.pathname}`; window.location.href = url; }}
                 className="flex-1 rounded-full bg-indigo/20 px-4 py-2 text-sm font-semibold text-indigo/90 hover:bg-indigo/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo/50 transition-colors"
                 data-testid="hero-track-price"
               >
                 Track Price
               </button>
-
-              {/* View Deal / Book — links to real bookingUrl when the API
-                  supplies one; otherwise the anchor becomes inert and the
-                  Track Price button stays the primary CTA. */}
               {bookingUrl ? (
                 <a
                   href={bookingUrl}
