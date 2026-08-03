@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-interface UseLiveDataOptions {
+interface UseLiveDataOptions<T = unknown> {
   pollIntervalMs?: number;
+  initialData?: T | null;
 }
 
 interface UseLiveDataResult<T> {
@@ -20,10 +21,10 @@ interface UseLiveDataResult<T> {
  */
 export function useLiveData<T>(
   fetcher: () => Promise<T>,
-  options: UseLiveDataOptions = {}
+  options: UseLiveDataOptions<T> = {}
 ): UseLiveDataResult<T> {
-  const { pollIntervalMs } = options;
-  const [data, setData] = useState<T | null>(null);
+  const { pollIntervalMs, initialData } = options;
+  const [data, setData] = useState<T | null>(initialData ?? null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);

@@ -31,6 +31,25 @@ export async function generateStaticParams() {
   }
 }
 
-export default function Page() {
-  return <SailingDetailClient />;
+// At build time, fetch the sailing data so SailingHero gets cabinTier
+// on the initial render (not just after client-side hydration).
+// During dev (non-export), the client fetch in useLiveData handles it.
+async function getSailingData(id: string) {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://portly-api.vqh9mnrdbp.workers.dev';
+  try {
+    const res = await fetch(`${apiUrl}/api/sailing/${id}`, { cache: 'no-store' });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export default async function Page({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const data = await getSailingData(params.id);
+  return <SailingDetailClient initialData={data} />;
 }

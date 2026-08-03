@@ -18,7 +18,7 @@ import CabinUpgradeTracker from '@/components/sailing/CabinUpgradeTracker';
 import ShipIntelSection from '@/components/sailing/ShipIntelSection';
 import PortPlaybookSection from '@/components/sailing/PortPlaybookSection';
 
-interface SailingData {
+export interface SailingData {
   sailing: {
     id: number;
     sailing_id: string;  // string ID from API (e.g., "carnival_conquest_2026-03-12_miami_4")
@@ -48,7 +48,11 @@ interface SailingData {
   priceHistory: any[];
 }
 
-export default function SailingDetailPage() {
+interface SailingDetailPageProps {
+  initialData?: SailingData | null;
+}
+
+export default function SailingDetailPage({ initialData }: SailingDetailPageProps = {}) {
   const params = useParams();
   const sailingId = params?.id as string;
 
@@ -61,7 +65,7 @@ export default function SailingDetailPage() {
     [sailingId]
   );
 
-  const { data, loading, error } = useLiveData<SailingData>(fetcher);
+  const { data, loading, error } = useLiveData<SailingData>(fetcher, { initialData });
 
   if (!sailingId) {
     return (
