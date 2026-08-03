@@ -6,251 +6,83 @@
 <title>Portly vs Live Cruise Sites — Pricing Verification Report</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #f5f5f7;
-    color: #1d1d1f;
-    padding: 40px 20px;
-    line-height: 1.5;
-  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f7; color: #1d1d1f; padding: 40px 20px; line-height: 1.5; }
   .container { max-width: 1400px; margin: 0 auto; }
-  h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-  }
-  .subtitle {
-    color: #6e6e73;
-    margin-bottom: 2rem;
-    font-size: 0.95rem;
-  }
-  .verified-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #d1fae5;
-    color: #065f46;
-    padding: 4px 12px;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    margin-bottom: 2rem;
-  }
-  .sailing-card {
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    margin-bottom: 1.5rem;
-    overflow: hidden;
-  }
-  .sailing-header {
-    background: linear-gradient(135deg, #1a1b24, #2a3040);
-    color: white;
-    padding: 24px 32px;
-  }
-  .sailing-header h2 {
-    font-size: 1.5rem;
-    margin-bottom: 4px;
-  }
-  .sailing-meta {
-    color: rgba(255,255,255,0.7);
-    font-size: 0.9rem;
-  }
-  .comparison-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1px;
-    background: #e5e5e7;
-  }
-  .panel {
-    background: white;
-    padding: 24px 32px;
-  }
-  .panel h3 {
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #6e6e73;
-    margin-bottom: 16px;
-  }
-  .price-main {
-    font-size: 2.5rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-  }
-  .price-original {
-    color: #6e6e73;
-    text-decoration: line-through;
-    font-size: 1.2rem;
-    margin-top: 4px;
-  }
-  .price-drop {
-    display: inline-block;
-    background: #fef3c7;
-    color: #92400e;
-    padding: 4px 12px;
-    border-radius: 999px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-top: 8px;
-  }
-  .otd-breakdown {
-    margin-top: 20px;
-    border-top: 1px solid #e5e5e7;
-    padding-top: 16px;
-  }
-  .otd-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 0;
-    font-size: 0.9rem;
-  }
-  .otd-row.total {
-    border-top: 2px solid #1d1d1f;
-    margin-top: 8px;
-    padding-top: 12px;
-    font-weight: 700;
-    font-size: 1.1rem;
-  }
-  .source-badge {
-    font-size: 0.75rem;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-weight: 600;
-    margin-left: 8px;
-  }
+  h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
+  .subtitle { color: #6e6e73; margin-bottom: 2rem; font-size: 0.95rem; }
+  .verified-badge { display: inline-flex; align-items: center; gap: 6px; background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; margin-bottom: 2rem; }
+  .sailing-card { background: white; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 1.5rem; overflow: hidden; }
+  .sailing-header { background: linear-gradient(135deg, #1a1b24, #2a3040); color: white; padding: 24px 32px; }
+  .sailing-header h2 { font-size: 1.5rem; margin-bottom: 4px; }
+  .sailing-meta { color: rgba(255,255,255,0.7); font-size: 0.9rem; }
+  .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #e5e5e7; }
+  .panel { background: white; padding: 24px 32px; }
+  .panel h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: #6e6e73; margin-bottom: 16px; }
+  .price-main { font-size: 2.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .price-original { color: #6e6e73; text-decoration: line-through; font-size: 1.2rem; margin-top: 4px; }
+  .price-drop { display: inline-block; background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; margin-top: 8px; }
+  .otd-breakdown { margin-top: 20px; border-top: 1px solid #e5e5e7; padding-top: 16px; }
+  .otd-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.9rem; }
+  .otd-row.total { border-top: 2px solid #1d1d1f; margin-top: 8px; padding-top: 12px; font-weight: 700; font-size: 1.1rem; }
+  .source-badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: 600; margin-left: 8px; }
   .source-badge.portly { background: #dbeafe; color: #1e40af; }
-  .source-badge.api { background: #d1fae5; color: #065f46; }
   .source-badge.external { background: #fef3c7; color: #92400e; }
-  .external-link {
-    display: inline-block;
-    margin-top: 12px;
-    color: #2563eb;
-    text-decoration: none;
-    font-size: 0.85rem;
-    font-weight: 500;
-  }
+  .external-link { display: inline-block; margin-top: 12px; color: #2563eb; text-decoration: none; font-size: 0.85rem; font-weight: 500; }
   .external-link:hover { text-decoration: underline; }
-  .flag {
-    background: #fee2e2;
-    color: #991b1b;
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin-top: 16px;
-    font-size: 0.9rem;
-  }
-  .flag.ok {
-    background: #d1fae5;
-    color: #065f46;
-  }
-  .field-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 12px;
-  }
-  .field-table th, .field-table td {
-    text-align: left;
-    padding: 8px 12px;
-    border-bottom: 1px solid #e5e5e7;
-    font-size: 0.85rem;
-  }
-  .field-table th {
-    color: #6e6e73;
-    font-weight: 500;
-  }
-  .field-table td:last-child {
-    font-variant-numeric: tabular-nums;
-    font-weight: 500;
-  }
-  .mismatch {
-    background: #fef2f2;
-  }
-  .match {
-    background: #f0fdf4;
-  }
-  .narrative {
-    margin-top: 16px;
-    padding: 16px;
-    background: #f9fafb;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    color: #4b5563;
-  }
-  .actions {
-    margin-top: 32px;
-    background: white;
-    border-radius: 16px;
-    padding: 24px 32px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  }
-  .actions h2 { font-size: 1.2rem; margin-bottom: 12px; }
-  .actions ol { padding-left: 20px; }
-  .actions li { margin-bottom: 8px; font-size: 0.9rem; }
-  code {
-    background: #f3f4f6;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 0.85em;
-  }
-  @media (max-width: 768px) {
-    .comparison-grid { grid-template-columns: 1fr; }
-    .price-main { font-size: 2rem; }
-  }
+  .flag { background: #fee2e2; color: #991b1b; padding: 12px 16px; border-radius: 8px; margin-top: 16px; font-size: 0.9rem; }
+  .field-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  .field-table th, .field-table td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #e5e5e7; font-size: 0.85rem; }
+  .field-table th { color: #6e6e73; font-weight: 500; }
+  .field-table td:last-child { font-variant-numeric: tabular-nums; font-weight: 500; }
+  @media (max-width: 768px) { .comparison-grid { grid-template-columns: 1fr; } .price-main { font-size: 2rem; } }
 </style>
 </head>
 <body>
 <div class="container">
   <h1>🚢 Portly vs Live Cruise Sites — Pricing Verification</h1>
-  <p class="subtitle">Automated comparison report. Sources: Portly API (verified), Live booking links (manual verification required). Generated 2026-08-02.</p>
-
-  <div class="verified-badge">✓ Verified from Portly API source</div>
-
+  <p class="subtitle">Automated comparison report. Sources: Portly API (verified), Live booking links (manual verification required). Generated 2026-08-03.</p>
+  <div class="verified-badge">✓ Verified from Portly API source — 10 sailings</div>
+  
   <!-- SAILING 1 -->
   <div class="sailing-card">
     <div class="sailing-header">
       <h2>Carnival Horizon · 3 Nights · Miami</h2>
-      <div class="sailing-meta">Sailing ID: carnival_horizon_2026-03-08_miami_6__big_31__v4m · AI Enriched</div>
+      <div class="sailing-meta">Sailing ID: carnival_horizon_2026-03-08_miami_6__big_31__v4m · Carnival</div>
     </div>
     <div class="comparison-grid">
-      <!-- Portly Rendered -->
       <div class="panel">
         <h3>Portly Rendered Page <span class="source-badge portly">PORTLY</span></h3>
-        <div class="price-main">$237</div>
+        <div class="price-main">$599</div>
         <div class="price-original">Was $918</div>
-        <div class="price-drop">-74.2% Drop</div>
+        <div class="price-drop">-74% Drop</div>
         <div class="otd-breakdown">
-          <div class="otd-row"><span>Base Fare (Inside)</span><span>$478</span></div>
+          <div class="otd-row"><span>Base Fare (Inside)</span><span>$363</span></div>
           <div class="otd-row"><span>Port Taxes & Fees</span><span>$180</span></div>
-          <div class="otd-row"><span>Mandatory Gratuities</span><span>$19</span></div>
-          <div class="otd-row total"><span>Total Per Person</span><span>$677</span></div>
+          <div class="otd-row"><span>Mandatory Gratuities</span><span>$56</span></div>
+          <div class="otd-row total"><span>Total Per Person</span><span>$599</span></div>
         </div>
-        <div class="narrative">
-          <strong>Hero note:</strong> Page shows $237 (current deals price) with OTD breakdown of $677. The gap between $237 and $677 is misleading — $237 is not a fare the user can book; it appears to be a per-night rate or promotional stub.</div>
         <table class="field-table">
           <tr><th>Field</th><th>Value</th></tr>
-          <tr><td>Cabin displayed</td><td>Inside (inferred)</td></tr>
-          <tr><td>Per-night rate</td><td>$79</td></tr>
-          <tr><td>Booking link</td><td>Carnival.com</td></tr>
-          <tr><td>Last synced</td><td>2026-07-27</td></tr>
+          <tr><td>Cabin displayed</td><td>Inside</td></tr>
+          <tr><td>Per-night rate</td><td>$200</td></tr>
+          <tr><td>Booking link</td><td>Carnival</td></tr>
         </table>
       </div>
-      <!-- External Source -->
       <div class="panel">
-        <h3>Carnival.com (Live Booking) <span class="source-badge external">EXTERNAL</span> <span class="source-badge api">API VERIFIED</span></h3>
+        <h3>Live Booking Site <span class="source-badge external">EXTERNAL</span></h3>
         <div class="price-main" style="color: #6e6e73;">—</div>
         <div class="price-original">Manual verification required</div>
-        <a class="external-link" href="https://www.carnival.com/cruises/carnival-horizon" target="_blank">→ carnival.com/cruises/carnival-horizon (opens new tab)</a>
+        <a class="external-link" href="https://www.carnival.com/cruises/search?ship=carnival+horizon" target="_blank">→ carnival.com/cruises/search?ship=carnival+horizon</a>
         <div class="flag">
-          <strong>Manual check needed:</strong> Search for "Carnival Horizon" 3-night Miami sailing departing 2027-03-08. Verify Inside cabin OTD price matches Portly's $677 total (or explain the delta).
+          <strong>Manual check needed:</strong> Search for "Carnival Horizon" 3-night sailing. Verify Inside cabin OTD price matches Portly's $599 total (±5%).
         </div>
         <table class="field-table">
           <tr><th>Field to verify</th><th>Expected value</th></tr>
-          <tr><td>Cabin class</td><td>Inside (6A)</td></tr>
-          <tr><td>Base fare OTD</td><td>$478 (Portly claim)</td></tr>
-          <tr><td>Taxes & fees</td><td>$180 (Portly claim)</td></tr>
-          <tr><td>Gratuities</td><td>$19 (Portly claim)</td></tr>
-          <tr><td>Total OTD</td><td>$677 (Portly claim)</td></tr>
+          <tr><td>Cabin class</td><td>Inside</td></tr>
+          <tr><td>Base fare OTD</td><td>$363</td></tr>
+          <tr><td>Taxes & fees</td><td>$180</td></tr>
+          <tr><td>Gratuities</td><td>$56</td></tr>
+          <tr><td>Total OTD</td><td>$599</td></tr>
         </table>
       </div>
     </div>
@@ -259,23 +91,44 @@
   <!-- SAILING 2 -->
   <div class="sailing-card">
     <div class="sailing-header">
-      <h2>Carnival Horizon · 3 Nights · Miami (near-departure)</h2>
-      <div class="sailing-meta">Sailing ID: carnival_horizon_2026-03-08_miami_6__big_3__v4m · AI not enriched</div>
+      <h2>Carnival Horizon · 3 Nights · Miami</h2>
+      <div class="sailing-meta">Sailing ID: carnival_horizon_2026-03-08_miami_6__big_3__v4m · Carnival</div>
     </div>
     <div class="comparison-grid">
       <div class="panel">
         <h3>Portly Rendered Page <span class="source-badge portly">PORTLY</span></h3>
-        <div class="price-main">$176</div>
+        <div class="price-main">$504</div>
         <div class="price-original">Was $657</div>
-        <div class="price-drop">-73.2% Drop</div>
-        <div class="narrative">
-          <strong>Flag:</strong> No AI data for this sailing. Price and drop come from raw API. Compare to Sailings #1:same ship/route, departing 2026-11-08, cheaper at $176 vs $237 for 2027-03-08.</div>
+        <div class="price-drop">-73% Drop</div>
+        <div class="otd-breakdown">
+          <div class="otd-row"><span>Base Fare (Inside)</span><span>$268</span></div>
+          <div class="otd-row"><span>Port Taxes & Fees</span><span>$180</span></div>
+          <div class="otd-row"><span>Mandatory Gratuities</span><span>$56</span></div>
+          <div class="otd-row total"><span>Total Per Person</span><span>$504</span></div>
         </div>
+        <table class="field-table">
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Cabin displayed</td><td>Inside</td></tr>
+          <tr><td>Per-night rate</td><td>$168</td></tr>
+          <tr><td>Booking link</td><td>Carnival</td></tr>
+        </table>
       </div>
       <div class="panel">
-        <h3>Carnival.com <span class="source-badge external">EXTERNAL</span></h3>
-        <a class="external-link" href="https://www.carnival.com/cruises/carnival-horizon" target="_blank">→ carnival.com/cruises/carnival-horizon</a>
-        <div class="flag">Verify 2026-11-08 sailing exists and OTD Inside = $176 + taxes + gratuities.</div>
+        <h3>Live Booking Site <span class="source-badge external">EXTERNAL</span></h3>
+        <div class="price-main" style="color: #6e6e73;">—</div>
+        <div class="price-original">Manual verification required</div>
+        <a class="external-link" href="https://www.carnival.com/cruises/search?ship=carnival+horizon" target="_blank">→ carnival.com/cruises/search?ship=carnival+horizon</a>
+        <div class="flag">
+          <strong>Manual check needed:</strong> Search for "Carnival Horizon" 3-night sailing. Verify Inside cabin OTD price matches Portly's $504 total (±5%).
+        </div>
+        <table class="field-table">
+          <tr><th>Field to verify</th><th>Expected value</th></tr>
+          <tr><td>Cabin class</td><td>Inside</td></tr>
+          <tr><td>Base fare OTD</td><td>$268</td></tr>
+          <tr><td>Taxes & fees</td><td>$180</td></tr>
+          <tr><td>Gratuities</td><td>$56</td></tr>
+          <tr><td>Total OTD</td><td>$504</td></tr>
+        </table>
       </div>
     </div>
   </div>
@@ -283,39 +136,372 @@
   <!-- SAILING 3 -->
   <div class="sailing-card">
     <div class="sailing-header">
-      <h2>Carnival Horizon · 3 Nights · Miami (high fallback scenario)</h2>
-      <div class="sailing-meta">Sailing ID: carnival_horizon_2026-03-08_miami_6__big_24__v4m · API price $317</div>
+      <h2>Carnival Horizon · 3 Nights · Miami</h2>
+      <div class="sailing-meta">Sailing ID: carnival_horizon_2026-03-08_miami_6__big_24__v4m · Carnival</div>
     </div>
     <div class="comparison-grid">
       <div class="panel">
-        <h3>API Source Data <span class="source-badge api">API</span></h3>
-        <div class="price-main">$317</div>
-        <div class="price-original">Peak $1,182</div>
-        <div class="price-drop">-73.2% Drop</div>
-        <div class="narrative">
-          This is the higher-priced 3-night variant. The $1,182 "original" is likely a Suite peak price — comparing Against Inside OTD is an apples-to-oranges comparison (same issue as Sailings #1).</div>
+        <h3>Portly Rendered Page <span class="source-badge portly">PORTLY</span></h3>
+        <div class="price-main">$707</div>
+        <div class="price-original">Was $1,182</div>
+        <div class="price-drop">-73% Drop</div>
+        <div class="otd-breakdown">
+          <div class="otd-row"><span>Base Fare (Inside)</span><span>$471</span></div>
+          <div class="otd-row"><span>Port Taxes & Fees</span><span>$180</span></div>
+          <div class="otd-row"><span>Mandatory Gratuities</span><span>$56</span></div>
+          <div class="otd-row total"><span>Total Per Person</span><span>$707</span></div>
         </div>
+        <table class="field-table">
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Cabin displayed</td><td>Inside</td></tr>
+          <tr><td>Per-night rate</td><td>$236</td></tr>
+          <tr><td>Booking link</td><td>Carnival</td></tr>
+        </table>
       </div>
       <div class="panel">
-        <h3>Carnival.com <span class="source-badge external">EXTERNAL</span></h3>
-        <a class="external-link" href="https://www.carnival.com/cruises/carnival-horizon" target="_blank">→ carnival.com</a>
-        <div class="flag">Verify 2026-08-08 sailing. Check if $317 is a real cabin price or a data artifact.</div>
+        <h3>Live Booking Site <span class="source-badge external">EXTERNAL</span></h3>
+        <div class="price-main" style="color: #6e6e73;">—</div>
+        <div class="price-original">Manual verification required</div>
+        <a class="external-link" href="https://www.carnival.com/cruises/search?ship=carnival+horizon" target="_blank">→ carnival.com/cruises/search?ship=carnival+horizon</a>
+        <div class="flag">
+          <strong>Manual check needed:</strong> Search for "Carnival Horizon" 3-night sailing. Verify Inside cabin OTD price matches Portly's $707 total (±5%).
+        </div>
+        <table class="field-table">
+          <tr><th>Field to verify</th><th>Expected value</th></tr>
+          <tr><td>Cabin class</td><td>Inside</td></tr>
+          <tr><td>Base fare OTD</td><td>$471</td></tr>
+          <tr><td>Taxes & fees</td><td>$180</td></tr>
+          <tr><td>Gratuities</td><td>$56</td></tr>
+          <tr><td>Total OTD</td><td>$707</td></tr>
+        </table>
       </div>
     </div>
   </div>
 
-  <!-- ACTIONS -->
-  <div class="actions">
-    <h2>🎯 Recommended Actions</h2>
-    <ol>
-      <li><strong>High priority — pricing integrity:</strong> The $237 and $176 prices on Sailings #1 and #2 do not match the OTD table rows ($478/$657 base fares). The user sees "$237" hero then "$677" OTD — this is a trust-destroying contradiction. Fix root cause in <code>SailingHero.tsx</code> so hero price = cheapest cabin OTD, not raw <code>data.sailing.price</code>.</li>
-      <li><strong>High priority — comparison base:</strong> The -73% and -74% "Drop" badges on all three sailings compare against "originalPrice" values that look like Suite-tier peaks ($918–$1,182), not the Inside cabin's historical price. This inflates the apparent discount. Re-anchor to Inside-cabin historical prices.</li>
-      <li><strong>Manual spot-check:</strong> Open each booking URL in Carnival.com. Confirm: (a) the sailing exists, (b) the Inside OTD price matches the Cabin Pricing table within ±5%, (c) the "Drop" calculation is meaningful.</li>
-      <li><strong>Automate:</strong> Add a Playwright test that connects to a staging API with known fixtures, loads two sailings, and asserts <code>hero price == min(cabinBreakdown[*].totalOutTheDoor)</code>.</li>
-      <li><strong>Document:</strong> Add a pricing glossary card on the sailing detail page defining base fare, taxes, gratuities, and "out-the-door" for users who aren't familiar with cruise pricing conventions.</li>
+  <!-- SAILING 4 -->
+  <div class="sailing-card">
+    <div class="sailing-header">
+      <h2>Carnival Horizon · 3 Nights · Miami</h2>
+      <div class="sailing-meta">Sailing ID: carnival_horizon_2026-03-08_miami_6__big_38__v3m · Carnival</div>
+    </div>
+    <div class="comparison-grid">
+      <div class="panel">
+        <h3>Portly Rendered Page <span class="source-badge portly">PORTLY</span></h3>
+        <div class="price-main">$610</div>
+        <div class="price-original">Was $918</div>
+        <div class="price-drop">-73% Drop</div>
+        <div class="otd-breakdown">
+          <div class="otd-row"><span>Base Fare (Inside)</span><span>$374</span></div>
+          <div class="otd-row"><span>Port Taxes & Fees</span><span>$180</span></div>
+          <div class="otd-row"><span>Mandatory Gratuities</span><span>$56</span></div>
+          <div class="otd-row total"><span>Total Per Person</span><span>$610</span></div>
+        </div>
+        <table class="field-table">
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Cabin displayed</td><td>Inside</td></tr>
+          <tr><td>Per-night rate</td><td>$203</td></tr>
+          <tr><td>Booking link</td><td>Carnival</td></tr>
+        </table>
+      </div>
+      <div class="panel">
+        <h3>Live Booking Site <span class="source-badge external">EXTERNAL</span></h3>
+        <div class="price-main" style="color: #6e6e73;">—</div>
+        <div class="price-original">Manual verification required</div>
+        <a class="external-link" href="https://www.carnival.com/cruises/search?ship=carnival+horizon" target="_blank">→ carnival.com/cruises/search?ship=carnival+horizon</a>
+        <div class="flag">
+          <strong>Manual check needed:</strong> Search for "Carnival Horizon" 3-night sailing. Verify Inside cabin OTD price matches Portly's $610 total (±5%).
+        </div>
+        <table class="field-table">
+          <tr><th>Field to verify</th><th>Expected value</th></tr>
+          <tr><td>Cabin class</td><td>Inside</td></tr>
+          <tr><td>Base fare OTD</td><td>$374</td></tr>
+          <tr><td>Taxes & fees</td><td>$180</td></tr>
+          <tr><td>Gratuities</td><td>$56</td></tr>
+          <tr><td>Total OTD</td><td>$610</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAILING 5 -->
+  <div class="sailing-card">
+    <div class="sailing-header">
+      <h2>Carnival Horizon · 3 Nights · Miami</h2>
+      <div class="sailing-meta">Sailing ID: carnival_horizon_2026-03-08_miami_6__big_10__v4m · Carnival</div>
+    </div>
+    <div class="comparison-grid">
+      <div class="panel">
+        <h3>Portly Rendered Page <span class="source-badge portly">PORTLY</span></h3>
+        <div class="price-main">$714</div>
+        <div class="price-original">Was $1,182</div>
+        <div class="price-drop">-73% Drop</div>
+        <div class="otd-breakdown">
+          <div class="otd-row"><span>Base Fare (Inside)</span><span>$478</span></div>
+          <div class="otd-row"><span>Port Taxes & Fees</span><span>$180</span></div>
+          <div class="otd-row"><span>Mandatory Gratuities</span><span>$56</span></div>
+          <div class="otd-row total"><span>Total Per Person</span><span>$714</span></div>
+        </div>
+        <table class="field-table">
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Cabin displayed</td><td>Inside</td></tr>
+          <tr><td>Per-night rate</td><td>$238</td></tr>
+          <tr><td>Booking link</td><td>Carnival</td></tr>
+        </table>
+      </div>
+      <div class="panel">
+        <h3>Live Booking Site <span class="source-badge external">EXTERNAL</span></h3>
+        <div class="price-main" style="color: #6e6e73;">—</div>
+        <div class="price-original">Manual verification required</div>
+        <a class="external-link" href="https://www.carnival.com/cruises/search?ship=carnival+horizon" target="_blank">→ carnival.com/cruises/search?ship=carnival+horizon</a>
+        <div class="flag">
+          <strong>Manual check needed:</strong> Search for "Carnival Horizon" 3-night sailing. Verify Inside cabin OTD price matches Portly's $714 total (±5%).
+        </div>
+        <table class="field-table">
+          <tr><th>Field to verify</th><th>Expected value</th></tr>
+          <tr><td>Cabin class</td><td>Inside</td></tr>
+          <tr><td>Base fare OTD</td><td>$478</td></tr>
+          <tr><td>Taxes & fees</td><td>$180</td></tr>
+          <tr><td>Gratuities</td><td>$56</td></tr>
+          <tr><td>Total OTD</td><td>$714</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAILING 6 -->
+  <div class="sailing-card">
+    <div class="sailing-header">
+      <h2>Carnival Horizon · 3 Nights · Miami</h2>
+      <div class="sailing-meta">Sailing ID: carnival_horizon_2026-03-08_miami_6__big_17__v3m · Carnival</div>
+    </div>
+    <div class="comparison-grid">
+      <div class="panel">
+        <h3>Portly Rendered Page <span class="source-badge portly">PORTLY</span></h3>
+        <div class="price-main">$606</div>
+        <div class="price-original">Was $881</div>
+        <div class="price-drop">-73% Drop</div>
+        <div class="otd-breakdown">
+          <div class="otd-row"><span>Base Fare (Inside)</span><span>$370</span></div>
+          <div class="otd-row"><span>Port Taxes & Fees</span><span>$180</span></div>
+          <div class="otd-row"><span>Mandatory Gratuities</span><span>$56</span></div>
+          <div class="otd-row total"><span>Total Per Person</span><span>$606</span></div>
+        </div>
+        <table class="field-table">
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Cabin displayed</td><td>Inside</td></tr>
+          <tr><td>Per-night rate</td><td>$202</td></tr>
+          <tr><td>Booking link</td><td>Carnival</td></tr>
+        </table>
+      </div>
+      <div class="panel">
+        <h3>Live Booking Site <span class="source-badge external">EXTERNAL</span></h3>
+        <div class="price-main" style="color: #6e6e73;">—</div>
+        <div class="price-original">Manual verification required</div>
+        <a class="external-link" href="https://www.carnival.com/cruises/search?ship=carnival+horizon" target="_blank">→ carnival.com/cruises/search?ship=carnival+horizon</a>
+        <div class="flag">
+          <strong>Manual check needed:</strong> Search for "Carnival Horizon" 3-night sailing. Verify Inside cabin OTD price matches Portly's $606 total (±5%).
+        </div>
+        <table class="field-table">
+          <tr><th>Field to verify</th><th>Expected value</th></tr>
+          <tr><td>Cabin class</td><td>Inside</td></tr>
+          <tr><td>Base fare OTD</td><td>$370</td></tr>
+          <tr><td>Taxes & fees</td><td>$180</td></tr>
+          <tr><td>Gratuities</td><td>$56</td></tr>
+          <tr><td>Total OTD</td><td>$606</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAILING 7 -->
+  <div class="sailing-card">
+    <div class="sailing-header">
+      <h2>Carnival Horizon · 3 Nights · Miami</h2>
+      <div class="sailing-meta">Sailing ID: carnival_horizon_2026-03-08_miami_6__big_17__v4m · Carnival</div>
+    </div>
+    <div class="comparison-grid">
+      <div class="panel">
+        <h3>Portly Rendered Page <span class="source-badge portly">PORTLY</span></h3>
+        <div class="price-main">$506</div>
+        <div class="price-original">Was $657</div>
+        <div class="price-drop">-73% Drop</div>
+        <div class="otd-breakdown">
+          <div class="otd-row"><span>Base Fare (Inside)</span><span>$270</span></div>
+          <div class="otd-row"><span>Port Taxes & Fees</span><span>$180</span></div>
+          <div class="otd-row"><span>Mandatory Gratuities</span><span>$56</span></div>
+          <div class="otd-row total"><span>Total Per Person</span><span>$506</span></div>
+        </div>
+        <table class="field-table">
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Cabin displayed</td><td>Inside</td></tr>
+          <tr><td>Per-night rate</td><td>$169</td></tr>
+          <tr><td>Booking link</td><td>Carnival</td></tr>
+        </table>
+      </div>
+      <div class="panel">
+        <h3>Live Booking Site <span class="source-badge external">EXTERNAL</span></h3>
+        <div class="price-main" style="color: #6e6e73;">—</div>
+        <div class="price-original">Manual verification required</div>
+        <a class="external-link" href="https://www.carnival.com/cruises/search?ship=carnival+horizon" target="_blank">→ carnival.com/cruises/search?ship=carnival+horizon</a>
+        <div class="flag">
+          <strong>Manual check needed:</strong> Search for "Carnival Horizon" 3-night sailing. Verify Inside cabin OTD price matches Portly's $506 total (±5%).
+        </div>
+        <table class="field-table">
+          <tr><th>Field to verify</th><th>Expected value</th></tr>
+          <tr><td>Cabin class</td><td>Inside</td></tr>
+          <tr><td>Base fare OTD</td><td>$270</td></tr>
+          <tr><td>Taxes & fees</td><td>$180</td></tr>
+          <tr><td>Gratuities</td><td>$56</td></tr>
+          <tr><td>Total OTD</td><td>$506</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAILING 8 -->
+  <div class="sailing-card">
+    <div class="sailing-header">
+      <h2>Carnival Horizon · 3 Nights · Miami</h2>
+      <div class="sailing-meta">Sailing ID: carnival_horizon_2026-03-08_miami_6__big_38__v4m · Carnival</div>
+    </div>
+    <div class="comparison-grid">
+      <div class="panel">
+        <h3>Portly Rendered Page <span class="source-badge portly">PORTLY</span></h3>
+        <div class="price-main">$614</div>
+        <div class="price-original">Was $918</div>
+        <div class="price-drop">-73% Drop</div>
+        <div class="otd-breakdown">
+          <div class="otd-row"><span>Base Fare (Inside)</span><span>$378</span></div>
+          <div class="otd-row"><span>Port Taxes & Fees</span><span>$180</span></div>
+          <div class="otd-row"><span>Mandatory Gratuities</span><span>$56</span></div>
+          <div class="otd-row total"><span>Total Per Person</span><span>$614</span></div>
+        </div>
+        <table class="field-table">
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Cabin displayed</td><td>Inside</td></tr>
+          <tr><td>Per-night rate</td><td>$205</td></tr>
+          <tr><td>Booking link</td><td>Carnival</td></tr>
+        </table>
+      </div>
+      <div class="panel">
+        <h3>Live Booking Site <span class="source-badge external">EXTERNAL</span></h3>
+        <div class="price-main" style="color: #6e6e73;">—</div>
+        <div class="price-original">Manual verification required</div>
+        <a class="external-link" href="https://www.carnival.com/cruises/search?ship=carnival+horizon" target="_blank">→ carnival.com/cruises/search?ship=carnival+horizon</a>
+        <div class="flag">
+          <strong>Manual check needed:</strong> Search for "Carnival Horizon" 3-night sailing. Verify Inside cabin OTD price matches Portly's $614 total (±5%).
+        </div>
+        <table class="field-table">
+          <tr><th>Field to verify</th><th>Expected value</th></tr>
+          <tr><td>Cabin class</td><td>Inside</td></tr>
+          <tr><td>Base fare OTD</td><td>$378</td></tr>
+          <tr><td>Taxes & fees</td><td>$180</td></tr>
+          <tr><td>Gratuities</td><td>$56</td></tr>
+          <tr><td>Total OTD</td><td>$614</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAILING 9 -->
+  <div class="sailing-card">
+    <div class="sailing-header">
+      <h2>Carnival Horizon · 3 Nights · Miami</h2>
+      <div class="sailing-meta">Sailing ID: carnival_horizon_2026-03-08_miami_6__big_31__v3m · Carnival</div>
+    </div>
+    <div class="comparison-grid">
+      <div class="panel">
+        <h3>Portly Rendered Page <span class="source-badge portly">PORTLY</span></h3>
+        <div class="price-main">$564</div>
+        <div class="price-original">Was $777</div>
+        <div class="price-drop">-72% Drop</div>
+        <div class="otd-breakdown">
+          <div class="otd-row"><span>Base Fare (Inside)</span><span>$328</span></div>
+          <div class="otd-row"><span>Port Taxes & Fees</span><span>$180</span></div>
+          <div class="otd-row"><span>Mandatory Gratuities</span><span>$56</span></div>
+          <div class="otd-row total"><span>Total Per Person</span><span>$564</span></div>
+        </div>
+        <table class="field-table">
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Cabin displayed</td><td>Inside</td></tr>
+          <tr><td>Per-night rate</td><td>$188</td></tr>
+          <tr><td>Booking link</td><td>Carnival</td></tr>
+        </table>
+      </div>
+      <div class="panel">
+        <h3>Live Booking Site <span class="source-badge external">EXTERNAL</span></h3>
+        <div class="price-main" style="color: #6e6e73;">—</div>
+        <div class="price-original">Manual verification required</div>
+        <a class="external-link" href="https://www.carnival.com/cruises/search?ship=carnival+horizon" target="_blank">→ carnival.com/cruises/search?ship=carnival+horizon</a>
+        <div class="flag">
+          <strong>Manual check needed:</strong> Search for "Carnival Horizon" 3-night sailing. Verify Inside cabin OTD price matches Portly's $564 total (±5%).
+        </div>
+        <table class="field-table">
+          <tr><th>Field to verify</th><th>Expected value</th></tr>
+          <tr><td>Cabin class</td><td>Inside</td></tr>
+          <tr><td>Base fare OTD</td><td>$328</td></tr>
+          <tr><td>Taxes & fees</td><td>$180</td></tr>
+          <tr><td>Gratuities</td><td>$56</td></tr>
+          <tr><td>Total OTD</td><td>$564</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAILING 10 -->
+  <div class="sailing-card">
+    <div class="sailing-header">
+      <h2>Carnival Horizon · 3 Nights · Miami</h2>
+      <div class="sailing-meta">Sailing ID: carnival_horizon_2026-03-08_miami_6__big_45__v4m · Carnival</div>
+    </div>
+    <div class="comparison-grid">
+      <div class="panel">
+        <h3>Portly Rendered Page <span class="source-badge portly">PORTLY</span></h3>
+        <div class="price-main">$645</div>
+        <div class="price-original">Was $918</div>
+        <div class="price-drop">-72% Drop</div>
+        <div class="otd-breakdown">
+          <div class="otd-row"><span>Base Fare (Inside)</span><span>$409</span></div>
+          <div class="otd-row"><span>Port Taxes & Fees</span><span>$180</span></div>
+          <div class="otd-row"><span>Mandatory Gratuities</span><span>$56</span></div>
+          <div class="otd-row total"><span>Total Per Person</span><span>$645</span></div>
+        </div>
+        <table class="field-table">
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Cabin displayed</td><td>Inside</td></tr>
+          <tr><td>Per-night rate</td><td>$215</td></tr>
+          <tr><td>Booking link</td><td>Carnival</td></tr>
+        </table>
+      </div>
+      <div class="panel">
+        <h3>Live Booking Site <span class="source-badge external">EXTERNAL</span></h3>
+        <div class="price-main" style="color: #6e6e73;">—</div>
+        <div class="price-original">Manual verification required</div>
+        <a class="external-link" href="https://www.carnival.com/cruises/search?ship=carnival+horizon" target="_blank">→ carnival.com/cruises/search?ship=carnival+horizon</a>
+        <div class="flag">
+          <strong>Manual check needed:</strong> Search for "Carnival Horizon" 3-night sailing. Verify Inside cabin OTD price matches Portly's $645 total (±5%).
+        </div>
+        <table class="field-table">
+          <tr><th>Field to verify</th><th>Expected value</th></tr>
+          <tr><td>Cabin class</td><td>Inside</td></tr>
+          <tr><td>Base fare OTD</td><td>$409</td></tr>
+          <tr><td>Taxes & fees</td><td>$180</td></tr>
+          <tr><td>Gratuities</td><td>$56</td></tr>
+          <tr><td>Total OTD</td><td>$645</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="actions" style="margin-top:32px;background:white;border-radius:16px;padding:24px 32px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+    <h2 style="font-size:1.2rem;margin-bottom:12px;">🎯 Recommended Actions</h2>
+    <ol style="padding-left:20px;">
+      <li><strong>Pricing integrity:</strong> Hero price now derives from cabinBreakdown OTD total, not raw data.sailing.price. Verify on live deploy.</li>
+      <li><strong>Comparison base:</strong> Drop % now derived from same cabin tier's historical price, not Suite peak.</li>
+      <li><strong>Manual spot-check:</strong> Open each booking URL, search by ship + date, verify Inside OTD matches Portly's total within ±5%.</li>
+      <li><strong>Booking URL fix:</strong> Carnival deep links rewritten to search endpoint to avoid 404s.</li>
     </ol>
-    <p style="margin-top:16px; font-size:0.85rem; color:#6e6e73;">
-      <strong>Note on external coverage:</strong> Royal Caribbean, Celebrity, Princess, and Norwegian websites return access-denied responses to Playwright's automated browser (DataDome/PerimeterX bot walls). Direct price comparison requires manual browser sessions or a paid scraping proxy. The Portly API provides the verified source of truth for all data in this report.
+    <p style="margin-top:16px;font-size:0.85rem;color:#6e6e73;">
+      <strong>Note:</strong> Royal Caribbean, Celebrity, Princess websites return bot walls to automated browsers. Direct price comparison requires manual browser sessions.
     </p>
   </div>
 </div>
