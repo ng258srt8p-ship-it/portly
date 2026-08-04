@@ -38,9 +38,10 @@ export interface Deal {
   badgeType: BadgeType;
   badgeText: string;
   history: number[];
-  bookingUrl?: string;        // NEW — deep link to cruise line booking page
-  bookingLabel?: string;      // NEW — cruise line name for button label
-  itinerary?: string[];       // JSON array of ports from DB
+  bookingUrl?: string; // NEW — deep link to cruise line booking page
+  bookingLabel?: string; // NEW — cruise line name for button label
+  itinerary?: string[]; // JSON array of ports from DB
+  totalOutTheDoor?: number; // MIN(cp.total_per_person) — out-the-door total matching sailing detail page
 }
 
 export interface CabinRate {

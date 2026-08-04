@@ -86,15 +86,16 @@ export default function DealsGrid({
   // to contain a single line/ship/etc.).
   const catalog = useFilterCatalog();
 
-  // Apply client-side filters that the API doesn't support (price range)
+  // Apply client-side filters (use totalOutTheDoor when available so the
+  // price range slider reflects what the card displays).
   const deals = useMemo(() => {
     if (!rawDeals) return rawDeals;
     let filtered = rawDeals;
     if (filters.minPrice !== undefined) {
-      filtered = filtered.filter((d) => d.price >= filters.minPrice!);
+      filtered = filtered.filter((d) => (d.totalOutTheDoor ?? d.price) >= filters.minPrice!);
     }
     if (filters.maxPrice !== undefined) {
-      filtered = filtered.filter((d) => d.price <= filters.maxPrice!);
+      filtered = filtered.filter((d) => (d.totalOutTheDoor ?? d.price) <= filters.maxPrice!);
     }
     return filtered;
   }, [rawDeals, filters.minPrice, filters.maxPrice]);
@@ -406,7 +407,7 @@ function renderGridContent(
           <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">90-day low · out-the-door</p>
           <div className="mt-1 flex flex-wrap items-baseline gap-2">
             <span className="font-mono text-2xl font-bold tracking-tight text-indigo">
-              ${deal.price.toLocaleString()}
+              ${(deal.totalOutTheDoor ?? deal.price).toLocaleString()}
            </span>
             {deal.dropPercent > 0 && (
               <span className="font-mono text-xs text-ink-faint line-through">
@@ -415,7 +416,7 @@ function renderGridContent(
             )}
          </div>
           <p className="mt-0.5 text-[11px] text-ink-faint">
-            per person · incl. taxes & gratuities · ${Math.round(deal.price / Math.max(deal.nights, 1))}/night
+            per person · incl. taxes & gratuities · ${Math.round((deal.totalOutTheDoor ?? deal.price) / Math.max(deal.nights, 1))}/night
          </p>
        </div>
         <Sparkline data={deal.history} positive={deal.dropPercent > 0} />

@@ -119,6 +119,19 @@ function formatSailing(row: any): any {
   const { port, route } = parseItineraryPort(r);
   if (port) r.departurePort = port;
   r.route = route;
+  // Expose totalOutTheDoor so the deals card shows the out-the-door total
+  // (base fare + port tax + gratuity) matching the sailing detail page.
+  // The sailing detail endpoint synthesizes using the average of the last 5
+  // history points as the Inside base fare — we replicate that here so both
+  // pages show the same headline number.
+  const PORT_TAX_PER_PERSON = 180;
+  const GRATUITY_PER_NIGHT = 18.5;
+  const nights = Number(r.nights) || 7;
+  const recent = Array.isArray(r.history) ? r.history.slice(-5) : [];
+  const insideBase = recent.length > 0
+    ? Math.round(recent.reduce((a: number, b: number) => a + b, 0) / recent.length)
+    : Number(r.price) || 0;
+  r.totalOutTheDoor = insideBase + PORT_TAX_PER_PERSON + Math.round(GRATUITY_PER_NIGHT * nights);
   return r;
 }
 
@@ -160,7 +173,7 @@ app.get('/api/deals', async (c) => {
     );
   }
 
-  let where = "WHERE s.price IS NOT NULL AND s.sail_date >= date('now')";
+  let where = "WHERE s.price IS NOT NULL AND s.sail_date >= date('now') AND s.source = 'scraper'";
   const binds: any[] = [];
 
   const cruiseLine = c.req.query('cruiseLine');
@@ -415,8 +428,9 @@ app.get('/api/search', async (c) => {
   }
   const offset = Math.min(Math.max(Number(c.req.query('offset') || 0), 0), 50_000);
 
-  // Build WHERE clause
-  let where = 'WHERE 1=1';
+  // Build WHERE clause — only show scraper sailings (real data) by default.
+  // Use ?include=all to override (internal/admin use only).
+  let where = c.req.query('include') === 'all' ? 'WHERE 1=1' : "WHERE s.source = 'scraper'";
   const binds: any[] = [];
   if (q) {
     where += ' AND (sh.name LIKE ? OR cl.name LIKE ? OR d.name LIKE ? OR s.departure_port LIKE ?)';
@@ -819,15 +833,15 @@ app.get('/api/sailing/:id', async (c) => {
       };
     });
   } else {
+    const sailingNights = Number(row.nights) || 7;
     cabinBreakdown = (cabinRows as any[]).map((c) => {
       const baseFare = Number(c.base_fare_per_person) || 0;
       const portTax = Number(c.port_tax_per_person) || 0;
       const gratuity = Number(c.gratuity_per_person_per_night) || 0;
-      const totalPerPerson = Number(c.total_per_person) || 0;
-      // Many UI components want the precomputed "out-the-door" total
-      // (base + port tax + gratuity*7 nights default). Prefer column if present;
-      // fall back to derivation.
-      const totalOutTheDoor = totalPerPerson || (baseFare + portTax + gratuity * 7);
+      // totalOutTheDoor = base + port tax + gratuity × actual nights
+      // (the DB generated column total_per_person only includes base + portTax
+      //  so we can't use it — gratuity is per-night and must be multiplied)
+      const totalOutTheDoor = baseFare + portTax + Math.round(gratuity * sailingNights);
       // Multiplier: derive from tier name (Inside=1.0, others use known ratios)
       const nameLower = String(c.cabinType || '').toLowerCase();
       const mult =
@@ -840,8 +854,8 @@ app.get('/api/sailing/:id', async (c) => {
         portTaxPerPerson: portTax,
         gratuityPerPersonPerNight: gratuity,
         totalOutTheDoor,
-        nights: 7,
-        perPersonPerDay: totalOutTheDoor / 7,
+        nights: sailingNights,
+        perPersonPerDay: totalOutTheDoor / sailingNights,
       };
       return {
         cabinType: c.cabinType,
@@ -849,7 +863,6 @@ app.get('/api/sailing/:id', async (c) => {
         baseFarePerPerson: baseFare,
         portTaxPerPerson: portTax,
         gratuityPerPersonPerNight: gratuity,
-        totalPerPerson,
         totalOutTheDoor,
         multiplier: mult,
         // Legacy snake_case keys (still consumed elsewhere)
@@ -858,7 +871,7 @@ app.get('/api/sailing/:id', async (c) => {
         gratuity,
         portFees: portTax,
         mandatoryGratuities: gratuity,
-        nights: 7,
+        nights: sailingNights,
         raw,
       }
       });
