@@ -27,6 +27,8 @@ export interface HiddenCosts {
   resortFees?: number;
   /** Computed real total cost including all hidden fees */
   realTotalCost?: number;
+  /** Canonical listed price (OTD total) from cabin breakdown */
+  totalOutTheDoor?: number;
 }
 
 export interface DealAnalysisOutput {

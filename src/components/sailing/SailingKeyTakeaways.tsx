@@ -15,6 +15,9 @@ import MaterialIcon from '@/components/ui/MaterialIcon';
 
 export interface KeyTakeawaysProps {
   price: number;
+  /** Inside-cabin out-the-door total — used for per-night math so this
+   *  matches the cabin table and hero price instead of the raw `price`. */
+  listedPrice?: number;
   originalPrice: number;
   dropPercent: number;
   perNight?: number;
@@ -205,6 +208,7 @@ function deriveCabinPick(cabinBreakdown: KeyTakeawaysProps['cabinBreakdown']): s
 
 export default function SailingKeyTakeaways({
   price,
+  listedPrice,
   originalPrice,
   dropPercent,
   perNight,
@@ -223,6 +227,8 @@ export default function SailingKeyTakeaways({
   aiExcursionStrategy,
   aiInsiderSummary,
 }: KeyTakeawaysProps) {
+  const canonical = listedPrice ?? price;
+  const perNightCalc = perNight ?? Math.round(canonical / days);
   const score = aiScore ?? Math.min(99, Math.max(40, 50 + (dropPercent || 0) + Math.floor((originalPrice || price) / 200)));
   const scoreLabel = score >= 85 ? 'Exceptional' : score >= 70 ? 'Great' : score >= 50 ? 'Average' : 'Below Avg';
   const scoreTone = score >= 85 ? 'emerald' : score >= 70 ? 'indigo' : score >= 50 ? 'amber' : 'coral';
@@ -233,7 +239,7 @@ export default function SailingKeyTakeaways({
   const portIntel = derivePortIntel(route || []);
   const verdict = (aiDealScoreNarrative && aiDealScoreNarrative.trim())
     || aiInsiderSummary?.trim()
-    || deriveVerdict(dropPercent, perNight, line, ship, days, route || [], history, shipClass);
+    || deriveVerdict(dropPercent, perNightCalc, line, ship, days, route || [], history, shipClass);
   const bestFor = deriveBestFor(line, ship);
   const cabinPick = deriveCabinPick(cabinBreakdown);
 

@@ -22,6 +22,10 @@ interface SailingContext {
   port: string;
   route: string[];
   price: number;
+  /** Inside-cabin out-the-door total (base + port tax + gratuity × nights).
+   *  Used as the canonical price for all per-night, total-cost, and
+   *  hidden-cost calculations so every displayed dollar figure agrees. */
+  listedPrice?: number;
   originalPrice: number;
   dropPercent: number;
 }
@@ -109,8 +113,11 @@ function generateInsiderAnalysis(ctx: SailingContext): {
     realTotalCost: number;
   };
 } {
-  const { line, ship, days, region, port, route, price, originalPrice, dropPercent } = ctx;
-  const perNight = Math.round(price / days);
+  const { line, ship, days, region, port, route, price, listedPrice, originalPrice, dropPercent } = ctx;
+  // Canonical price = the out-the-door total shown in the cabin table.
+  // Falls back to raw `price` when no cabin breakdown is available.
+  const canonical = listedPrice ?? price;
+  const perNight = Math.round(canonical / days);
   const savings = Math.round(originalPrice - price);
   const savingsPct = Math.round(((originalPrice - price) / originalPrice) * 100);
   const portCount = route.length;
@@ -193,10 +200,13 @@ function generateInsiderAnalysis(ctx: SailingContext): {
   ];
 
   // Hidden costs (deterministic from data)
-  const gratuities = 18.5 * days;
-  const portFees = 180; // standard estimate
+  // The OTD total already includes base + port fees + gratuities. Wi-Fi is
+  // the only additive the cabin table does NOT include, so we add it to
+  // surface the "real total including Wi-Fi" figure. Displayed only when
+  // the API hasn't supplied its own hiddenCosts block.
   const wifiCost = 12 * days;
-  const realTotalCost = Math.round(price + portFees + gratuities + wifiCost);
+  const realTotalCost = Math.round(canonical + wifiCost);
+  const gratuities = canonical - price; // portion of OTD above base fare
 
   return {
     pricingDeepDive,

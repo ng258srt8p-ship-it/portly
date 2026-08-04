@@ -151,10 +151,10 @@ export default function SailingHero({
 
             {/* OTD breakdown (matches cabinTier, not the raw price) */}
             <div className="mt-2 w-full space-y-1 text-xs text-white/80">
-              <div className="flex justify-between"><span className="font-medium">Base Fare</span><span className="text-right">${otdBaseFare.toLocaleString()}</span></div>
-              <div className="flex justify-between"><span className="font-medium">Port Taxes & Fees</span><span className="text-right">${otdPortTax.toLocaleString()}</span></div>
-              <div className="flex justify-between"><span className="font-medium">Mandatory Gratuities</span><span className="text-right">${otdGratuityTotal.toLocaleString()}</span></div>
-              <div className="flex items-baseline justify-between border-t border-black/[0.08] pt-2">
+              <div className="flex justify-between" data-testid="hero-otd-base-fare"><span className="font-medium">Base Fare</span><span className="text-right">${otdBaseFare.toLocaleString()}</span></div>
+              <div className="flex justify-between" data-testid="hero-otd-port-tax"><span className="font-medium">Port Taxes & Fees</span><span className="text-right">${otdPortTax.toLocaleString()}</span></div>
+              <div className="flex justify-between" data-testid="hero-otd-gratuity"><span className="font-medium">Mandatory Gratuities</span><span className="text-right">${otdGratuityTotal.toLocaleString()}</span></div>
+              <div className="flex items-baseline justify-between border-t border-black/[0.08] pt-2" data-testid="hero-otd-total">
                 <span className="font-bold text-xl">Total Per Person</span>
                 <span className="font-mono-tab text-xl font-bold">${otdTotalPerPerson.toLocaleString()}</span>
               </div>

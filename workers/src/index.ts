@@ -101,7 +101,7 @@ function parseItineraryPort(row: any): { port: string; route: string[] } {
   return { port: port || '', route };
 }
 
-function formatSailing(row: any): any {
+async function formatSailing(row: any, db: any): Promise<any> {
   const r = mapKeys(row);
   // Parse history JSON string → array
   if (typeof r.history === 'string') {
@@ -119,19 +119,29 @@ function formatSailing(row: any): any {
   const { port, route } = parseItineraryPort(r);
   if (port) r.departurePort = port;
   r.route = route;
-  // Expose totalOutTheDoor so the deals card shows the out-the-door total
-  // (base fare + port tax + gratuity) matching the sailing detail page.
-  // The sailing detail endpoint synthesizes using the average of the last 5
-  // history points as the Inside base fare — we replicate that here so both
-  // pages show the same headline number.
-  const PORT_TAX_PER_PERSON = 180;
-  const GRATUITY_PER_NIGHT = 18.5;
+  r.listedPrice = r.price;
+  // Pull the Inside cabin row so both /api/deals (via formatSailing) and
+  // /api/sailing/:id compute the exact same out-the-door number.
+  const cabinRows = await db.prepare(
+    `SELECT cp.base_fare_per_person, cp.port_tax_per_person,
+            cp.gratuity_per_person_per_night
+     FROM cabin_prices cp
+     JOIN cabin_categories cc ON cp.cabin_category_id = cc.id
+     WHERE cp.sailing_id = ?
+     ORDER BY cp.base_fare_per_person ASC
+     LIMIT 1`
+  ).bind(r.id).all();
+
   const nights = Number(r.nights) || 7;
-  const recent = Array.isArray(r.history) ? r.history.slice(-5) : [];
-  const insideBase = recent.length > 0
-    ? Math.round(recent.reduce((a: number, b: number) => a + b, 0) / recent.length)
-    : Number(r.price) || 0;
-  r.totalOutTheDoor = insideBase + PORT_TAX_PER_PERSON + Math.round(GRATUITY_PER_NIGHT * nights);
+  const inside = cabinRows.results?.[0];
+  if (typeof console !== 'undefined' && (globalThis as any).__PORTLY_FORMAT_TRACE) {
+    console.log(`[formatSailing] ${r.id} cabinRows=${cabinRows.results?.length} inside=${inside ? JSON.stringify(inside) : 'null'}`);
+  }
+  const baseFare  = inside ? Number(inside.base_fare_per_person)       : Number(r.price) || 0;
+  const portTax   = inside ? Number(inside.port_tax_per_person)         : 180;
+  const gratuity  = inside ? Number(inside.gratuity_per_person_per_night) : 18.5;
+  r.price           = baseFare;
+  r.totalOutTheDoor = baseFare + portTax + Math.round(gratuity * nights);
   return r;
 }
 
@@ -205,7 +215,8 @@ app.get('/api/deals', async (c) => {
   if (limit > 0) binds.push(limit, offset);
 
   const { results } = await c.env.DB.prepare(sql).bind(...binds).all();
-  return c.json(results.map(formatSailing));
+  const formatted = await Promise.all(results.map((r) => formatSailing(r, c.env.DB)));
+  return c.json(formatted);
 });
 
 // GET /api/solo-friendly
@@ -473,7 +484,7 @@ app.get('/api/search', async (c) => {
     total,
     page,
     totalPages,
-    results: results.map(formatSailing)
+    results: await Promise.all(results.map((r) => formatSailing(r, c.env.DB)))
   });
 });
 
@@ -1194,12 +1205,28 @@ app.get('/api/enhanced/deal-analysis/:id', async (c) => {
 
   if (!s) return c.json({ error: 'Not found' }, 404);
 
+  // Pull the Inside cabin row so deterministic insight text uses the SAME
+  // base fare / port tax / gratuity that the cabin pricing table renders.
+  const cabinRows = await c.env.DB.prepare(
+    `SELECT cp.base_fare_per_person, cp.port_tax_per_person, cp.gratuity_per_person_per_night,
+            cc.name AS cabin_type
+     FROM cabin_prices cp
+     JOIN cabin_categories cc ON cp.cabin_category_id = cc.id
+     WHERE cp.sailing_id = ?
+     ORDER BY cp.base_fare_per_person ASC
+     LIMIT 1`
+  ).bind(id).all<any>();
+
   const price = s.price || 0;
   const original = s.original_price || price;
   const dropPct = original > 0 ? Math.round((original - price) / original * 100) : 0;
   const nights = s.nights || 7;
-  const perNight = Math.round(price / nights);
-  const totalCost = Math.round(price + 180 + nights * 18.5);
+  const inside = cabinRows.results?.[0];
+  const baseFare     = inside ? Number(inside.base_fare_per_person) || price : price;
+  const portFees     = inside ? Number(inside.port_tax_per_person) || 0    : 180;
+  const gratuityRate = inside ? Number(inside.gratuity_per_person_per_night) || 0 : 18.5;
+  const perNight = Math.round((baseFare + portFees + gratuityRate * nights) / nights);
+  const totalCost = Math.round(baseFare + portFees + gratuityRate * nights);
 
   // Determine price trend from history
   let history: number[] = [];
@@ -1260,6 +1287,7 @@ app.get('/api/enhanced/deal-analysis/:id', async (c) => {
       shipValueScoreJustification,
       priceTrend,
       recommendation: dropPct >= 25 ? 'strong_buy' : dropPct >= 15 ? 'buy' : 'hold',
+      listedPrice: totalCost,
     }
   });
 });

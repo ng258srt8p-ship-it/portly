@@ -183,13 +183,9 @@ export default function SailingDetailPage({ initialData }: SailingDetailPageProp
               <section id="key-takeaways" className="scroll-mt-40">
                 <SailingKeyTakeaways
                   price={data.sailing.price || 0}
+                  listedPrice={data.cabinBreakdown?.[0]?.totalOutTheDoor ?? (data.sailing.price || 0)}
                   originalPrice={data.sailing.originalPrice || 0}
                   dropPercent={data.sailing.dropPercent || 0}
-                  perNight={
-                    data.sailing.days > 0
-                      ? Math.round((data.sailing.price || 0) / data.sailing.days)
-                      : data.sailing.price || 0
-                  }
                   days={data.sailing.days}
                   route={data.sailing.route || []}
                   region={data.sailing.region}
@@ -221,6 +217,7 @@ export default function SailingDetailPage({ initialData }: SailingDetailPageProp
                     port: data.sailing.port,
                     route: data.sailing.route,
                     price: data.sailing.price || 0,
+                    listedPrice: data.cabinBreakdown?.[0]?.totalOutTheDoor ?? (data.sailing.price || 0),
                     originalPrice: data.sailing.originalPrice || 0,
                     dropPercent: data.sailing.dropPercent || 0
                   }}

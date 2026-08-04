@@ -2,11 +2,10 @@
 
 /**
  * TripTide — HiddenCostDisplay
- * 
+ *
  * Renders the hidden costs breakdown for a sailing:
  * - Mandatory gratuities (by cruise line rate)
- * - Wi-Fi cost
- * - Resort/destination fees
+ * - Wi‑Fi cost
  * - Real total cost (listed + hidden)
  * - Cost delta visualization
  */
@@ -16,6 +15,8 @@ import type { HiddenCosts } from '@/types/enhancedAnalytics';
 
 interface HiddenCostDisplayProps {
   costs: HiddenCosts;
+  /** Canonical listed price (OTD total) – used to compute delta and to
+   *  synthesize missing gratuities/Wi‑Fi if the API omitted them. */
   listedPrice?: number;
   durationDays?: number;
   cruiseLine?: string;
@@ -37,76 +38,50 @@ export default function HiddenCostDisplay({
   cruiseLine = '',
 }: HiddenCostDisplayProps) {
   const gratuityRate = getGratuityRate(cruiseLine);
-  const gratuitiesPerDay = costs.mandatoryGratuities
-    ? Math.round(costs.mandatoryGratuities / durationDays / 2)
-    : gratuityRate;
-
-  const totalListed = listedPrice || 0;
-  const realTotal = costs.realTotalCost || totalListed + (costs.mandatoryGratuities || 0) + (costs.wifiCost || 0);
-  const hiddenTotal = realTotal - totalListed;
-  const hiddenPct = totalListed > 0 ? ((hiddenTotal / totalListed) * 100).toFixed(0) : '0';
+  // Synthesize missing values when the API does not provide them.
+  const baseForGratuities = listedPrice ?? costs.totalOutTheDoor ?? costs.realTotalCost ?? 0;
+  const computedGratuities = Math.round(gratuityRate * durationDays);
+  const mandatoryGratuities = costs.mandatoryGratuities ?? computedGratuities;
+  const wifiCost = costs.wifiCost ?? 12 * durationDays;
+  // Real total cost = listed price (already includes gratuities) + Wi‑Fi.
+  const realTotalCost = costs.realTotalCost ?? (baseForGratuities + wifiCost);
+  const costDelta = listedPrice ? Math.round(realTotalCost - listedPrice) : 0;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" data-testid="hidden-cost-display">
-      <div className="mb-3 flex items-center gap-1.5">
-        <MaterialIcon name="payments" size="sm" />
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-faint">
-          What the Listed Price Doesn&apos;t Show
-        </h3>
-      </div>
-
-      <div className="space-y-2.5">
-        {costs.mandatoryGratuities !== undefined && (
-          <div className="flex justify-between text-sm">
-            <span className="text-ink-soft">
-              Gratuities ({gratuitiesPerDay}/day/person × 2)
-            </span>
-            <span className="font-medium text-rose-700 tabular-nums">
-              ${costs.mandatoryGratuities.toLocaleString()}
-            </span>
+    <section className="hidden-costs border border-surface-400/5 p-3 rounded">
+      <h3 className="text-sm font-semibold mb-2">Hidden Cost Detector</h3>
+      <ul className="grid gap-2">
+        <li className="flex items-center gap-2">
+          <MaterialIcon name="info" className="text-surface-600/60" />
+          <div>
+            <div className="text-xs opacity-70">Mandatory Gratuities</div>
+            <div className="font-medium">${mandatoryGratuities.toLocaleString()}/night</div>
           </div>
-        )}
-
-        {costs.wifiCost !== undefined && (
-          <div className="flex justify-between text-sm">
-            <span className="text-ink-soft">
-              Wi-Fi (~$12/day × 2 passengers)
-            </span>
-            <span className="font-medium text-rose-700 tabular-nums">
-              ${costs.wifiCost.toLocaleString()}
-            </span>
+        </li>
+        <li className="flex items-center gap-2">
+          <MaterialIcon name="wifi" className="text-surface-600/60" />
+          <div>
+            <div className="text-xs opacity-70">Wi‑Fi (Starlink)</div>
+            <div className="font-medium">${wifiCost.toLocaleString()}</div>
           </div>
-        )}
-
-        {costs.resortFees !== undefined && costs.resortFees > 0 && (
-          <div className="flex justify-between text-sm">
-            <span className="text-ink-soft">Resort/Destination Fees</span>
-            <span className="font-medium text-rose-700 tabular-nums">
-              ${costs.resortFees.toLocaleString()}
-            </span>
+        </li>
+        <li className="flex items-center gap-2">
+          <MaterialIcon name="account_balance" className="text-surface-600/60" />
+          <div>
+            <div className="text-xs opacity-70">Real Total Cost (est.)</div>
+            <div className="font-medium">${realTotalCost.toLocaleString()}</div>
           </div>
-        )}
-
-        {hiddenTotal > 0 && (
-          <div className="border-t border-slate-200 pt-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-ink-faint">Hidden costs total</span>
-              <span className="font-medium text-rose-600 tabular-nums">
-                +${hiddenTotal.toLocaleString()} ({hiddenPct}%)
-              </span>
+        </li>
+        {costDelta !== 0 && (
+          <li className="flex items-center gap-2 text-surface-600/80">
+            <MaterialIcon name="compare_arrows" className="text-surface-600/60" />
+            <div>
+              <div className="text-xs opacity-70">Δ (real‑vs‑listed)</div>
+              <div className="font-medium text-sm">{costDelta > 0 ? `+${costDelta}` : costDelta}</div>
             </div>
-          </div>
+          </li>
         )}
-
-        {costs.realTotalCost !== undefined && (
-          <div className="flex justify-between border-t-2 border-ink/10 pt-3 font-bold">
-            <span className="text-ink">Real Total Cost</span>
-            <span className="text-rose-700 tabular-nums">
-              ${costs.realTotalCost.toLocaleString()}
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
+      </ul>
+    </section>
   );
 }
