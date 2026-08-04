@@ -54,11 +54,19 @@ interface SailingDetailPageProps {
 
 export default function SailingDetailPage({ initialData }: SailingDetailPageProps = {}) {
   const params = useParams();
-  const sailingId = params?.id as string;
+  // When the homepage SPA shell is served for /sailing/<id>/ paths (Cloudflare
+  // Pages catch-all + static export limitation), useParams() returns no id
+  // because the RSC seed data maps to the homepage route (/), not /sailing/<id>/.
+  // Fall back to parsing window.location.pathname in that case.
+  let sailingId = params?.id as string | undefined;
+  if (!sailingId && typeof window !== 'undefined') {
+    const match = window.location.pathname.match(/\/sailing\/([^/]+)\/?$/);
+    if (match) sailingId = match[1];
+  }
 
   const fetcher = useMemo(
     () => async () => {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/sailing/${sailingId}`, { cache: 'no-store' });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://portly-api.vqh9mnrdbp.workers.dev'}/api/sailing/${sailingId}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to load sailing');
       return res.json();
     },

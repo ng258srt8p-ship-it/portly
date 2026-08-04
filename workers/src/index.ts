@@ -388,7 +388,7 @@ async function computeHistorySnapshot(env: any) {
 // GET /api/stats
 app.get('/api/stats', async (c) => {
   const { results } = await c.env.DB.prepare(
-    `SELECT COUNT(*) AS tracked_sailings, COALESCE(SUM(nights), 0) AS pricing_snapshots FROM sailings WHERE price IS NOT NULL`
+    `SELECT COUNT(*) AS tracked_sailings, COALESCE(SUM(nights), 0) AS pricing_snapshots FROM sailings WHERE price IS NOT NULL AND source = 'scraper'`
   ).all();
   return c.json(mapKeys(results[0] || { trackedSailings: 0, pricingSnapshots: 0 }));
 });
