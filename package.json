@@ -6,7 +6,7 @@
     "dev": "next dev",
     "dev:port": "next dev -p",
     "build": "next build",
-    "postbuild": "node -e \"const fs=require('fs');['out/404.html','out/404.txt'].forEach(f=>{try{fs.unlinkSync(f);console.log('Removed '+f+' for SPA fallback')}catch{}})\" && npx tsx scripts/generate-sailing-pages.ts",
+    "postbuild": "node -e \"const fs=require('fs');['out/404.html','out/404.txt'].forEach(f=>{try{fs.unlinkSync(f);console.log('Removed '+f+' for SPA fallback')}catch{}})\"",
     "start": "next start",
     "lint": "next lint",
     "test": "playwright test",
