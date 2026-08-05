@@ -8,7 +8,7 @@
  * Cost: $0 (Jina Reader is free, no API key required)
  * Frequency: Every 4 hours via Cloudflare Worker cron trigger
  * 
- * Usage: wrangler.toml [triggers] crons = ["0 */4 * * *"]
+ * Cron schedule: every 4 hours (configured in wrangler.toml)
  */
 
 import { getAllScrapeUrls } from '../../server/services/cruiseLineConfig';
