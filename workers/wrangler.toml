@@ -24,3 +24,15 @@ crons = ["*/30 * * * *"]
 # Cloudflare Workers AI binding — for cruise-insight enrichment (free tier 10k neurons/day)
 [ai]
 binding = "AI"
+
+# Browser Rendering API binding (for anti-bot bypass)
+[browser]
+binding = "MYBROWSER"
+
+# OpenCode API key (set via wrangler secret put OPENCODE_API_KEY)
+[vars]
+OPENCODE_API_KEY = ""
+
+# Updated cron trigger — every 4 hours (was every 30 minutes)
+[triggers]
+crons = ["0 */4 * * *"]
