@@ -1,8 +1,8 @@
 /**
- * TripTide — Smart 4-Hour Update Cycle with Priority Queuing
- * 
- * Updates all 192 URLs every 4 hours while staying within $0 cost:
- * - High-priority (top 20%): Every 4 hours with OpenCode AI analysis
+ * DEPRECATED — Superseded by scheduled-scrape.ts (2026-08-05)
+ * This file was never wired into the worker. It referenced non-existent
+ * dependencies (@cloudflare/puppeteer) and a placeholder URL.
+ * The working implementation is in workers/src/scheduled-scrape.ts using Jina Reader.
  * - Medium-priority (next 50%): Every 12 hours with lightweight fetch
  * - Low-priority (bottom 30%): Every 24 hours with lightweight fetch
  * - Problematic sites: Every 48 hours with Browser Rendering API (free tier)

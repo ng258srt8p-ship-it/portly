@@ -6,6 +6,7 @@ import { runAlertEvaluationTick, runAlertDispatchTick } from './alert-engine';
 import { getMetricsSnapshot } from './metrics-analytics';
 import { runExternalLineSyncTick } from './external-line-sync';
 import { ingestRealSailing } from './real-ingest';
+import { scheduled as runScheduledScrape } from './scheduled-scrape';
 
 export type Env = {
   DB: D1Database;
@@ -1474,5 +1475,14 @@ app.post('/api/admin/ingest-real', async (c) => {
     return c.json({ ok: false, id: '', duplicated: false, error: err?.message || 'unknown' }, 500);
   }
 });
+
+// ────────────────────────────────────────────────────────────────────────
+// SCHEDULED TASK — Cron trigger: every 4 hours, scrape all cruise line URLs
+// via Jina Reader and upsert into D1.
+// wrangler.toml [triggers] crons = ["0 */4 * * *"]
+// ────────────────────────────────────────────────────────────────────────
+export async function scheduled(event: ScheduledEvent, env: any): Promise<void> {
+  await runScheduledScrape(event, env);
+}
 
 export default app;

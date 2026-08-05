@@ -1,8 +1,7 @@
 /**
- * TripTide — OpenCode Free Model Scraper with Cooldown
- * 
- * Proxies requests to OpenCode Zen API using free models (minimax-m2.5-free, etc.)
- * with 3-second cooldown between requests to respect rate limits.
+ * DEPRECATED — Superseded by scheduled-scrape.ts (2026-08-05)
+ * This file referenced a non-existent endpoint (YOUR_WORKER_URL/zen).
+ * It was never wired into the worker. Uses Jina Reader instead.
  * 
  * Cost: $0 (free tier)
  */

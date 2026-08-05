@@ -1,8 +1,7 @@
 /**
- * TripTide — Cloudflare Browser Rendering Scraper
- * 
- * Uses Cloudflare's native Browser Rendering API to bypass anti-bot protections.
- * Costs ~$0.017 per page render (5 seconds). For 1000 initial pages: ~$17 total.
+ * DEPRECATED — Superseded by scheduled-scrape.ts (2026-08-05)
+ * This file referenced @cloudflare/puppeteer which is not installed.
+ * It was never wired into the worker. Uses Jina Reader instead.
  * 
  * This is a one-time cost to populate the database, then we cache results.
  */

@@ -13,26 +13,14 @@ database_id = "4d7787e9-9eea-4403-81a5-469a4ba2a5fb"
 binding = "CACHE"
 id = "4ddbcf807f444e62855dc3ff4216a30d"
 
-# Environment variables
+# Environment variables (single merged section)
 [vars]
 API_VERSION = "1.0"
-
-# Cron Trigger — every 30 minutes the scheduled handler populates D1
-[triggers]
-crons = ["*/30 * * * *"]
 
 # Cloudflare Workers AI binding — for cruise-insight enrichment (free tier 10k neurons/day)
 [ai]
 binding = "AI"
 
-# Browser Rendering API binding (for anti-bot bypass)
-[browser]
-binding = "MYBROWSER"
-
-# OpenCode API key (set via wrangler secret put OPENCODE_API_KEY)
-[vars]
-OPENCODE_API_KEY = ""
-
-# Updated cron trigger — every 4 hours (was every 30 minutes)
+# Cron Trigger — every 4 hours, scrape all cruise line URLs via Jina Reader
 [triggers]
 crons = ["0 */4 * * *"]
